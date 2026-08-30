@@ -1,6 +1,6 @@
-import { LIGHT_LAB_CATEGORIES, categoryById, presetById, undertoneById, variantById } from './presets.js';
+import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
-import { DEFAULT_PARAMS, baseForSelection, generateDetailedPalette, interpretDescription } from './paletteEngine.js';
+import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
 import { renderBasicPreview } from './renderer2d.js';
 import { downloadProjectStructure } from './exportSystem.js';
@@ -10,15 +10,13 @@ const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de 
 const store = createStore();
 const byId = (id) => document.getElementById(id);
 const elements = {
-  categoryGrid: byId('categoryGrid'), presetSelect: byId('presetSelect'), presetDescription: byId('presetDescription'),
-  variantSelect: byId('variantSelect'), variantLabel: byId('variantLabel'), undertoneField: byId('undertoneField'), undertoneSelect: byId('undertoneSelect'),
-  descriptionInput: byId('descriptionInput'), interpretBtn: byId('interpretBtn'), interpretationSummary: byId('interpretationSummary'),
+  categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  generate: byId('generateBtn'), previewTitle: byId('previewTitle'), paletteName: byId('paletteName'), swatchGrid: byId('swatchGrid'),
+  resetParams: byId('resetParamsBtn'), previewTitle: byId('previewTitle'), paletteName: byId('paletteName'), swatchGrid: byId('swatchGrid'),
   canvas: byId('previewCanvas'), modeLabel: byId('previewModeLabel'), previewTabs: byId('previewTabs'),
   canvasHint: byId('canvasHint'), referenceFile: byId('referenceFileInput'), pasteImage: byId('pasteImageBtn'), clearImage: byId('clearImageBtn'), imageStatus: byId('imageStatus'),
   referenceStage: byId('referenceStage'), referenceEmpty: byId('referenceEmpty'), referenceCanvas: byId('referenceCanvas'), marker: byId('eyedropperMarker'), dropOverlay: byId('dropOverlay'),
-  stateCategory: byId('stateCategory'), stateVariant: byId('stateVariant'), stateBase: byId('stateBase'), stateColors: byId('stateColors'),
+  stateCategory: byId('stateCategory'), stateBase: byId('stateBase'), stateColors: byId('stateColors'),
   editor: byId('swatchEditor'), editRole: byId('editRole'), editPicker: byId('editColorPicker'), editHex: byId('editHexInput'), editError: byId('editHexError'),
   closeEditor: byId('closeEditorBtn'), applyEdit: byId('applyEditBtn'),
   extractedCount: byId('extractedCount'), extractedEmpty: byId('extractedEmpty'), extractedColors: byId('extractedColors'), clearSamples: byId('clearSamplesBtn'),
@@ -42,38 +40,15 @@ async function copyText(text) {
 
 function paletteFrom(state, baseHex = state.palette.baseHex, params = state.params) {
   const entries = generateDetailedPalette({ categoryId: state.selection.categoryId, baseHex, params });
-  return { source: 'phase-2-generator', baseHex, entries, colors: entries.map((item) => item.hex), roles: entries.map((item) => item.role) };
+  return { source: 'base-color', baseHex, entries, colors: entries.map((item) => item.hex), roles: entries.map((item) => item.role) };
 }
 
 function renderCategories(state) {
   elements.categoryGrid.replaceChildren(...LIGHT_LAB_CATEGORIES.map((category) => {
     const button = document.createElement('button'); button.type = 'button'; button.dataset.category = category.id; button.setAttribute('role','listitem');
     button.className = `category-button${state.selection.categoryId === category.id ? ' is-active' : ''}`;
-    button.innerHTML = `<i>${category.icon}</i><strong>${category.label}</strong><small>${category.variants.length} variedades</small>`;
+    button.innerHTML = `<i>${category.icon}</i><strong>${category.label}</strong><small>Usar este tipo</small>`;
     return button;
-  }));
-}
-
-function renderPresets(category, state) {
-  const options = category.presets.map((preset) => {
-    const option = document.createElement('option'); option.value=preset.id; option.textContent=preset.name; option.selected=preset.id===state.selection.presetId; return option;
-  });
-  if (state.selection.presetId === 'custom') {
-    const custom = document.createElement('option'); custom.value='custom'; custom.textContent='Personalizada'; custom.selected=true; options.unshift(custom);
-  }
-  elements.presetSelect.replaceChildren(...options);
-  const preset = category.presets.find((item) => item.id === state.selection.presetId);
-  elements.presetDescription.textContent = preset?.description || `Configuración personalizada: ${state.interpretation}`;
-}
-
-function renderSelectors(category, state) {
-  elements.variantLabel.textContent = category.id === 'natural-skin' ? 'Profundidad de piel' : category.id === 'materials' ? 'Material' : category.id === 'hair-stylized' ? 'Tipo de cabello' : 'Tipo de piel';
-  elements.variantSelect.replaceChildren(...category.variants.map((variant) => {
-    const option=document.createElement('option'); option.value=variant.id; option.textContent=variant.name; option.selected=variant.id===state.selection.variantId; return option;
-  }));
-  const hasUndertones = category.undertones.length > 0; elements.undertoneField.hidden=!hasUndertones;
-  elements.undertoneSelect.replaceChildren(...category.undertones.map((undertone) => {
-    const option=document.createElement('option'); option.value=undertone.id; option.textContent=undertone.name; option.selected=undertone.id===state.selection.undertoneId; return option;
   }));
 }
 
@@ -112,16 +87,15 @@ function renderRecentColors(colors) {
 }
 
 function render(state) {
-  const category=categoryById(state.selection.categoryId); const variant=variantById(category,state.selection.variantId); const undertone=undertoneById(category,state.selection.undertoneId);
-  renderCategories(state); renderPresets(category,state); renderSelectors(category,state); renderParameters(state.params); renderSwatches(state.palette.entries);
+  const category=categoryById(state.selection.categoryId);
+  renderCategories(state); renderParameters(state.params); renderSwatches(state.palette.entries);
   renderExtractedColors(state.reference.extractedColors); renderRecentColors(state.reference.recentColors);
-  elements.interpretationSummary.textContent=state.interpretation; elements.previewTitle.textContent=category.label;
-  elements.paletteName.textContent=state.selection.presetId==='custom' ? `${variant.name}${undertone?` · ${undertone.name}`:''}` : presetById(category,state.selection.presetId).name;
-  elements.stateCategory.textContent=category.label; elements.stateVariant.textContent=`${variant.name}${undertone?` · ${undertone.name}`:''}`;
+  elements.previewTitle.textContent=category.label;
+  elements.paletteName.textContent=`Desde ${state.palette.baseHex}`;
+  elements.stateCategory.textContent=category.label;
   elements.stateBase.textContent=state.palette.baseHex; elements.stateColors.textContent=`${state.palette.entries.length} colores`;
   elements.clearImage.hidden=!state.reference.image;
   if (document.activeElement!==elements.baseHex) elements.baseHex.value=state.palette.baseHex; elements.basePicker.value=state.palette.baseHex;
-  if (document.activeElement!==elements.descriptionInput) elements.descriptionInput.value=state.description;
   elements.modeLabel.textContent=VIEW_LABELS[state.selection.previewMode];
   const referenceActive=state.selection.previewMode==='reference'; elements.canvas.hidden=referenceActive; elements.referenceStage.hidden=!referenceActive;
   elements.referenceEmpty.hidden=Boolean(state.reference.image); elements.referenceCanvas.hidden=!state.reference.image;
@@ -130,23 +104,11 @@ function render(state) {
   if(!referenceActive)requestAnimationFrame(()=>renderBasicPreview(elements.canvas,state.palette.colors,state.selection.previewMode));
 }
 
-function usePreset(category,preset) {
-  const params={...DEFAULT_PARAMS,...preset.params}; const selection={...store.getState().selection,categoryId:category.id,presetId:preset.id,variantId:preset.variantId,undertoneId:preset.undertoneId};
-  const baseHex=preset.baseHex || baseForSelection(category.id,preset.variantId,preset.undertoneId); const entries=generateDetailedPalette({categoryId:category.id,baseHex,params});
-  store.setState((state)=>({...state,selection,params,interpretation:`${category.label} · ${preset.name}`,palette:{source:'preset',baseHex,entries,colors:entries.map(x=>x.hex),roles:entries.map(x=>x.role)}}));
-}
-
 function applyManualHex() {
   const hex=normalizeHex(elements.baseHex.value); elements.hexError.hidden=Boolean(hex); elements.baseHex.setAttribute('aria-invalid',String(!hex));
   if (!hex) return;
-  store.setState((state)=>{const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`${state.interpretation.split(' · HEX')[0]} · HEX ${hex}`};return {...next,palette:paletteFrom(next,hex),reference:{...state.reference,recentColors:addRecentColor(state.reference.recentColors,hex,'manual-hex')}};});
+  store.setState((state)=>{const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`Color base ${hex}`};return {...next,palette:paletteFrom(next,hex),reference:{...state.reference,recentColors:addRecentColor(state.reference.recentColors,hex,'manual-hex')}};});
   showToast(`Base aplicada: ${hex}`);
-}
-
-function interpretAndGenerate(text) {
-  const current=store.getState(); const result=interpretDescription(text,{categoryId:current.selection.categoryId,variantId:current.selection.variantId,undertoneId:current.selection.undertoneId,params:current.params});
-  const next={...current,description:text,interpretation:result.summary,params:result.params,selection:{...current.selection,categoryId:result.categoryId,presetId:'custom',variantId:result.variantId,undertoneId:result.undertoneId}};
-  next.palette=paletteFrom(next,result.baseHex,result.params); next.reference={...next.reference,recentColors:addRecentColor(next.reference.recentColors,result.baseHex,'description')}; store.setState(next); showToast('Descripción interpretada · 16 colores generados');
 }
 
 function openEditor(index) {
@@ -162,7 +124,7 @@ function applyEditedColor() {
 
 function useExtractedAsBase(hex, label='color extraído') {
   store.setState((state)=>{
-    const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`${state.interpretation.split(' · Base extraída')[0]} · Base extraída ${hex}`};
+    const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraído ${hex}`};
     return {...next,palette:paletteFrom(next,hex),reference:{...state.reference,extractedColors:state.reference.extractedColors.map((sample)=>sample.hex===hex?{...sample,role:'base'}:sample),recentColors:addRecentColor(state.reference.recentColors,hex,label)}};
   });
   showToast(`${hex} usado como base · paleta regenerada`);
@@ -203,18 +165,12 @@ function captureReferenceColor(event) {
   } catch(error) { showToast(error.message || 'No se pudo leer ese píxel.'); }
 }
 
-elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;const category=categoryById(button.dataset.category);usePreset(category,category.presets[0]);});
-elements.presetSelect.addEventListener('change',()=>{const category=categoryById(store.getState().selection.categoryId);if(elements.presetSelect.value!=='custom')usePreset(category,presetById(category,elements.presetSelect.value));});
-elements.variantSelect.addEventListener('change',()=>{store.setState((state)=>{const selection={...state.selection,presetId:'custom',variantId:elements.variantSelect.value};const baseHex=baseForSelection(selection.categoryId,selection.variantId,selection.undertoneId);const next={...state,selection,interpretation:`${categoryById(selection.categoryId).label} · ${variantById(categoryById(selection.categoryId),selection.variantId).name}`};return {...next,palette:paletteFrom(next,baseHex)};});});
-elements.undertoneSelect.addEventListener('change',()=>{store.setState((state)=>{const selection={...state.selection,presetId:'custom',undertoneId:elements.undertoneSelect.value};const baseHex=baseForSelection(selection.categoryId,selection.variantId,selection.undertoneId);const next={...state,selection,interpretation:`Piel natural · ${variantById(categoryById(selection.categoryId),selection.variantId).name} · ${undertoneById(categoryById(selection.categoryId),selection.undertoneId).name}`};return {...next,palette:paletteFrom(next,baseHex)};});});
+elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const next={...state,selection:{...state.selection,categoryId:button.dataset.category,presetId:'custom'}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
 elements.baseHex.addEventListener('input',()=>{const valid=Boolean(normalizeHex(elements.baseHex.value));elements.hexError.hidden=valid;elements.baseHex.setAttribute('aria-invalid',String(!valid));if(valid)elements.basePicker.value=normalizeHex(elements.baseHex.value);});
 elements.baseHex.addEventListener('keydown',(event)=>{if(event.key==='Enter')applyManualHex();}); elements.applyHex.addEventListener('click',applyManualHex);
 elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=elements.basePicker.value.toUpperCase();applyManualHex();});
 document.querySelector('.parameter-list').addEventListener('input',(event)=>{const input=event.target.closest('[data-param]');if(!input)return;store.setState((state)=>{const params={...state.params,[input.dataset.param]:Number(input.value)};const next={...state,selection:{...state.selection,presetId:'custom'},params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});});
-elements.generate.addEventListener('click',()=>{const state=store.getState();store.setState({...state,palette:paletteFrom(state)});showToast('Paleta detallada regenerada');});
-elements.interpretBtn.addEventListener('click',()=>interpretAndGenerate(elements.descriptionInput.value.trim()));
-elements.descriptionInput.addEventListener('keydown',(event)=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault();interpretAndGenerate(elements.descriptionInput.value.trim());}});
-document.querySelector('.example-chips').addEventListener('click',(event)=>{const button=event.target.closest('[data-example]');if(!button)return;elements.descriptionInput.value=button.dataset.example;interpretAndGenerate(button.dataset.example);});
+elements.resetParams.addEventListener('click',()=>{store.setState((state)=>{const params={...DEFAULT_PARAMS};const next={...state,params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});showToast('Ajustes restablecidos');});
 elements.previewTabs.addEventListener('click',(event)=>{const button=event.target.closest('[data-view]');if(!button)return;store.setState((state)=>({...state,selection:{...state.selection,previewMode:button.dataset.view}}));});
 elements.referenceFile.addEventListener('change',()=>{const file=elements.referenceFile.files?.[0];try{if(file)loadReferenceBlob(imageBlobFromFile(file),file.name);}catch(error){elements.imageStatus.textContent=error.message;showToast(error.message);}elements.referenceFile.value='';});
 elements.pasteImage.addEventListener('click',async()=>{try{const blob=await readImageFromClipboard();await loadReferenceBlob(blob,'imagen-pegada');}catch(error){elements.imageStatus.textContent=error.message;showToast(error.message);}});
@@ -235,5 +191,5 @@ elements.clearSamples.addEventListener('click',()=>{store.setState((state)=>({..
 elements.recentColors.addEventListener('click',async(event)=>{const item=event.target.closest('[data-recent-hex]');if(!item)return;const hex=item.dataset.recentHex;const action=event.target.closest('[data-recent-action]')?.dataset.recentAction;if(action==='copy'){await copyText(hex);showToast(`${hex} copiado`);}else if(action==='base')useExtractedAsBase(hex,'recent-base');});
 elements.copyAll.addEventListener('click',async()=>{const text=store.getState().palette.entries.map((item)=>`${item.role}: ${item.hex}`).join('\n');await copyText(text);showToast('Los 16 códigos HEX fueron copiados');});
 elements.download.addEventListener('click',()=>{downloadProjectStructure(store.getState());showToast('Proyecto Light Lab descargado');});
-document.addEventListener('studio-theme-change',()=>render(store.getState())); window.addEventListener('resize',()=>renderBasicPreview(elements.canvas,store.getState().palette.colors,store.getState().selection.previewMode),{passive:true});
-store.subscribe(render); render(store.getState()); window.LightLab={getState:store.getState,reset:store.reset,generate:interpretAndGenerate,useExtractedAsBase,phase:3};
+document.addEventListener('studio-theme-change',()=>render(store.getState())); window.addEventListener('resize',()=>{const state=store.getState();if(state.selection.previewMode!=='reference')renderBasicPreview(elements.canvas,state.palette.colors,state.selection.previewMode);},{passive:true});
+store.subscribe(render); render(store.getState()); window.LightLab={getState:store.getState,reset:store.reset,useExtractedAsBase,phase:3.1};
