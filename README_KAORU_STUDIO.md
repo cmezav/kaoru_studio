@@ -1,41 +1,41 @@
-# Kaoru's Studio — Fase 12 / UI 2.0
+﻿# Kaoru's Studio â€” Fase 12 / UI 2.0
 
-Esta versión migra la **capa de aplicación** a React + TypeScript sin reescribir de golpe los motores gráficos ya implementados.
+Esta versiÃ³n migra la **capa de aplicaciÃ³n** a React + TypeScript sin reescribir de golpe los motores grÃ¡ficos ya implementados.
 
-## Qué cambia
+## QuÃ© cambia
 
-- Nuevo título y shell general: **Kaoru's Studio**.
-- Navegación lateral unificada para:
+- Nuevo tÃ­tulo y shell general: **Kaoru's Studio**.
+- NavegaciÃ³n lateral unificada para:
   - Silueta Studio
   - Text Studio
   - Image Studio
-  - Galería
+  - GalerÃ­a
 - Tema claro/oscuro global compartido.
 - Atajos globales Alt+1, Alt+2, Alt+3 y Alt+4.
 - Los Studios dejan de mostrar barras superiores duplicadas cuando se ejecutan dentro de Kaoru's Studio.
-- Capa visual común con paneles, radios, sombras, espaciado y superficies consistentes.
-- `logo.png` se usa como branding global cuando está presente en la raíz del proyecto.
+- Capa visual comÃºn con paneles, radios, sombras, espaciado y superficies consistentes.
+- `logo.png` se usa como branding global cuando estÃ¡ presente en la raÃ­z del proyecto.
 
 ## Importante sobre logo.png
 
-El ZIP de Fase 11 que se utilizó como base referenciaba `logo.png`, pero el archivo no venía incluido. Por eso Kaoru's Studio está preparado para usarlo automáticamente sin inventar un reemplazo.
+El ZIP de Fase 11 que se utilizÃ³ como base referenciaba `logo.png`, pero el archivo no venÃ­a incluido. Por eso Kaoru's Studio estÃ¡ preparado para usarlo automÃ¡ticamente sin inventar un reemplazo.
 
-Coloca tu archivo real aquí:
+Coloca tu archivo real aquÃ­:
 
 ```text
 kaoru-studio/
-├── logo.png   <-- aquí
-├── index.html
-├── app/
-├── legacy/
-└── vendor/
+â”œâ”€â”€ logo.png   <-- aquÃ­
+â”œâ”€â”€ index.html
+â”œâ”€â”€ app/
+â”œâ”€â”€ legacy/
+â””â”€â”€ vendor/
 ```
 
 Si falta, el shell muestra temporalmente una `K` como fallback. En cuanto `logo.png` exista, se usa en el shell, favicon y barras de los Studios.
 
-## Cómo abrir
+## CÃ³mo abrir
 
-### Opción recomendada en Windows
+### OpciÃ³n recomendada en Windows
 
 Ejecuta:
 
@@ -43,55 +43,54 @@ Ejecuta:
 
 Esto levanta un servidor local para que IndexedDB, fuentes, blobs y proyectos se comporten de forma consistente.
 
-### Opción simple
+### OpciÃ³n simple
 
-También puedes abrir `index.html` directamente. Para trabajo habitual se recomienda el servidor local.
+TambiÃ©n puedes abrir `index.html` directamente. Para trabajo habitual se recomienda el servidor local.
 
 ## Arquitectura
 
 ```text
 Kaoru's Studio
-├── index.html                 Shell general
-├── app/
-│   ├── src/app.tsx            Fuente React + TypeScript
-│   ├── dist/app.js            Build listo para usar
-│   └── dist/app.css           Diseño global
-├── vendor/
-│   ├── react.production.min.js
-│   └── react-dom.production.min.js
-└── legacy/
-    ├── index.html             Motor Silueta existente
-    ├── text-studio/           Motor de Texto existente
-    ├── image-studio/          Motor de Imagen existente
-    ├── gallery/               Galería existente
-    └── shared/
-        ├── studioBridge.js
-        ├── studioGallery.js
-        └── kaoruLegacy.css    Reskin no destructivo
+â”œâ”€â”€ index.html                 Shell general
+â”œâ”€â”€ app/
+â”‚   â”œâ”€â”€ src/app.tsx            Fuente React + TypeScript
+â”‚   â”œâ”€â”€ dist/app.js            Build listo para usar
+â”‚   â””â”€â”€ dist/app.css           DiseÃ±o global
+â”œâ”€â”€ vendor/
+â”‚   â”œâ”€â”€ react.production.min.js
+â”‚   â””â”€â”€ react-dom.production.min.js
+â””â”€â”€ legacy/
+    â”œâ”€â”€ index.html             Motor Silueta existente
+    â”œâ”€â”€ text-studio/           Motor de Texto existente
+    â”œâ”€â”€ image-studio/          Motor de Imagen existente
+    â”œâ”€â”€ gallery/               GalerÃ­a existente
+    â””â”€â”€ shared/
+        â”œâ”€â”€ studioBridge.js
+        â”œâ”€â”€ studioGallery.js
+        â””â”€â”€ kaoruLegacy.css    Reskin no destructivo
 ```
 
-## Estrategia de migración
+## Estrategia de migraciÃ³n
 
 Los motores existentes se mantienen intactos en lo funcional y se encapsulan dentro del nuevo shell. Esto evita perder:
 
 - proyectos y plantillas;
 - IndexedDB;
-- importación de fuentes y ZIP;
+- importaciÃ³n de fuentes y ZIP;
 - capas e historial;
 - curvas/deformaciones;
 - filtros y ajustes;
 - exportaciones;
 - nombres SIL-/TXT-/IMG-;
-- recuperación de Image Studio;
-- galerías existentes.
+- recuperaciÃ³n de Image Studio;
+- galerÃ­as existentes.
 
-A partir de aquí cada Studio puede migrarse internamente a componentes React de forma progresiva sin tener que volver a diseñar toda la aplicación.
+A partir de aquÃ­ cada Studio puede migrarse internamente a componentes React de forma progresiva sin tener que volver a diseÃ±ar toda la aplicaciÃ³n.
 
 ## Nota de runtime React
 
-Para que este ZIP sea autocontenido y no dependa de una CDN, incluye un runtime React disponible localmente en el entorno de construcción. La UI del shell está escrita en TypeScript y el JavaScript compilado ya está incluido; no necesitas instalar nada para usar la versión entregada.
+Para que este ZIP sea autocontenido y no dependa de una CDN, incluye un runtime React disponible localmente en el entorno de construcciÃ³n. La UI del shell estÃ¡ escrita en TypeScript y el JavaScript compilado ya estÃ¡ incluido; no necesitas instalar nada para usar la versiÃ³n entregada.
 
 
-## Fase 14 — Image Studio Standalone
+## Fase 14 â€” Image Studio Standalone
 
-Image Studio ahora se abre como una aplicación independiente en `image-studio-standalone/` para evitar los problemas que aparecían al incrustarlo dentro del shell.

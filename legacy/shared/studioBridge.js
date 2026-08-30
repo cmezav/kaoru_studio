@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   'use strict';
 
   const THEME_KEY = 'siluetaStudioTheme';
@@ -39,7 +39,7 @@
   function studioUrl(studio) {
     if (window.KAORU_PATHS && window.KAORU_PATHS[studio]) return new URL(window.KAORU_PATHS[studio], location.href).href;
     const current = document.body && document.body.dataset.studio;
-    const folders = { text: 'text-studio', image: 'image-launcher', gallery: 'gallery' };
+    const folders = { text: 'text-studio', image: 'image-studio', gallery: 'gallery' };
     if (current === 'silhouette') {
       if (studio === 'silhouette') return new URL('./index.html', location.href).href;
       return new URL(`./${folders[studio] || 'gallery'}/index.html`, location.href).href;
