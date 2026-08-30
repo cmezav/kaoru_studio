@@ -179,13 +179,22 @@ function renderDropShadow(ctx, blockPath, layout, shadow) {
  */
 function renderInsetEffect(ctx, blockPath, layout, { offsetX = 0, offsetY = 0, blur, color, opacity }) {
   const FAR = Math.max(layout.totalWidth, layout.totalHeight) * 4 + 4000;
+  const matrix = ctx.getTransform();
+  // shadowOffset y shadowBlur se expresan en píxeles del lienzo. Convertimos
+  // el vector local para que el efecto siga alineado al rotar o exportar.
+  const transformedOffsetX = offsetX * matrix.a + offsetY * matrix.c;
+  const transformedOffsetY = offsetX * matrix.b + offsetY * matrix.d;
+  const scaleX = Math.hypot(matrix.a, matrix.b);
+  const scaleY = Math.hypot(matrix.c, matrix.d);
+  const effectScale = Math.max(0.0001, (scaleX + scaleY) / 2);
+
   ctx.save();
   ctx.clip(blockPath);
   ctx.globalAlpha *= opacity;
   ctx.shadowColor = color;
-  ctx.shadowBlur = blur;
-  ctx.shadowOffsetX = FAR + offsetX;
-  ctx.shadowOffsetY = offsetY;
+  ctx.shadowBlur = Math.max(0, blur) * effectScale;
+  ctx.shadowOffsetX = FAR * matrix.a + transformedOffsetX;
+  ctx.shadowOffsetY = FAR * matrix.b + transformedOffsetY;
   ctx.fillStyle = 'black';
   ctx.save();
   ctx.translate(-FAR, 0);
@@ -368,3 +377,4 @@ function clearWithCheckerboard(ctx, w, h, cell = 12) {
 }
 
 window.Renderer = { renderTextBlock, clearWithCheckerboard, buildBlockPath, applyBlockTransform, blockMatrix };
+
