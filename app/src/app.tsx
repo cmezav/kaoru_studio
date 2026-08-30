@@ -1,7 +1,7 @@
 declare const React: any;
 declare const ReactDOM: any;
 
-type StudioId = 'silhouette' | 'text' | 'image' | 'gallery';
+type StudioId = 'silhouette' | 'text' | 'image' | 'light' | 'gallery';
 type Theme = 'day' | 'night';
 type Studio = { id: StudioId; name: string; short: string; subtitle: string; src: string; accent: string; icon: any; hotkey: string };
 
@@ -15,6 +15,7 @@ function Icon(props:{name:string}) {
     silhouette:[h('path',{d:'M4 18c2.2-6 4.6-10 8-12 2.1 1.4 4.8 4.4 8 9-4.8-.1-8.4 1-11 4.2C7.4 20.5 5.6 20 4 18Z'}),h('path',{d:'M9 19.2c2.8-1.8 5.8-2.5 9-2.2'})],
     text:[h('path',{d:'M5 6V4h14v2'}),h('path',{d:'M12 4v16'}),h('path',{d:'M8 20h8'})],
     image:[h('rect',{x:3,y:4,width:18,height:16,rx:2}),h('circle',{cx:8.5,cy:9.2,r:1.5}),h('path',{d:'m5 17 4.2-4.2 3.1 3.1 2-2 4.7 3.1'})],
+    light:[h('circle',{cx:12,cy:12,r:3.2}),h('path',{d:'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1'}),h('path',{d:'M9.8 14.7h4.4M10.4 17h3.2'})],
     gallery:[h('rect',{x:4,y:4,width:6,height:6,rx:1}),h('rect',{x:14,y:4,width:6,height:6,rx:1}),h('rect',{x:4,y:14,width:6,height:6,rx:1}),h('rect',{x:14,y:14,width:6,height:6,rx:1})],
     moon:[h('path',{d:'M20.2 14.2A8 8 0 0 1 9.8 3.8 8.5 8.5 0 1 0 20.2 14.2Z'})],
     sun:[h('circle',{cx:12,cy:12,r:4}),h('path',{d:'M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41'})],
@@ -28,7 +29,8 @@ const studios:Studio[]=[
   {id:'silhouette',name:'Silueta Studio',short:'Silueta',subtitle:'Formas, máscaras y composiciones',src:'./legacy/index.html?embed=1',accent:'violet',icon:h(Icon,{name:'silhouette'}),hotkey:'Alt+1'},
   {id:'text',name:'Text Studio',short:'Texto',subtitle:'Tipografía y efectos avanzados',src:'./legacy/text-studio/index.html?embed=1',accent:'rose',icon:h(Icon,{name:'text'}),hotkey:'Alt+2'},
   {id:'image',name:'Image Studio',short:'Imagen',subtitle:'Ajustes, filtros y exportación',src:'./legacy/image-studio/index.html?embed=1',accent:'blue',icon:h(Icon,{name:'image'}),hotkey:'Alt+3'},
-  {id:'gallery',name:'Galería',short:'Galería',subtitle:'Diseños, proyectos y plantillas',src:'./legacy/gallery/index.html?embed=1',accent:'amber',icon:h(Icon,{name:'gallery'}),hotkey:'Alt+4'}
+  {id:'light',name:'Light Lab',short:'Light Lab',subtitle:'Paletas, luces, pieles y materiales',src:'./legacy/light-lab/index.html?embed=1',accent:'teal',icon:h(Icon,{name:'light'}),hotkey:'Alt+4'},
+  {id:'gallery',name:'Galería',short:'Galería',subtitle:'Diseños, proyectos y plantillas',src:'./legacy/gallery/index.html?embed=1',accent:'amber',icon:h(Icon,{name:'gallery'}),hotkey:'Alt+5'}
 ];
 
 function readTheme():Theme{try{return localStorage.getItem(THEME_KEY)==='night'?'night':'day'}catch(_){return'day'}}
@@ -70,7 +72,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   onHash(){const id=hashStudio();if(id!==this.state.active)this.navigate(id,false)}
   onKey(e:KeyboardEvent){
     if(!e.altKey||e.ctrlKey||e.metaKey||e.shiftKey)return;
-    const map:any={'1':'silhouette','2':'text','3':'image','4':'gallery'};
+    const map:any={'1':'silhouette','2':'text','3':'image','4':'light','5':'gallery'};
     if(!map[e.key])return;e.preventDefault();this.navigate(map[e.key]);
   }
   onMessage(e:MessageEvent){

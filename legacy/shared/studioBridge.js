@@ -39,7 +39,7 @@
   function studioUrl(studio) {
     if (window.KAORU_PATHS && window.KAORU_PATHS[studio]) return new URL(window.KAORU_PATHS[studio], location.href).href;
     const current = document.body && document.body.dataset.studio;
-    const folders = { text: 'text-studio', image: 'image-studio', gallery: 'gallery' };
+    const folders = { text: 'text-studio', image: 'image-studio', light: 'light-lab', gallery: 'gallery' };
     if (current === 'silhouette') {
       if (studio === 'silhouette') return new URL('./index.html', location.href).href;
       return new URL(`./${folders[studio] || 'gallery'}/index.html`, location.href).href;
@@ -52,7 +52,7 @@
   function installNavigationShortcuts() {
     document.addEventListener('keydown', (event) => {
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      const target = event.key === '1' ? 'silhouette' : event.key === '2' ? 'text' : event.key === '3' ? 'image' : event.key === '4' ? 'gallery' : null;
+      const target = event.key === '1' ? 'silhouette' : event.key === '2' ? 'text' : event.key === '3' ? 'image' : event.key === '4' ? 'light' : event.key === '5' ? 'gallery' : null;
       if (!target) return;
       event.preventDefault();
       if (EMBEDDED) {
@@ -96,4 +96,3 @@
 
   window.StudioBridge = { applyTheme, readTheme, studioUrl };
 }());
-

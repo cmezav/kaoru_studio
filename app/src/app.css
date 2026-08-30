@@ -11,6 +11,7 @@ html[data-theme=night]{--bg:#0e0c12;--surface:rgba(23,20,29,.92);--surface-solid
 
 
 .silhouette-shell-actions{display:flex;align-items:center;gap:7px}
+.accent-teal.is-active{color:#0f9f91}
 .shell-action{height:34px;border-radius:10px;padding:0 11px;border:1px solid var(--line);font-size:10px;font-weight:780;cursor:pointer;white-space:nowrap;background:var(--surface-solid);color:var(--text);transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease}
 .shell-action:hover{transform:translateY(-1px)}
 .shell-action-secondary:hover{border-color:rgba(124,58,237,.35);background:var(--surface-2)}

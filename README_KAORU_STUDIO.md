@@ -1,5 +1,17 @@
 ﻿# Kaoru's Studio â€” Fase 12 / UI 2.0
 
+## Light Lab — Fase 1 de 8
+
+Se agregó el nuevo Studio **Light Lab** con una arquitectura independiente en `legacy/light-lab/`.
+
+Esta primera fase incluye navegación con `Alt+4`, tema global, interfaz de escritorio en tres paneles, cuatro categorías, presets visuales de 12 colores, previews 2D básicas y una estructura portable `.lls.json`. La Galería ahora usa `Alt+5`.
+
+### Publicación en GitHub Pages
+
+Light Lab se publica junto con el resto de Kaoru’s Studio al subir estos archivos a la rama configurada en GitHub Pages. Se abre desde la barra lateral, con `Alt+4` o mediante `#light` en la URL publicada.
+
+---
+
 Esta versiÃ³n migra la **capa de aplicaciÃ³n** a React + TypeScript sin reescribir de golpe los motores grÃ¡ficos ya implementados.
 
 ## QuÃ© cambia
@@ -93,4 +105,3 @@ Para que este ZIP sea autocontenido y no dependa de una CDN, incluye un runtime 
 
 
 ## Fase 14 â€” Image Studio Standalone
-
