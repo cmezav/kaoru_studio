@@ -1,10 +1,10 @@
 ﻿# Kaoru's Studio â€” Fase 12 / UI 2.0
 
-## Light Lab — Fase 3.1 de 8
+## Light Lab — Fase 4 de 8
 
 Se agregó el nuevo Studio **Light Lab** con arquitectura independiente y un motor de generación detallada de color.
 
-La Fase 3.1 simplifica Light Lab: primero se elige directamente un color base y, de forma opcional, se ajustan calidez, saturación, contraste, sombras y luces. También permite subir, pegar o arrastrar imágenes, usar un cuentagotas de píxel exacto, asignar roles a las muestras y convertir cualquier color extraído en la nueva base. Las vistas Esfera, Banda, Plano e Imagen son independientes para que la referencia siempre se vea completa. Todas las paletas conservan 16 colores editables y copia inmediata de HEX. La navegación continúa en `Alt+4` y Galería usa `Alt+5`.
+La Fase 4 añade un sistema de iluminación con hasta ocho luces directas simultáneas. Cada luz tiene color HEX, intensidad, dirección, elevación, suavidad, activación, duplicado y eliminación independientes. Ambiente, sombra, rebote y rim light también aceptan cualquier HEX e intensidad. La paleta original puede compararse con los 16 colores resultantes y cualquier muestra extraída puede alimentar el color base o los componentes de iluminación. La navegación continúa en `Alt+4` y Galería usa `Alt+5`.
 
 ### Publicación en GitHub Pages
 

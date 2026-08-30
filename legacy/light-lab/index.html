@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio — Light Lab Fase 3.1</title>
+  <title>Kaoru's Studio — Light Lab Fase 4</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=15.0">
-  <link rel="stylesheet" href="./styles.css?v=3.1">
+  <link rel="stylesheet" href="./styles.css?v=4.0">
 </head>
 <body class="studio-light" data-studio="light">
   <header class="light-topbar">
@@ -25,9 +25,9 @@
   <main class="lab-shell">
     <aside class="panel controls-panel" aria-label="Configuración de Light Lab">
       <section class="lab-intro">
-        <div class="eyebrow">LIGHT LAB · FASE 3.1</div>
-        <h1>Tu color, una paleta completa</h1>
-        <p>Elige un color base. Las sombras y luces aparecen automáticamente.</p>
+        <div class="eyebrow">LIGHT LAB · FASE 4 DE 8</div>
+        <h1>Tu color bajo cualquier luz</h1>
+        <p>Elige la base y decide exactamente qué luces y sombras la afectan.</p>
       </section>
 
       <section class="control-section">
@@ -46,15 +46,32 @@
         <p class="base-help">Puedes escribir o pegar cualquier HEX. La paleta se actualiza al instante.</p>
       </section>
 
+      <section class="control-section lighting-section">
+        <div class="section-heading lighting-heading"><span>03</span><h2>Iluminación</h2><label class="master-switch" title="Activar iluminación"><input id="lightingEnabled" type="checkbox" checked><i></i></label></div>
+        <div id="lightingScenes" class="lighting-scenes" aria-label="Escenas rápidas"></div>
+        <div class="lights-title"><div><strong>Luces directas</strong><small id="activeLightsLabel">1 luz activa</small></div><button id="addLightBtn" type="button">＋ Añadir luz</button></div>
+        <div id="lightsList" class="lights-list"></div>
+
+        <details class="environment-controls" open>
+          <summary><strong>Ambiente y sombra</strong><span>⌄</span></summary>
+          <div id="environmentControls" class="lighting-components">
+            <label class="lighting-component" data-light-component="ambient"><span>Ambiente</span><input type="color" data-component-field="color" aria-label="Color ambiente"><input type="text" maxlength="7" data-component-hex aria-label="HEX ambiente"><output data-component-output>12</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad ambiente"></label>
+            <label class="lighting-component" data-light-component="shadow"><span>Sombra</span><input type="color" data-component-field="color" aria-label="Color de sombra"><input type="text" maxlength="7" data-component-hex aria-label="HEX de sombra"><output data-component-output>30</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad de sombra"></label>
+            <label class="lighting-component" data-light-component="bounce"><span>Rebote</span><input type="color" data-component-field="color" aria-label="Color de rebote"><input type="text" maxlength="7" data-component-hex aria-label="HEX de rebote"><output data-component-output>10</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad de rebote"></label>
+            <label class="lighting-component" data-light-component="rim"><span>Rim light</span><input type="color" data-component-field="color" aria-label="Color de rim light"><input type="text" maxlength="7" data-component-hex aria-label="HEX de rim light"><output data-component-output>0</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad de rim light"></label>
+          </div>
+        </details>
+      </section>
+
       <section class="control-section extraction-controls">
-        <div class="section-heading"><span>03</span><h2>O tómalo de una imagen</h2></div>
+        <div class="section-heading"><span>04</span><h2>O tómalo de una imagen</h2></div>
         <label class="upload-reference-button" for="referenceFileInput"><input id="referenceFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><span>＋</span><strong>Subir imagen</strong><small>PNG · JPG · WEBP · GIF</small></label>
         <div class="reference-actions"><button id="pasteImageBtn" type="button">Pegar imagen</button><button id="clearImageBtn" type="button" hidden>Quitar</button></div>
         <p id="imageStatus" class="field-help">También puedes usar Ctrl+V. La imagen se abrirá en el visor central.</p>
       </section>
 
       <details class="control-section advanced-controls">
-        <summary><span>04</span><span><strong>Ajustes opcionales</strong><small>Calidez, contraste, sombras y luces</small></span><b>⌄</b></summary>
+        <summary><span>05</span><span><strong>Ajustes de paleta</strong><small>Calidez, contraste y acabado</small></span><b>⌄</b></summary>
         <div class="parameter-list">
           <label><span>Calidez <output data-output="warmth">0</output></span><input data-param="warmth" type="range" min="-50" max="50" value="0"></label>
           <label><span>Saturación <output data-output="saturation">0</output></span><input data-param="saturation" type="range" min="-50" max="50" value="0"></label>
@@ -91,22 +108,30 @@
       <section class="palette-card">
         <div class="palette-heading">
           <div><span class="eyebrow">PALETA DETALLADA · 16 COLORES</span><h2 id="paletteName">Muy clara cálida</h2></div>
-          <span class="phase-note">Clic en un color = copiar HEX · ✎ = editar</span>
+          <div id="paletteViewTabs" class="palette-view-tabs" role="tablist" aria-label="Comparar iluminación">
+            <button type="button" data-palette-view="original" role="tab">Original</button>
+            <button type="button" class="is-active" data-palette-view="illuminated" role="tab">Iluminada</button>
+            <button type="button" data-palette-view="selected" role="tab">Luz elegida</button>
+            <button type="button" data-palette-view="compare" role="tab">Comparar</button>
+          </div>
         </div>
         <div id="swatchGrid" class="swatch-grid"></div>
+        <div id="comparisonGrid" class="comparison-grid" hidden></div>
+        <p class="palette-tip">Clic en cualquier color = copiar HEX · La edición individual está disponible en Original.</p>
       </section>
     </section>
 
     <aside class="panel status-panel" aria-label="Estado y edición">
-      <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">FLUJO SIMPLE</span><h2>Elige → ajusta → copia</h2></div></section>
+      <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">ILUMINACIÓN ACTIVA</span><h2>Color bajo varias luces</h2></div></section>
       <ol class="quick-guide">
         <li>Elige un color base.</li>
-        <li>Ajusta la paleta solo si lo necesitas.</li>
-        <li>Toca cualquier muestra para copiar su HEX.</li>
+        <li>Añade luces y cambia cada HEX.</li>
+        <li>Compara Original e Iluminada.</li>
       </ol>
       <dl class="state-list">
         <div><dt>Tipo</dt><dd id="stateCategory">Piel natural</dd></div>
         <div><dt>Base</dt><dd id="stateBase">#F1C9B6</dd></div>
+        <div><dt>Iluminación</dt><dd id="stateLighting">1 luz activa</dd></div>
         <div><dt>Paleta</dt><dd id="stateColors">16 colores</dd></div>
       </dl>
 
@@ -137,6 +162,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?v=15.0"></script>
-  <script type="module" src="./js/main.js?v=3.1"></script>
+  <script type="module" src="./js/main.js?v=4.0"></script>
 </body>
 </html>

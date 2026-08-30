@@ -1,7 +1,8 @@
 import { LIGHT_LAB_CATEGORIES } from './presets.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
+import { createDefaultLighting } from './lightingEngine.js';
 
-export const LIGHT_LAB_STATE_VERSION = 3;
+export const LIGHT_LAB_STATE_VERSION = 4;
 
 export function createInitialState() {
   const category = LIGHT_LAB_CATEGORIES[0];
@@ -16,9 +17,9 @@ export function createInitialState() {
     interpretation: `Color base ${preset.baseHex}`,
     params,
     palette: { source: 'base-color', baseHex: preset.baseHex, colors: entries.map((item) => item.hex), entries, roles: entries.map((item) => item.role) },
-    lighting: { enabled: false, key: null, ambient: null, bounce: null, rim: null },
+    lighting: createDefaultLighting(),
     reference: { image: null, extractedColors: [], recentColors: [] },
-    ui: { activePanel: 'category', phase: 3, selectedSwatchIndex: null, lastSamplePosition: null }
+    ui: { activePanel: 'category', phase: 4, selectedSwatchIndex: null, lastSamplePosition: null, paletteView: 'illuminated' }
   };
 }
 

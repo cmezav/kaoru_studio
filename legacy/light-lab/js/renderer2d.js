@@ -1,3 +1,5 @@
+import { dominantLightVector } from './lightingEngine.js';
+
 function colorAt(colors, index, fallback) { return colors[index] || colors[colors.length - 1] || fallback; }
 
 function roundedRect(ctx, x, y, width, height, radius) {
@@ -6,13 +8,15 @@ function roundedRect(ctx, x, y, width, height, radius) {
   ctx.roundRect(x, y, width, height, r);
 }
 
-function renderSphere(ctx, width, height, colors) {
+function renderSphere(ctx, width, height, colors, lightVector) {
   const radius = Math.min(width, height) * 0.29;
   const cx = width * 0.52;
   const cy = height * 0.49;
   ctx.save();
   ctx.shadowColor = 'rgba(10,12,20,.28)'; ctx.shadowBlur = radius * .18; ctx.shadowOffsetY = radius * .11;
-  const gradient = ctx.createRadialGradient(cx - radius * .38, cy - radius * .42, radius * .05, cx, cy, radius);
+  const highlightX = cx + lightVector.x * radius * .58;
+  const highlightY = cy + lightVector.y * radius * .58;
+  const gradient = ctx.createRadialGradient(highlightX, highlightY, radius * (.04 + lightVector.softness * .1), cx, cy, radius);
   gradient.addColorStop(0, colorAt(colors, 13, '#fff'));
   gradient.addColorStop(.2, colorAt(colors, 12, '#ddd'));
   gradient.addColorStop(.48, colorAt(colors, 6, '#999'));
@@ -26,9 +30,9 @@ function renderSphere(ctx, width, height, colors) {
   ctx.restore();
 }
 
-function renderBand(ctx, width, height, colors) {
+function renderBand(ctx, width, height, colors, lightVector) {
   const x = width * .13, y = height * .27, w = width * .74, h = height * .44;
-  const gradient = ctx.createLinearGradient(x, y, x + w, y);
+  const gradient = lightVector.x >= 0 ? ctx.createLinearGradient(x, y, x + w, y) : ctx.createLinearGradient(x + w, y, x, y);
   const indices = [0,3,6,12,9,1,13,11,4,0];
   indices.forEach((index, i) => gradient.addColorStop(i / (indices.length - 1), colorAt(colors, index, '#777')));
   ctx.save(); ctx.shadowColor = 'rgba(10,12,20,.3)'; ctx.shadowBlur = 32; ctx.shadowOffsetY = 18;
@@ -38,16 +42,17 @@ function renderBand(ctx, width, height, colors) {
   roundedRect(ctx, x, y, w, h, h / 2); ctx.fillStyle = shine; ctx.fill(); ctx.restore();
 }
 
-function renderPlane(ctx, width, height, colors) {
+function renderPlane(ctx, width, height, colors, lightVector) {
   const x = width * .13, y = height * .18, w = width * .74, h = height * .63;
-  const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
+  const startX = lightVector.x >= 0 ? x : x + w; const startY = lightVector.y >= 0 ? y : y + h;
+  const gradient = ctx.createLinearGradient(startX, startY, x + w - (startX - x), y + h - (startY - y));
   [0,3,6,10,13].forEach((index, i) => gradient.addColorStop(i / 4, colorAt(colors, index, '#777')));
   ctx.save(); ctx.translate(width / 2, height / 2); ctx.transform(1, -.12, -.18, .92, 0, 0);
   ctx.shadowColor = 'rgba(10,12,20,.28)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 18;
   roundedRect(ctx, -w / 2, -h / 2, w, h, 22); ctx.fillStyle = gradient; ctx.fill(); ctx.restore();
 }
 
-export function renderBasicPreview(canvas, colors, mode = 'sphere') {
+export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = null) {
   if (!canvas) return;
   const bounds = canvas.getBoundingClientRect();
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -60,7 +65,8 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere') {
   const backdrop = ctx.createRadialGradient(width * .5, height * .42, 0, width * .5, height * .5, width * .72);
   backdrop.addColorStop(0, dark ? '#292532' : '#ffffff'); backdrop.addColorStop(1, dark ? '#111016' : '#eeeaf2');
   ctx.fillStyle = backdrop; ctx.fillRect(0, 0, width, height);
-  if (mode === 'band') renderBand(ctx, width, height, colors);
-  else if (mode === 'plane') renderPlane(ctx, width, height, colors);
-  else renderSphere(ctx, width, height, colors);
+  const lightVector = dominantLightVector(lighting);
+  if (mode === 'band') renderBand(ctx, width, height, colors, lightVector);
+  else if (mode === 'plane') renderPlane(ctx, width, height, colors, lightVector);
+  else renderSphere(ctx, width, height, colors, lightVector);
 }
