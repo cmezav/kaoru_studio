@@ -1,0 +1,61 @@
+/* Fase 11 (adelanto): navegación y tema compartidos por Silueta / Text / Image Studio. */
+.studio-switcher{display:inline-flex;align-items:center;gap:4px;padding:3px;border:1px solid var(--line,#e7e7ec);background:rgba(127,127,140,.08);border-radius:10px;white-space:nowrap}
+.studio-link{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:31px;padding:0 9px;border-radius:7px;text-decoration:none;color:inherit;font-size:10px;font-weight:850;letter-spacing:.01em;border:1px solid transparent;transition:background .18s ease,border-color .18s ease,color .18s ease,transform .18s ease}
+.studio-link:hover{transform:translateY(-1px);background:rgba(124,58,237,.10);border-color:rgba(124,58,237,.24);color:var(--purple,var(--accent,#7c3aed))}
+.studio-link[aria-current="page"]{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.28);color:var(--purple,var(--accent,#7c3aed))}
+.studio-link kbd{font:700 8px/1 ui-monospace,SFMono-Regular,Consolas,monospace;opacity:.58;border:1px solid currentColor;border-radius:4px;padding:2px 3px}
+
+/* El mismo botón flotante que ya usa Silueta Studio. */
+.theme-fab{position:fixed;right:24px;bottom:24px;z-index:1000;width:58px;height:58px;border:1px solid rgba(124,58,237,.35);border-radius:50%;display:grid;place-items:center;padding:0;font-size:25px;line-height:1;color:#fff;background:linear-gradient(145deg,#8b5cf6,#6d28d9);box-shadow:0 10px 28px rgba(55,25,100,.24),inset 0 1px 0 rgba(255,255,255,.4);cursor:pointer;transition:transform 220ms ease,box-shadow 220ms ease,background 420ms ease,border-color 420ms ease}
+.theme-fab:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 14px 32px rgba(55,25,100,.32),inset 0 1px 0 rgba(255,255,255,.45)}
+.theme-fab:active{transform:translateY(0) scale(.96)}
+.theme-fab .theme-icon-wrap{position:relative;width:24px;height:24px;display:block}
+.theme-fab .theme-icon{position:absolute;top:50%;left:50%;width:22px;height:22px;transform:translate(-50%,-50%) scale(1) rotate(0deg);transition:opacity 300ms ease,transform 420ms cubic-bezier(.34,1.56,.64,1);opacity:1}
+.theme-fab .theme-icon-moon{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(-40deg)}
+.theme-fab.is-night .theme-icon-sun{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(40deg)}
+.theme-fab.is-night .theme-icon-moon{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0deg)}
+html[data-theme=night] .theme-fab{background:linear-gradient(145deg,#302344,#18131f);border-color:#7c5aa8;box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 0 1px rgba(167,139,250,.08),inset 0 1px 0 rgba(255,255,255,.1)}
+
+/* Tema noche para Text Studio. Está aislado por body.studio-text. */
+html[data-theme=night] body.studio-text{--purple:#a78bfa;--purple2:#c4b5fd;--ink:#f4f1ff;--muted:#aaa5b9;--line:#383341;--panel:#17151e;background:#08070b;color:#f4f1ff;color-scheme:dark}
+html[data-theme=night] body.studio-text .topbar{background:#111016;border-color:#302c3b;box-shadow:0 4px 20px rgba(0,0,0,.30)}
+html[data-theme=night] body.studio-text .panel,
+html[data-theme=night] body.studio-text .layer-item,
+html[data-theme=night] body.studio-text .text-layer-item,
+html[data-theme=night] body.studio-text .effect-box,
+html[data-theme=night] body.studio-text .gradient-editor,
+html[data-theme=night] body.studio-text .fill-layer-item{background:#17151e;color:#f4f1ff;border-color:#383341}
+html[data-theme=night] body.studio-text .preview-area{background:#0d0c11}
+html[data-theme=night] body.studio-text .upload-zone,
+html[data-theme=night] body.studio-text .font-family-group,
+html[data-theme=night] body.studio-text .import-status,
+html[data-theme=night] body.studio-text .gallery-empty{background:#121018;border-color:#383341;color:#d0cad9}
+html[data-theme=night] body.studio-text .segmented,
+html[data-theme=night] body.studio-text .color-fill-tabs,
+html[data-theme=night] body.studio-text .tab-nav{background:#211e29;border-color:#383341}
+html[data-theme=night] body.studio-text .seg,
+html[data-theme=night] body.studio-text .color-fill-tab,
+html[data-theme=night] body.studio-text .control-tab{color:#aaa5b9}
+html[data-theme=night] body.studio-text .seg.active,
+html[data-theme=night] body.studio-text .color-fill-tab.active,
+html[data-theme=night] body.studio-text .control-tab.active{background:#30283e;color:#c4b5fd}
+html[data-theme=night] body.studio-text input:not([type="range"]):not([type="color"]),
+html[data-theme=night] body.studio-text textarea,
+html[data-theme=night] body.studio-text select{background:#100e15!important;color:#f4f1ff!important;border-color:#4a4355!important}
+html[data-theme=night] body.studio-text .btn,
+html[data-theme=night] body.studio-text .mini-btn,
+html[data-theme=night] body.studio-text .eyedropper-btn,
+html[data-theme=night] body.studio-text .icon-btn{background:#211e29;color:#eeeaf6;border-color:#4a4355}
+html[data-theme=night] body.studio-text .btn.primary{background:#7c3aed;color:#fff;border-color:#7c3aed}
+html[data-theme=night] body.studio-text .mini-btn:hover,
+html[data-theme=night] body.studio-text .eyedropper-btn:hover{background:#2b2338;color:#c4b5fd;border-color:#7254a8}
+html[data-theme=night] body.studio-text .phase-badge{background:#271d37;border-color:#5c477f;color:#c4b5fd}
+html[data-theme=night] body.studio-text .back-link,
+html[data-theme=night] body.studio-text .field-label,
+html[data-theme=night] body.studio-text .section-title small,
+html[data-theme=night] body.studio-text .range-labels,
+html[data-theme=night] body.studio-text .preview-head span{color:#aaa5b9}
+
+@media(max-width:1050px){.studio-link kbd{display:none}.studio-link{padding:0 7px}.studio-switcher{gap:2px}}
+@media(max-width:760px){.theme-fab{width:52px;height:52px;right:16px;bottom:16px}.studio-link{font-size:0;min-width:30px;padding:0 7px}.studio-link::first-letter{font-size:12px}.studio-link .studio-link-label{display:none}}
+@media(prefers-reduced-motion:reduce){.theme-fab,.theme-fab .theme-icon,.studio-link{transition:none!important}}

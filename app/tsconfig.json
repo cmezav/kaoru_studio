@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2018",
+    "module": "none",
+    "jsx": "react",
+    "outFile": "./dist/app.js",
+    "strict": false,
+    "skipLibCheck": true,
+    "lib": ["DOM", "ES2018"]
+  },
+  "files": ["./src/app.tsx"]
+}

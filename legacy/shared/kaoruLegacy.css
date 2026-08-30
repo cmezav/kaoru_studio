@@ -1,0 +1,81 @@
+/* Kaoru's Studio UI 2.0 — capa visual no destructiva para los motores existentes. */
+:root{
+  --kaoru-radius:14px;
+  --kaoru-radius-sm:10px;
+  --kaoru-shadow:0 12px 34px rgba(42,31,58,.07);
+  --kaoru-font:Inter,"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+}
+body{font-family:var(--kaoru-font)!important;letter-spacing:-.005em}
+body.studio-silhouette,body.studio-text,body.studio-image,body.studio-gallery{background:#f7f5f9!important}
+html[data-theme=night] body.studio-silhouette,
+html[data-theme=night] body.studio-text,
+html[data-theme=night] body.studio-image,
+html[data-theme=night] body.studio-gallery{background:#100e14!important}
+
+/* Superficies más limpias y consistentes */
+.panel,.preview-panel,.control-panel details,.intro-card,.toolbar-card,.gallery-card,.new-card,.preview-wrap,.stage-card{
+  border-radius:var(--kaoru-radius)!important;
+  box-shadow:var(--kaoru-shadow)!important;
+}
+.panel,.preview-panel,.intro-card,.toolbar-card,.new-card{border-color:rgba(77,63,97,.11)!important}
+html[data-theme=night] .panel,html[data-theme=night] .preview-panel,html[data-theme=night] .intro-card,html[data-theme=night] .toolbar-card,html[data-theme=night] .new-card{border-color:rgba(231,218,248,.11)!important}
+
+button,.btn,.mini-btn,.primary-button,.secondary-button,.icon-button,.icon-btn,.eyedropper-btn,.new-card{transition:transform .16s ease,background .16s ease,border-color .16s ease,box-shadow .16s ease,color .16s ease}
+button:hover:not(:disabled),.btn:hover:not(:disabled),.mini-btn:hover:not(:disabled),.primary-button:hover:not(:disabled),.secondary-button:hover:not(:disabled),.icon-button:hover:not(:disabled),.icon-btn:hover:not(:disabled){transform:translateY(-1px)}
+input:not([type=range]):not([type=color]),textarea,select{border-radius:9px!important}
+input[type=range]{accent-color:#7c3aed}
+details>summary{font-weight:760!important;letter-spacing:-.01em}
+
+/* Branding standalone. Dentro del shell la barra superior se oculta. */
+.kaoru-brand-logo{width:30px;height:30px;object-fit:contain;border-radius:8px;flex:0 0 auto}
+.topbar .brand{gap:9px!important}.topbar{backdrop-filter:blur(20px)}
+
+/* Modo embebido: Kaoru's Studio aporta navegación, título y tema. */
+html.kaoru-embedded,html.kaoru-embedded body{height:100%;margin:0}
+html.kaoru-embedded body>.topbar,
+html.kaoru-embedded body>.theme-fab{display:none!important}
+html.kaoru-embedded body.studio-silhouette .hero{display:none!important}
+html.kaoru-embedded body.studio-silhouette .workspace{max-width:none!important;padding:16px 16px 30px!important}
+html.kaoru-embedded body.studio-text .workspace{max-width:none!important;padding:16px!important}
+html.kaoru-embedded body.studio-image{display:grid!important;grid-template-rows:minmax(0,1fr)!important;height:100%!important;overflow:hidden!important}
+html.kaoru-embedded body.studio-image .app-shell{grid-row:1/-1!important;height:100%!important;min-height:0!important}
+html.kaoru-embedded body.studio-image .control-panel,
+html.kaoru-embedded body.studio-image .stage-column,
+html.kaoru-embedded body.studio-image .canvas-viewport{min-height:0!important;height:auto!important}
+html.kaoru-embedded body.studio-gallery .gallery-shell{max-width:none!important;padding:18px 20px 40px!important}
+html.kaoru-embedded body.studio-gallery .hero{margin-top:0!important}
+
+/* Silueta: más sensación de aplicación */
+body.studio-silhouette .editor-grid{gap:14px!important}
+body.studio-silhouette .panel{box-shadow:0 10px 34px rgba(35,25,49,.055)!important}
+body.studio-silhouette .controls{padding:16px!important}
+body.studio-silhouette .panel-section{margin-bottom:16px!important;padding-bottom:16px!important}
+body.studio-silhouette .section-title .num{border-radius:8px!important}
+body.studio-silhouette .preview-area{border-radius:13px!important}
+body.studio-silhouette .preview-head{padding-inline:15px!important}
+
+/* Text Studio */
+body.studio-text .editor-grid{gap:14px!important}
+body.studio-text .panel{box-shadow:0 10px 34px rgba(35,25,49,.055)!important}
+body.studio-text .controls{padding:16px!important}
+body.studio-text .panel-section{padding-bottom:16px!important;margin-bottom:16px!important}
+body.studio-text .preview-area{border-radius:13px!important}
+
+/* Image Studio: mantiene la lógica y solo refina superficies. */
+body.studio-image .app-shell{gap:14px!important;padding:14px!important}
+body.studio-image .control-panel{border-radius:15px!important}
+body.studio-image .intro-card{box-shadow:none!important}
+body.studio-image .preview-panel{overflow:hidden!important}
+body.studio-image details{border-radius:12px!important}
+body.studio-image .drop-zone{border-radius:12px!important}
+
+/* Galería */
+body.studio-gallery .gallery-grid{gap:14px!important}
+body.studio-gallery .toolbar-card{padding:12px!important}
+body.studio-gallery .new-card{box-shadow:none!important}
+
+@media(max-width:900px){
+  html.kaoru-embedded body.studio-silhouette .workspace,
+  html.kaoru-embedded body.studio-text .workspace{padding:10px!important}
+  html.kaoru-embedded body.studio-gallery .gallery-shell{padding:12px!important}
+}

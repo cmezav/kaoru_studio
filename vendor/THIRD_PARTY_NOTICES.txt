@@ -1,0 +1,4 @@
+React 16.0.0 and ReactDOM 16.0.1
+Copyright (c) Facebook, Inc. and its affiliates.
+License: MIT
+Source runtime files are bundled locally so Kaoru's Studio can launch without a CDN.

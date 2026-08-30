@@ -1,0 +1,718 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}</script>
+<title>Kaoru's Studio — Text Studio</title>
+<link rel="icon" href="../../logo.png" type="image/png" />
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="../shared/studioBridge.css?v=11.0">
+<script>if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
+<link rel="stylesheet" href="../shared/kaoruLegacy.css?v=12.0">
+</head>
+<body class="studio-text" data-studio="text">
+<header class="topbar">
+  <div class="brand"><img class="kaoru-brand-logo" src="../../logo.png" alt="" onerror="this.hidden=true">
+    <div class="brand-mark">Tt</div>
+    <span class="brand-name">Text Effects Studio</span>
+    <span class="phase-badge">Fase 11 — Galería · Proyectos · Dark mode global</span>
+  </div>
+  <div class="topbar-actions">
+    <nav class="studio-switcher" aria-label="Cambiar de Studio">
+      <a class="studio-link" data-studio-link="silhouette" href="../index.html" title="Silueta Studio · Alt+1">◆ <span class="studio-link-label">Silueta</span><kbd>Alt+1</kbd></a>
+      <a class="studio-link" data-studio-link="text" href="./index.html" title="Text Studio · Alt+2">Tt <span class="studio-link-label">Texto</span><kbd>Alt+2</kbd></a>
+      <a class="studio-link" data-studio-link="image" href="../image-studio/index.html" title="Image Studio · Alt+3">◫ <span class="studio-link-label">Imagen</span><kbd>Alt+3</kbd></a>
+      <a class="studio-link" data-studio-link="gallery" href="../gallery/index.html" title="Galería · Alt+4">▦ <span class="studio-link-label">Galería</span><kbd>Alt+4</kbd></a>
+    </nav>
+    <button class="btn top-action" id="undoBtn" disabled title="Ctrl + Z">↶ Deshacer</button>
+    <button class="btn top-action" id="redoBtn" disabled title="Ctrl + Shift + Z">↷ Rehacer</button>
+    <button class="btn top-action" id="duplicateTextBtn" title="Ctrl + D">⧉ Duplicar texto</button>
+  </div>
+</header>
+
+<main class="workspace">
+  <div class="editor-grid">
+
+    <!-- ============ PANEL IZQUIERDO: CONTROLES ============ -->
+    <div class="panel controls">
+
+      <!-- 1. Fuentes -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">1</span>
+          <div>
+            <strong>Importar fuente</strong>
+            <small>.ttf, .otf, .woff, .woff2 o un .zip descargado de Google Fonts / DaFont (se buscan fuentes en todas las subcarpetas).</small>
+          </div>
+        </div>
+
+        <div class="upload-zone" id="fontDrop">
+          <input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2,.zip" multiple>
+          <div class="upload-icon">＋</div>
+          <strong>Arrastra fuentes o un .zip aquí</strong>
+          <small>o haz clic para seleccionar archivos</small>
+        </div>
+
+        <div id="fontImportStatus" class="import-status hidden"></div>
+        <div id="fontList" class="font-list"></div>
+      </section>
+
+      <!-- 2. Texto -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">2</span>
+          <div>
+            <strong>Texto</strong>
+            <small>Escribe una o varias líneas y elige qué fuente importada usar.</small>
+          </div>
+        </div>
+
+        <textarea id="textContent" class="text-input" rows="3" placeholder="Escribe tu texto…"></textarea>
+
+        <label class="field-label">Conversión de mayúsculas/minúsculas</label>
+        <div class="case-actions">
+          <button class="mini-btn" data-case="upper">MAYÚSCULAS</button>
+          <button class="mini-btn" data-case="lower">minúsculas</button>
+          <button class="mini-btn" data-case="title">Primera Letra De Cada Palabra</button>
+          <button class="mini-btn" data-case="sentence">Primera letra de la oración</button>
+          <button class="mini-btn" data-case="toggle">aLTERNAR mAYÚSCULAS</button>
+        </div>
+
+        <label class="field-label">Fuente activa</label>
+        <select id="fontSelect" class="select-input"></select>
+
+        <div class="range-row">
+          <span>24</span>
+          <input type="range" id="sizeRange" min="8" max="480" value="96">
+          <span class="range-value" id="sizeValue">96px</span>
+        </div>
+        <div class="range-labels"><span>Tamaño</span></div>
+
+        <div class="range-row">
+          <span>-40</span>
+          <input type="range" id="trackingRange" min="-40" max="120" value="0">
+          <span class="range-value" id="trackingValue">0px</span>
+        </div>
+        <div class="range-labels"><span>Interletrado (tracking)</span></div>
+
+        <div class="range-row">
+          <span>0.6</span>
+          <input type="range" id="leadingRange" min="0.6" max="2.5" step="0.01" value="1.05">
+          <span class="range-value" id="leadingValue">1.05×</span>
+        </div>
+        <div class="range-labels"><span>Interlineado (leading)</span></div>
+
+        <label class="field-label">Alineación</label>
+        <div class="segmented">
+          <button class="seg active" data-align="left">Izquierda</button>
+          <button class="seg" data-align="center">Centro</button>
+          <button class="seg" data-align="right">Derecha</button>
+        </div>
+
+      </section>
+
+      <!-- 3. Relleno -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">3</span>
+          <div>
+            <strong>Relleno</strong>
+            <small>Sólido, degradado con múltiples puntos y dirección, o relleno con una o varias imágenes.</small>
+          </div>
+        </div>
+
+        <div class="color-fill-tabs">
+          <button class="color-fill-tab active" data-fill="solid">Sólido</button>
+          <button class="color-fill-tab" data-fill="gradient">Degradado</button>
+          <button class="color-fill-tab" data-fill="image">Imagen</button>
+        </div>
+
+        <!-- Sólido -->
+        <div class="mode-block" id="fillPanelSolid">
+          <div class="color-picker-row">
+            <input type="color" id="fillColor" value="#7c3aed" class="color-mini">
+            <button class="eyedropper-btn" id="eyedropperSolid">✛ Cuentagotas</button>
+          </div>
+        </div>
+
+        <!-- Degradado -->
+        <div class="mode-block hidden" id="fillPanelGradient">
+          <div class="gradient-editor">
+            <div class="gradient-preview" id="gradientPreview"></div>
+            <div class="gradient-track" id="gradientTrack"></div>
+
+            <div class="range-row">
+              <span>0°</span>
+              <input type="range" id="gradientAngle" min="0" max="360" value="90">
+              <span class="range-value" id="gradientAngleValue">90°</span>
+            </div>
+            <div class="range-labels"><span>Dirección del degradado</span></div>
+
+            <div class="gradient-actions">
+              <button class="mini-btn" id="addStopBtn">＋ Punto</button>
+              <button class="mini-btn" id="removeStopBtn">🗑 Quitar punto</button>
+            </div>
+
+            <div class="color-picker-row" style="margin-top:8px">
+              <input type="color" id="stopColor" value="#7c3aed" class="color-mini">
+              <button class="eyedropper-btn" id="eyedropperStop">✛ Cuentagotas</button>
+            </div>
+            <div class="range-row">
+              <span>0%</span>
+              <input type="range" id="stopAlpha" min="0" max="100" value="100">
+              <span class="range-value" id="stopAlphaValue">100%</span>
+            </div>
+            <div class="range-labels"><span>Transparencia del punto seleccionado</span></div>
+
+            <div class="gradient-presets" id="gradientPresets"></div>
+          </div>
+        </div>
+
+        <!-- Imagen -->
+        <div class="mode-block hidden" id="fillPanelImage">
+          <div class="upload-zone template-base-upload" id="imageFillDrop">
+            <input type="file" id="imageFillInput" accept="image/*" multiple>
+            <div class="upload-icon">🖼</div>
+            <strong>Arrastra imágenes aquí</strong>
+            <small>Puedes añadir varias; cada una se puede mover/escalar/rotar por separado dentro del texto</small>
+          </div>
+          <div class="fill-layers-list" id="imageFillList"></div>
+
+          <div id="imageFillControls" class="hidden" style="margin-top:10px">
+            <div class="layer-grid">
+              <label>Pos X<input type="range" id="imgX" min="-400" max="1200" value="0"></label>
+              <label>Pos Y<input type="range" id="imgY" min="-400" max="1200" value="0"></label>
+              <label>Escala<input type="range" id="imgScale" min="0.05" max="4" step="0.01" value="1"></label>
+              <label>Rotación<input type="range" id="imgRotation" min="-180" max="180" value="0"></label>
+            </div>
+            <div class="range-row">
+              <span>0%</span>
+              <input type="range" id="imgOpacity" min="0" max="100" value="100">
+              <span class="range-value" id="imgOpacityValue">100%</span>
+            </div>
+            <div class="range-labels"><span>Opacidad de la imagen seleccionada</span></div>
+          </div>
+        </div>
+
+        <div class="range-row" style="margin-top:12px">
+          <span>0%</span>
+          <input type="range" id="opacityRange" min="0" max="100" value="100">
+          <span class="range-value" id="opacityValue">100%</span>
+        </div>
+        <div class="range-labels"><span>Opacidad general del relleno</span></div>
+      </section>
+
+      <!-- 4. Contorno -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">4</span>
+          <div>
+            <strong>Contorno</strong>
+            <small>Añade uno o varios contornos apilados (como anillos), cada uno sólido o degradado, con su propio grosor y opacidad.</small>
+          </div>
+        </div>
+        <div class="layer-list" id="strokeList"></div>
+        <button class="btn ghost add-layer" id="addStrokeBtn">＋ Añadir contorno</button>
+      </section>
+
+      <!-- 5. Sombra -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">5</span>
+          <div>
+            <strong>Sombra</strong>
+            <small>Sombra proyectada, sólida o con degradado lineal/radial propio (independiente del relleno y el contorno).</small>
+          </div>
+        </div>
+        <label class="check-row"><input type="checkbox" id="shadowEnabled"> Activar sombra</label>
+        <div id="shadowControls" class="hidden">
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Desplaz. X</span><strong id="shadowXValue">12px</strong></div><input type="range" id="shadowX" min="-80" max="80" value="12"></div>
+            <div><div class="control-label-row"><span>Desplaz. Y</span><strong id="shadowYValue">12px</strong></div><input type="range" id="shadowY" min="-80" max="80" value="12"></div>
+          </div>
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Desenfoque</span><strong id="shadowBlurValue">14px</strong></div><input type="range" id="shadowBlur" min="0" max="80" value="14"></div>
+            <div><div class="control-label-row"><span>Expansión</span><strong id="shadowSpreadValue">0px</strong></div><input type="range" id="shadowSpread" min="0" max="40" value="0"></div>
+          </div>
+          <div class="range-row">
+            <span>0%</span><input type="range" id="shadowOpacity" min="0" max="100" value="55"><span class="range-value" id="shadowOpacityValue">55%</span>
+          </div>
+          <div class="segmented">
+            <button class="seg active" data-shadowfill="solid">Sólido</button>
+            <button class="seg" data-shadowfill="gradient">Degradado</button>
+          </div>
+          <div id="shadowSolidControls"><input type="color" id="shadowColor" value="#000000" class="color-mini"></div>
+          <div id="shadowGradientControls" class="hidden">
+            <div class="segmented">
+              <button class="seg active" data-gradtype="linear">Lineal</button>
+              <button class="seg" data-gradtype="radial">Radial</button>
+            </div>
+            <div id="shadowGradientEditor" class="inline-gradient-editor"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. Sombra interna y brillo -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">6</span>
+          <div>
+            <strong>Sombra interna y brillo</strong>
+            <small>Sombra dentro de las letras, glow exterior e interior.</small>
+          </div>
+        </div>
+
+        <label class="check-row"><input type="checkbox" id="innerShadowEnabled"> Sombra interna</label>
+        <div id="innerShadowControls" class="hidden">
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Profundidad</span><strong id="innerDepthValue">1.0×</strong></div><input type="range" id="innerDepth" min="0" max="3" step="0.1" value="1"></div>
+            <div><div class="control-label-row"><span>Desenfoque</span><strong id="innerBlurValue">10px</strong></div><input type="range" id="innerBlur" min="0" max="60" value="10"></div>
+          </div>
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>X</span><strong id="innerXValue">6px</strong></div><input type="range" id="innerX" min="-40" max="40" value="6"></div>
+            <div><div class="control-label-row"><span>Y</span><strong id="innerYValue">6px</strong></div><input type="range" id="innerY" min="-40" max="40" value="6"></div>
+          </div>
+          <div class="color-picker-row">
+            <input type="color" id="innerColor" value="#000000" class="color-mini">
+            <input type="range" id="innerOpacity" min="0" max="100" value="60">
+          </div>
+        </div>
+
+        <label class="check-row" style="margin-top:12px"><input type="checkbox" id="glowEnabled"> Glow exterior</label>
+        <div id="glowControls" class="hidden">
+          <div class="color-picker-row">
+            <input type="color" id="glowColor" value="#7c3aed" class="color-mini">
+            <input type="range" id="glowOpacity" min="0" max="100" value="75">
+          </div>
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Radio</span><strong id="glowBlurValue">24px</strong></div><input type="range" id="glowBlur" min="0" max="100" value="24"></div>
+            <div><div class="control-label-row"><span>Intensidad</span><strong id="glowIntensityValue">2</strong></div><input type="range" id="glowIntensity" min="1" max="6" value="2"></div>
+          </div>
+        </div>
+
+        <label class="check-row" style="margin-top:12px"><input type="checkbox" id="innerGlowEnabled"> Glow interior</label>
+        <div id="innerGlowControls" class="hidden">
+          <div class="color-picker-row">
+            <input type="color" id="innerGlowColor" value="#ffffff" class="color-mini">
+            <input type="range" id="innerGlowOpacity" min="0" max="100" value="60">
+          </div>
+          <div class="range-row">
+            <span>0</span><input type="range" id="innerGlowBlur" min="0" max="60" value="12"><span class="range-value" id="innerGlowBlurValue">12px</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. Bisel y extrusión 3D -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">7</span>
+          <div>
+            <strong>Bisel y extrusión 3D</strong>
+            <small>Relieve con luz direccional (bisel) y un lateral apilado tipo 3D (extrusión), independientes entre sí.</small>
+          </div>
+        </div>
+
+        <label class="check-row"><input type="checkbox" id="bevelEnabled"> Bisel</label>
+        <div id="bevelControls" class="hidden">
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Ángulo de luz</span><strong id="bevelAngleValue">135°</strong></div><input type="range" id="bevelAngle" min="-180" max="180" value="135"></div>
+            <div><div class="control-label-row"><span>Tamaño</span><strong id="bevelSizeValue">6px</strong></div><input type="range" id="bevelSize" min="0" max="30" value="6"></div>
+          </div>
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Suavizado</span><strong id="bevelSoftnessValue">4px</strong></div><input type="range" id="bevelSoftness" min="0" max="20" value="4"></div>
+            <div><div class="control-label-row"><span>Intensidad</span><strong id="bevelStrengthValue">60%</strong></div><input type="range" id="bevelStrength" min="0" max="100" value="60"></div>
+          </div>
+          <div class="color-picker-row" style="margin-top:8px">
+            <input type="color" id="bevelHighlightColor" value="#ffffff" class="color-mini">
+            <input type="color" id="bevelShadowColor" value="#000000" class="color-mini">
+          </div>
+          <div class="range-labels"><span>Luz</span><span>Sombra</span></div>
+        </div>
+
+        <label class="check-row" style="margin-top:12px"><input type="checkbox" id="extrudeEnabled"> Extrusión / 3D</label>
+        <div id="extrudeControls" class="hidden">
+          <div class="independent-size">
+            <div><div class="control-label-row"><span>Profundidad</span><strong id="extrudeDepthValue">30px</strong></div><input type="range" id="extrudeDepth" min="0" max="150" value="30"></div>
+            <div><div class="control-label-row"><span>Ángulo</span><strong id="extrudeAngleValue">45°</strong></div><input type="range" id="extrudeAngle" min="-180" max="180" value="45"></div>
+          </div>
+          <div><div class="control-label-row"><span>Suavidad de capas</span><strong id="extrudeStepValue">2px</strong></div><input type="range" id="extrudeStep" min="1" max="6" value="2"></div>
+
+          <div class="segmented" style="margin-top:10px">
+            <button class="seg active" data-extrudefill="solid">Sólido</button>
+            <button class="seg" data-extrudefill="gradient">Degradado</button>
+          </div>
+          <div id="extrudeSolidControls" style="margin-top:8px"><input type="color" id="extrudeColor" value="#4b1fa8" class="color-mini"></div>
+          <div id="extrudeGradientControls" class="hidden" style="margin-top:8px">
+            <div class="color-picker-row">
+              <input type="color" id="extrudeColorNear" value="#7c3aed" class="color-mini">
+              <input type="color" id="extrudeColorFar" value="#1a0a3d" class="color-mini">
+            </div>
+            <div class="range-labels"><span>Cerca</span><span>Lejos</span></div>
+          </div>
+
+          <label class="check-row" style="margin-top:12px"><input type="checkbox" id="extrudeEdgeEnabled" checked> Borde de definición</label>
+          <div class="color-picker-row" style="margin-top:8px">
+            <input type="color" id="extrudeEdgeColor" value="#000000" class="color-mini">
+            <input type="range" id="extrudeEdgeOpacity" min="0" max="100" value="35">
+          </div>
+        </div>
+      </section>
+
+      <!-- 8. Transformaciones -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">8</span>
+          <div>
+            <strong>Transformar</strong>
+            <small>Rota, escala e inclina el bloque de texto. También puedes arrastrarlo directamente sobre el lienzo.</small>
+          </div>
+        </div>
+
+        <div class="range-row rotation-row">
+          <span>-180</span>
+          <input type="range" id="rotationRange" min="-180" max="180" value="0">
+          <input type="number" class="number-input rotation-number" id="rotationNumber" min="-180" max="180" value="0" aria-label="Rotación en grados">
+        </div>
+        <div class="range-labels"><span>Rotación general</span><strong class="rotation-readout" id="rotationValue">0°</strong></div>
+
+        <div class="independent-size">
+          <div>
+            <div class="control-label-row"><span>Escala X</span><strong id="scaleXValue">1.00×</strong></div>
+            <input type="range" id="scaleXRange" min="0.1" max="4" step="0.01" value="1">
+          </div>
+          <div>
+            <div class="control-label-row"><span>Escala Y</span><strong id="scaleYValue">1.00×</strong></div>
+            <input type="range" id="scaleYRange" min="0.1" max="4" step="0.01" value="1">
+          </div>
+        </div>
+        <label class="check-row"><input type="checkbox" id="linkScale" checked> Mantener proporción</label>
+
+        <div class="independent-size">
+          <div>
+            <div class="control-label-row"><span>Inclinar X</span><strong id="skewXValue">0°</strong></div>
+            <input type="range" id="skewXRange" min="-60" max="60" value="0">
+          </div>
+          <div>
+            <div class="control-label-row"><span>Inclinar Y</span><strong id="skewYValue">0°</strong></div>
+            <input type="range" id="skewYRange" min="-60" max="60" value="0">
+          </div>
+        </div>
+
+        <button class="btn ghost add-layer" id="resetTransformBtn">Restablecer transformación</button>
+      </section>
+
+      <!-- 9. Curvatura / Texto circular / Curva personalizada -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">9</span>
+          <div>
+            <strong>Curvar texto</strong>
+            <small>Arco simple, texto circular completo/parcial o una curva personalizada dibujada a mano.</small>
+          </div>
+        </div>
+
+        <div class="segmented" style="grid-template-columns:repeat(4,1fr)">
+          <button class="seg active" data-curvemode="none">Ninguna</button>
+          <button class="seg" data-curvemode="arc">Arco</button>
+          <button class="seg" data-curvemode="circle">Círculo</button>
+          <button class="seg" data-curvemode="custom">Personalizada</button>
+        </div>
+
+        <!-- Arco -->
+        <div id="curvePanelArc" class="mode-block hidden">
+          <div class="range-row">
+            <span>0</span>
+            <input type="range" id="arcIntensity" min="0" max="100" value="45">
+            <span class="range-value" id="arcIntensityValue">45%</span>
+          </div>
+          <div class="range-labels"><span>Curvatura / intensidad</span></div>
+
+          <label class="field-label" style="margin-top:12px">Dirección</label>
+          <div class="segmented" style="grid-template-columns:1fr 1fr">
+            <button class="seg active" data-arcdir="1">⌢ Arriba</button>
+            <button class="seg" data-arcdir="-1">⌣ Abajo</button>
+          </div>
+
+          <div class="range-row">
+            <span>-300</span>
+            <input type="range" id="arcPosition" min="-300" max="300" value="0">
+            <span class="range-value" id="arcPositionValue">0px</span>
+          </div>
+          <div class="range-labels"><span>Posición vertical</span></div>
+
+          <label class="check-row"><input type="checkbox" id="arcInvert"> Invertir orientación de las letras</label>
+          <div class="general-rotation-box">
+            <strong>Rotación general</strong>
+            <div class="dual-control"><input type="range" data-general-rotation min="-180" max="180" value="0"><input type="number" data-general-rotation-number min="-180" max="180" value="0"></div>
+          </div>
+        </div>
+
+        <!-- Círculo -->
+        <div id="curvePanelCircle" class="mode-block hidden">
+          <div class="range-row">
+            <span>40</span>
+            <input type="range" id="circleRadius" min="40" max="800" value="220">
+            <span class="range-value" id="circleRadiusValue">220px</span>
+          </div>
+          <div class="range-labels"><span>Radio</span></div>
+
+          <div class="independent-size">
+            <div>
+              <div class="control-label-row"><span>Ángulo inicial</span><strong id="circleStartAngleValue">-90°</strong></div>
+              <input type="range" id="circleStartAngle" min="-360" max="360" value="-90">
+            </div>
+            <div>
+              <div class="control-label-row"><span>Ángulo final</span><strong id="circleEndAngleValue">270°</strong></div>
+              <input type="range" id="circleEndAngle" min="-360" max="720" value="270">
+            </div>
+          </div>
+
+          <label class="field-label" style="margin-top:12px">Dirección</label>
+          <div class="segmented" style="grid-template-columns:1fr 1fr">
+            <button class="seg active" data-circledir="1">↻ Horario</button>
+            <button class="seg" data-circledir="-1">↺ Antihorario</button>
+          </div>
+
+          <label class="field-label" style="margin-top:12px">Orientación</label>
+          <div class="segmented" style="grid-template-columns:1fr 1fr">
+            <button class="seg active" data-circleorient="outside">Hacia afuera</button>
+            <button class="seg" data-circleorient="inside">Hacia adentro</button>
+          </div>
+
+          <div class="range-row">
+            <span>0</span>
+            <input type="range" id="circleLetterSpacing" min="0" max="60" value="0">
+            <span class="range-value" id="circleLetterSpacingValue">0px</span>
+          </div>
+          <div class="range-labels"><span>Separación entre letras</span></div>
+
+          <div class="independent-size">
+            <div>
+              <div class="control-label-row"><span>Centro X</span><strong id="circleCenterXValue">0px</strong></div>
+              <input type="range" id="circleCenterX" min="-300" max="300" value="0">
+            </div>
+            <div>
+              <div class="control-label-row"><span>Centro Y</span><strong id="circleCenterYValue">0px</strong></div>
+              <input type="range" id="circleCenterY" min="-300" max="300" value="0">
+            </div>
+          </div>
+
+          <div class="gradient-actions" style="margin-top:10px">
+            <button class="mini-btn" id="circlePresetFull">Círculo completo</button>
+            <button class="mini-btn" id="circlePresetArcTop">Arco superior</button>
+            <button class="mini-btn" id="circlePresetArcBottom">Arco inferior</button>
+          </div>
+          <div class="general-rotation-box">
+            <strong>Rotación general</strong>
+            <div class="dual-control"><input type="range" data-general-rotation min="-180" max="180" value="0"><input type="number" data-general-rotation-number min="-180" max="180" value="0"></div>
+          </div>
+        </div>
+
+        <!-- Curva personalizada -->
+        <div id="curvePanelCustom" class="mode-block hidden">
+          <label class="field-label">Tipo de curva</label>
+          <div class="segmented" style="grid-template-columns:1fr 1fr">
+            <button class="seg" data-curvetype="linear">Recta</button>
+            <button class="seg active" data-curvetype="smooth">Suave</button>
+          </div>
+
+          <label class="check-row" style="margin-top:12px">
+            <input type="checkbox" id="customEditToggle"> Editar puntos directamente sobre el lienzo
+          </label>
+          <div class="hint">Con la edición activada, arrastra los puntos sobre la vista previa para curvar el texto. Los puntos son solo una guía y no se incluyen en la exportación.</div>
+
+          <div id="customPointList" class="layer-list" style="margin-top:10px"></div>
+
+          <div class="gradient-actions" style="margin-top:8px">
+            <button class="mini-btn" id="addCurvePointBtn">+ Añadir punto</button>
+            <button class="mini-btn" id="resetCurvePointsBtn">Restablecer curva</button>
+          </div>
+          <div class="general-rotation-box">
+            <strong>Rotación general</strong>
+            <div class="dual-control"><input type="range" data-general-rotation min="-180" max="180" value="0"><input type="number" data-general-rotation-number min="-180" max="180" value="0"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 10. Deformación libre (malla de puntos) -->
+      <section class="panel-section">
+        <div class="section-title">
+          <span class="num">10</span>
+          <div>
+            <strong>Deformación libre</strong>
+            <small>Deforma el texto con una rejilla de puntos de control: estira, comprime, ondula o inclina localmente cualquier zona del texto, incluso combinado con las curvas de arriba.</small>
+          </div>
+        </div>
+
+        <label class="check-row"><input type="checkbox" id="deformEnabled"> Activar deformación libre</label>
+
+        <div id="deformControls" class="mode-block hidden">
+          <label class="field-label">Interpolación</label>
+          <div class="segmented" style="grid-template-columns:1fr 1fr">
+            <button class="seg active" data-deforminterp="linear">Lineal</button>
+            <button class="seg" data-deforminterp="smooth">Suave (Bézier)</button>
+          </div>
+
+          <div class="independent-size">
+            <div>
+              <div class="control-label-row"><span>Filas</span><strong id="deformRowsValue">3</strong></div>
+              <input type="range" id="deformRows" min="2" max="6" step="1" value="3">
+            </div>
+            <div>
+              <div class="control-label-row"><span>Columnas</span><strong id="deformColsValue">3</strong></div>
+              <input type="range" id="deformCols" min="2" max="6" step="1" value="3">
+            </div>
+          </div>
+
+          <label class="check-row" style="margin-top:12px">
+            <input type="checkbox" id="deformEditToggle"> Editar rejilla directamente sobre el lienzo
+          </label>
+          <div class="hint">Con la edición activada, arrastra cualquier punto de la rejilla sobre la vista previa para deformar el texto. Cuanta más densidad (filas/columnas), más control local tendrás. Los puntos son solo una guía y no se incluyen en la exportación.</div>
+
+          <button class="btn ghost add-layer" id="resetDeformBtn">Restablecer rejilla</button>
+          <div class="general-rotation-box">
+            <strong>Rotación general</strong>
+            <div class="dual-control"><input type="range" data-general-rotation min="-180" max="180" value="0"><input type="number" data-general-rotation-number min="-180" max="180" value="0"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11. Capas -->
+      <section class="panel-section" id="layersSection">
+        <div class="section-title">
+          <span class="num">11</span>
+          <div><strong>Capas de texto</strong><small>Crea varios textos independientes en el mismo diseño. La primera capa de la lista queda al frente.</small></div>
+        </div>
+        <div class="text-layer-actions">
+          <button class="btn primary" id="addTextBtn">＋ Añadir texto</button>
+          <button class="btn ghost" id="duplicateSelectedTextBtn">⧉ Duplicar (Ctrl+D)</button>
+        </div>
+        <div class="text-layer-list" id="textLayerList"></div>
+
+        <div class="subsection-title"><strong>Orden interno de efectos</strong><small>Estos efectos pertenecen únicamente al texto seleccionado.</small></div>
+        <div class="effect-layer-list" id="effectLayerList"></div>
+        <button class="btn ghost add-layer" id="restoreLayersBtn">＋ Restaurar capas base eliminadas</button>
+      </section>
+
+      <!-- 12. Guardado y plantillas -->
+      <section class="panel-section" id="saveSection">
+        <div class="section-title">
+          <span class="num">12</span>
+          <div><strong>Guardado y plantillas</strong><small>Guarda proyectos editables en este dispositivo o crea archivos JSON portables. Las plantillas generan una composición nueva.</small></div>
+        </div>
+        <input class="text-input compact" id="documentName" value="Mi diseño" placeholder="Nombre del diseño">
+        <div class="save-actions">
+          <button class="btn primary" id="saveProjectBtn">Guardar proyecto</button>
+          <button class="btn ghost" id="saveTemplateBtn">Guardar como plantilla</button>
+        </div>
+        <div class="save-actions three">
+          <button class="mini-btn" id="exportProjectBtn">Exportar JSON</button>
+          <button class="mini-btn" id="importProjectBtn">Importar JSON</button>
+          <input type="file" id="projectFileInput" accept=".json,.tes.json,application/json" hidden>
+          <button class="mini-btn" id="newProjectBtn">Nuevo</button>
+        </div>
+        <div id="saveStatus" class="import-status hidden" role="status"></div>
+
+        <label class="field-label">Proyectos guardados</label>
+        <div class="document-list" id="projectList"></div>
+        <label class="field-label">Galería de plantillas</label>
+        <div class="document-list" id="templateList"></div>
+      </section>
+
+      <!-- 13. Exportación profesional -->
+      <section class="panel-section" id="exportSection">
+        <div class="section-title">
+          <span class="num">13</span>
+          <div><strong>Exportación profesional</strong><small>Renderiza desde el diseño original, no desde una captura ampliada de la previsualización.</small></div>
+        </div>
+
+        <label class="field-label">Formato</label>
+        <div class="segmented export-format-tabs">
+          <button class="seg active" data-export-format="png">PNG</button>
+          <button class="seg" data-export-format="svg">SVG</button>
+          <button class="seg" data-export-format="pdf">PDF</button>
+        </div>
+
+        <div class="export-presets">
+          <button class="mini-btn" data-export-scale="1">1×</button>
+          <button class="mini-btn" data-export-scale="2">2×</button>
+          <button class="mini-btn active" data-export-scale="3">3×</button>
+          <button class="mini-btn" data-export-scale="4">4×</button>
+          <button class="mini-btn" data-export-scale="8">8×</button>
+        </div>
+
+        <div class="independent-size">
+          <label class="export-number-label">Ancho (px)<input type="number" id="exportWidth" min="1" max="16000" value="2700"></label>
+          <label class="export-number-label">Alto (px)<input type="number" id="exportHeight" min="1" max="16000" value="1860"></label>
+        </div>
+        <label class="check-row"><input type="checkbox" id="exportLockRatio" checked> Mantener proporción del lienzo</label>
+
+        <div id="pdfDpiRow" class="hidden">
+          <label class="field-label">Resolución física del PDF</label>
+          <select id="exportDpi" class="select-input"><option value="72">72 DPI</option><option value="96">96 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI</option><option value="600">600 DPI</option></select>
+          <div class="hint" id="pdfSizeHint"></div>
+        </div>
+
+        <label class="check-row"><input type="checkbox" id="exportTransparent" checked> Fondo transparente</label>
+        <div class="color-picker-row" id="exportBackgroundRow">
+          <input type="color" id="exportBackgroundColor" value="#ffffff" class="color-mini" disabled>
+          <span class="export-bg-label">Color del fondo</span>
+        </div>
+        <label class="check-row"><input type="checkbox" id="exportCrop"> Recortar al contenido visible</label>
+
+        <div class="export-info" id="exportInfo">2700 × 1860 px · 5.02 MP</div>
+        <button class="btn primary export-final-btn" id="exportFinalBtn">Exportar PNG en alta calidad</button>
+        <div id="exportStatus" class="import-status hidden" role="status"></div>
+      </section>
+
+      <div class="roadmap">
+        <strong>Siguiente fase:</strong>
+        <ol><li>Editor de imágenes independiente con ajustes, filtros, granulado y Lens Blur.</li></ol>
+      </div>
+    </div>
+
+    <!-- ============ PANEL DERECHO: PREVIEW ============ -->
+    <div class="panel preview-panel">
+      <div class="preview-head">
+        <div>
+          <strong>Vista previa</strong>
+          <span>Arrastra el texto para moverlo. Escala 1:1, exportación en alta resolución.</span>
+        </div>
+        <button class="btn primary" id="exportPngBtn">Opciones de exportación</button>
+      </div>
+      <div class="preview-area">
+        <canvas id="previewCanvas" width="900" height="620"></canvas>
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">Tt</div>
+          <strong>Importa una fuente para empezar</strong>
+          <span>Arrastra un .ttf, .otf, .woff o un .zip de fuentes al panel de la izquierda</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<button id="themeFab" class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"></circle><line x1="12" y1="2.5" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="21.5" y2="12"></line><line x1="5.1" y1="5.1" x2="6.8" y2="6.8"></line><line x1="17.2" y1="17.2" x2="18.9" y2="18.9"></line><line x1="5.1" y1="18.9" x2="6.8" y2="17.2"></line><line x1="17.2" y1="6.8" x2="18.9" y2="5.1"></line></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/opentype.js@1.3.4/dist/opentype.min.js"></script>
+<script src="../shared/namingSystem.js?v=10.2"></script>
+<script src="../shared/studioBridge.js?v=11.0"></script>
+<script src="../shared/studioGallery.js?v=11.0"></script>
+<script src="./js/fonts.js"></script>
+<script src="./js/textEngine.js"></script>
+<script src="./js/fillSystem.js"></script>
+<script src="./js/pathUtils.js"></script>
+<script src="./js/deformSystem.js"></script>
+<script src="./js/curveSystem.js"></script>
+<script src="./js/historySystem.js"></script>
+<script src="./js/storageSystem.js"></script>
+<script src="./js/layerSystem.js"></script>
+<script src="./js/renderer.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+<script src="./js/exportSystem.js"></script>
+<script src="./js/main.js?v=11.0"></script>
+</body>
+</html>
