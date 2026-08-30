@@ -24,11 +24,14 @@
 
   function applyTheme(theme, save) {
     const next = normalizedTheme(theme);
+    const changed = html.dataset.theme !== next;
     html.dataset.theme = next;
     updateThemeButtons(next);
     if (save) {
       try { localStorage.setItem(THEME_KEY, next); } catch (_) {}
     }
+    // Evita el eco infinito entre el iframe y la aplicación principal.
+    if (!changed) return;
     document.dispatchEvent(new CustomEvent('studio-theme-change', { detail: { theme: next } }));
     if (EMBEDDED) window.parent.postMessage({ type: 'kaoru:theme', theme: next }, '*');
   }
@@ -93,3 +96,4 @@
 
   window.StudioBridge = { applyTheme, readTheme, studioUrl };
 }());
+
