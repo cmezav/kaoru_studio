@@ -1,5 +1,5 @@
 export const LIGHT_LAB_PROJECT_SCHEMA = 'kaoru.light-lab.project';
-export const LIGHT_LAB_PROJECT_VERSION = 2;
+export const LIGHT_LAB_PROJECT_VERSION = 3;
 
 export function buildExportEnvelope(state) {
   const timestamp = new Date().toISOString();
@@ -7,7 +7,7 @@ export function buildExportEnvelope(state) {
     schema: LIGHT_LAB_PROJECT_SCHEMA,
     version: LIGHT_LAB_PROJECT_VERSION,
     studio: 'light',
-    phase: 2,
+    phase: 3,
     exportedAt: timestamp,
     project: { ...state.project, updatedAt: timestamp },
     selection: structuredClone(state.selection),
@@ -16,8 +16,8 @@ export function buildExportEnvelope(state) {
     params: structuredClone(state.params),
     palette: structuredClone(state.palette),
     lighting: structuredClone(state.lighting),
-    reference: { image: null, extractedColors: [...state.reference.extractedColors] },
-    compatibility: { minimumLightLabVersion: 2, future3d: null }
+    reference: structuredClone(state.reference),
+    compatibility: { minimumLightLabVersion: 3, future3d: null }
   };
 }
 

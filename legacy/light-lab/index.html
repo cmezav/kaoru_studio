@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio — Light Lab Fase 2</title>
+  <title>Kaoru's Studio — Light Lab Fase 3</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=15.0">
-  <link rel="stylesheet" href="./styles.css?v=2.0">
+  <link rel="stylesheet" href="./styles.css?v=3.0">
 </head>
 <body class="studio-light" data-studio="light">
   <header class="light-topbar">
@@ -25,9 +25,9 @@
   <main class="lab-shell">
     <aside class="panel controls-panel" aria-label="Configuración de Light Lab">
       <section class="lab-intro">
-        <div class="eyebrow">LIGHT LAB · FASE 2 DE 8</div>
-        <h1>Generador detallado de color</h1>
-        <p>Describe una piel, material o cabello, o construye la paleta con controles precisos.</p>
+        <div class="eyebrow">LIGHT LAB · FASE 3 DE 8</div>
+        <h1>Color desde tus referencias</h1>
+        <p>Genera, escribe un HEX o extrae colores exactos desde una imagen.</p>
       </section>
 
       <section class="control-section prompt-section">
@@ -68,8 +68,15 @@
         <p id="hexError" class="input-error" hidden>Usa #RGB o #RRGGBB.</p>
       </section>
 
+      <section class="control-section extraction-controls">
+        <div class="section-heading"><span>05</span><h2>Extraer desde imagen</h2></div>
+        <label class="upload-reference-button" for="referenceFileInput"><input id="referenceFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><span>＋</span><strong>Subir imagen</strong><small>PNG · JPG · WEBP · GIF</small></label>
+        <div class="reference-actions"><button id="pasteImageBtn" type="button">Pegar imagen</button><button id="clearImageBtn" type="button" hidden>Quitar</button></div>
+        <p id="imageStatus" class="field-help">También puedes presionar Ctrl+V o arrastrar una imagen al visor.</p>
+      </section>
+
       <section class="control-section parameter-section">
-        <div class="section-heading"><span>05</span><h2>Ajustes</h2></div>
+        <div class="section-heading"><span>06</span><h2>Ajustes</h2></div>
         <div class="parameter-list">
           <label><span>Calidez <output data-output="warmth">0</output></span><input data-param="warmth" type="range" min="-50" max="50" value="0"></label>
           <label><span>Saturación <output data-output="saturation">0</output></span><input data-param="saturation" type="range" min="-50" max="50" value="0"></label>
@@ -90,11 +97,18 @@
           <button type="button" class="is-active" data-view="sphere" role="tab" aria-selected="true">Esfera</button>
           <button type="button" data-view="band" role="tab" aria-selected="false">Banda</button>
           <button type="button" data-view="plane" role="tab" aria-selected="false">Plano</button>
+          <button type="button" data-view="reference" role="tab" aria-selected="false">Imagen</button>
         </div>
       </div>
       <div class="canvas-card">
         <canvas id="previewCanvas" width="960" height="560" aria-label="Vista previa de la paleta"></canvas>
-        <div class="canvas-caption"><span id="previewModeLabel">Estudio de volumen · esfera</span><span>Actualización en tiempo real</span></div>
+        <div id="referenceStage" class="reference-stage" hidden>
+          <div id="referenceEmpty" class="reference-empty"><span>⌁</span><strong>Sube o pega una imagen</strong><small>Después haz clic sobre cualquier píxel para extraer su HEX.</small></div>
+          <canvas id="referenceCanvas" width="1" height="1" aria-label="Imagen de referencia con cuentagotas" hidden></canvas>
+          <div id="eyedropperMarker" class="eyedropper-marker" hidden></div>
+          <div id="dropOverlay" class="drop-overlay" hidden>Suelta la imagen aquí</div>
+        </div>
+        <div class="canvas-caption"><span id="previewModeLabel">Estudio de volumen · esfera</span><span id="canvasHint">Actualización en tiempo real</span></div>
       </div>
       <section class="palette-card">
         <div class="palette-heading">
@@ -106,7 +120,7 @@
     </section>
 
     <aside class="panel status-panel" aria-label="Estado y edición">
-      <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">MOTOR ACTIVO</span><h2>Light Lab · Fase 2</h2></div></section>
+      <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">CUENTAGOTAS ACTIVO</span><h2>Light Lab · Fase 3</h2></div></section>
       <dl class="state-list">
         <div><dt>Categoría</dt><dd id="stateCategory">Piel natural</dd></div>
         <div><dt>Variedad</dt><dd id="stateVariant">Muy clara</dd></div>
@@ -120,15 +134,27 @@
         <p id="editHexError" class="input-error" hidden>HEX inválido.</p>
       </section>
 
+      <section class="extracted-section">
+        <div class="side-section-heading"><div><span class="eyebrow">COLORES EXTRAÍDOS</span><h3 id="extractedCount">0 muestras</h3></div><button id="clearSamplesBtn" type="button" hidden>Limpiar</button></div>
+        <p id="extractedEmpty" class="side-empty">Abre la vista Imagen y haz clic para usar el cuentagotas.</p>
+        <div id="extractedColors" class="extracted-colors"></div>
+      </section>
+
+      <section class="recent-section">
+        <div class="side-section-heading"><div><span class="eyebrow">RECIENTES</span><h3>Colores reutilizables</h3></div></div>
+        <p id="recentEmpty" class="side-empty">Los colores que extraigas o uses aparecerán aquí.</p>
+        <div id="recentColors" class="recent-colors"></div>
+      </section>
+
       <section class="architecture-card">
         <h3>Disponible ahora</h3>
         <ul>
-          <li class="is-ready">HEX manual y validación</li>
-          <li class="is-ready">Descripción libre interpretada</li>
-          <li class="is-ready">Pieles y subtonos combinables</li>
-          <li class="is-ready">16 luces, sombras y transiciones</li>
-          <li class="is-ready">Copia y edición de swatches</li>
-          <li>Extracción desde imágenes · Fase 3</li>
+          <li class="is-ready">Subida, pegado y arrastre</li>
+          <li class="is-ready">Cuentagotas de píxel exacto</li>
+          <li class="is-ready">Muestras con roles editables</li>
+          <li class="is-ready">Usar extracción como base</li>
+          <li class="is-ready">Historial de colores recientes</li>
+          <li>Iluminación avanzada · Fase 4</li>
         </ul>
       </section>
 
@@ -141,6 +167,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?v=15.0"></script>
-  <script type="module" src="./js/main.js?v=2.0"></script>
+  <script type="module" src="./js/main.js?v=3.0"></script>
 </body>
 </html>

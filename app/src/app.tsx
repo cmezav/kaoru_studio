@@ -29,7 +29,7 @@ const studios:Studio[]=[
   {id:'silhouette',name:'Silueta Studio',short:'Silueta',subtitle:'Formas, máscaras y composiciones',src:'./legacy/index.html?embed=1',accent:'violet',icon:h(Icon,{name:'silhouette'}),hotkey:'Alt+1'},
   {id:'text',name:'Text Studio',short:'Texto',subtitle:'Tipografía y efectos avanzados',src:'./legacy/text-studio/index.html?embed=1',accent:'rose',icon:h(Icon,{name:'text'}),hotkey:'Alt+2'},
   {id:'image',name:'Image Studio',short:'Imagen',subtitle:'Ajustes, filtros y exportación',src:'./legacy/image-studio/index.html?embed=1',accent:'blue',icon:h(Icon,{name:'image'}),hotkey:'Alt+3'},
-  {id:'light',name:'Light Lab',short:'Light Lab',subtitle:'Paletas, luces, pieles y materiales',src:'./legacy/light-lab/index.html?embed=1&phase=2',accent:'teal',icon:h(Icon,{name:'light'}),hotkey:'Alt+4'},
+  {id:'light',name:'Light Lab',short:'Light Lab',subtitle:'Paletas, luces, pieles y materiales',src:'./legacy/light-lab/index.html?embed=1&phase=3',accent:'teal',icon:h(Icon,{name:'light'}),hotkey:'Alt+4'},
   {id:'gallery',name:'Galería',short:'Galería',subtitle:'Diseños, proyectos y plantillas',src:'./legacy/gallery/index.html?embed=1',accent:'amber',icon:h(Icon,{name:'gallery'}),hotkey:'Alt+5'}
 ];
 

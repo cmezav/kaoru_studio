@@ -1,7 +1,7 @@
 import { LIGHT_LAB_CATEGORIES } from './presets.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 
-export const LIGHT_LAB_STATE_VERSION = 2;
+export const LIGHT_LAB_STATE_VERSION = 3;
 
 export function createInitialState() {
   const category = LIGHT_LAB_CATEGORIES[0];
@@ -17,8 +17,8 @@ export function createInitialState() {
     params,
     palette: { source: 'phase-2-generator', baseHex: preset.baseHex, colors: entries.map((item) => item.hex), entries, roles: entries.map((item) => item.role) },
     lighting: { enabled: false, key: null, ambient: null, bounce: null, rim: null },
-    reference: { image: null, extractedColors: [] },
-    ui: { activePanel: 'category', phase: 2, selectedSwatchIndex: null }
+    reference: { image: null, extractedColors: [], recentColors: [] },
+    ui: { activePanel: 'category', phase: 3, selectedSwatchIndex: null, lastSamplePosition: null }
   };
 }
 
