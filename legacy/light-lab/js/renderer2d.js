@@ -13,15 +13,15 @@ function renderSphere(ctx, width, height, colors) {
   ctx.save();
   ctx.shadowColor = 'rgba(10,12,20,.28)'; ctx.shadowBlur = radius * .18; ctx.shadowOffsetY = radius * .11;
   const gradient = ctx.createRadialGradient(cx - radius * .38, cy - radius * .42, radius * .05, cx, cy, radius);
-  gradient.addColorStop(0, colorAt(colors, 8, '#fff'));
-  gradient.addColorStop(.2, colorAt(colors, 7, '#ddd'));
-  gradient.addColorStop(.48, colorAt(colors, 5, '#999'));
+  gradient.addColorStop(0, colorAt(colors, 13, '#fff'));
+  gradient.addColorStop(.2, colorAt(colors, 12, '#ddd'));
+  gradient.addColorStop(.48, colorAt(colors, 6, '#999'));
   gradient.addColorStop(.74, colorAt(colors, 3, '#555'));
   gradient.addColorStop(1, colorAt(colors, 0, '#111'));
   ctx.fillStyle = gradient; ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
   ctx.shadowColor = 'transparent';
   const rim = ctx.createLinearGradient(cx - radius, 0, cx + radius, 0);
-  rim.addColorStop(0, colorAt(colors, 11, '#333')); rim.addColorStop(.28, 'transparent'); rim.addColorStop(.82, 'transparent'); rim.addColorStop(1, colorAt(colors, 9, '#aaa'));
+  rim.addColorStop(0, colorAt(colors, 15, '#333')); rim.addColorStop(.28, 'transparent'); rim.addColorStop(.82, 'transparent'); rim.addColorStop(1, colorAt(colors, 14, '#aaa'));
   ctx.fillStyle = rim; ctx.globalAlpha = .55; ctx.beginPath(); ctx.arc(cx, cy, radius * .985, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -29,7 +29,7 @@ function renderSphere(ctx, width, height, colors) {
 function renderBand(ctx, width, height, colors) {
   const x = width * .13, y = height * .27, w = width * .74, h = height * .44;
   const gradient = ctx.createLinearGradient(x, y, x + w, y);
-  const indices = [0,2,5,8,6,1,9,7,3,0];
+  const indices = [0,3,6,12,9,1,13,11,4,0];
   indices.forEach((index, i) => gradient.addColorStop(i / (indices.length - 1), colorAt(colors, index, '#777')));
   ctx.save(); ctx.shadowColor = 'rgba(10,12,20,.3)'; ctx.shadowBlur = 32; ctx.shadowOffsetY = 18;
   roundedRect(ctx, x, y, w, h, h / 2); ctx.fillStyle = gradient; ctx.fill();
@@ -41,7 +41,7 @@ function renderBand(ctx, width, height, colors) {
 function renderPlane(ctx, width, height, colors) {
   const x = width * .13, y = height * .18, w = width * .74, h = height * .63;
   const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
-  [0,2,4,6,8].forEach((index, i) => gradient.addColorStop(i / 4, colorAt(colors, index, '#777')));
+  [0,3,6,10,13].forEach((index, i) => gradient.addColorStop(i / 4, colorAt(colors, index, '#777')));
   ctx.save(); ctx.translate(width / 2, height / 2); ctx.transform(1, -.12, -.18, .92, 0, 0);
   ctx.shadowColor = 'rgba(10,12,20,.28)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 18;
   roundedRect(ctx, -w / 2, -h / 2, w, h, 22); ctx.fillStyle = gradient; ctx.fill(); ctx.restore();

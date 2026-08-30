@@ -1,10 +1,10 @@
 ﻿# Kaoru's Studio â€” Fase 12 / UI 2.0
 
-## Light Lab — Fase 1 de 8
+## Light Lab — Fase 2 de 8
 
-Se agregó el nuevo Studio **Light Lab** con una arquitectura independiente en `legacy/light-lab/`.
+Se agregó el nuevo Studio **Light Lab** con arquitectura independiente y un motor de generación detallada de color.
 
-Esta primera fase incluye navegación con `Alt+4`, tema global, interfaz de escritorio en tres paneles, cuatro categorías, presets visuales de 12 colores, previews 2D básicas y una estructura portable `.lls.json`. La Galería ahora usa `Alt+5`.
+La Fase 2 incorpora validación de HEX, paletas de 16 colores, variedades de piel y subtonos combinables, materiales, cabello, descripción libre interpretada, ajustes de temperatura y contraste, edición individual y copia inmediata de cualquier swatch. La navegación continúa en `Alt+4` y Galería usa `Alt+5`.
 
 ### Publicación en GitHub Pages
 

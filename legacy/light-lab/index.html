@@ -5,17 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio — Light Lab</title>
+  <title>Kaoru's Studio — Light Lab Fase 2</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=15.0">
-  <link rel="stylesheet" href="./styles.css?v=1.0">
+  <link rel="stylesheet" href="./styles.css?v=2.0">
 </head>
 <body class="studio-light" data-studio="light">
   <header class="light-topbar">
-    <a class="light-brand" href="../../index.html#light">
-      <img src="../../logo.png" alt="" onerror="this.hidden=true">
-      <span>Kaoru's Studio</span><b>Light Lab</b>
-    </a>
+    <a class="light-brand" href="../../index.html#light"><img src="../../logo.png" alt="" onerror="this.hidden=true"><span>Kaoru's Studio</span><b>Light Lab</b></a>
     <nav class="studio-switcher" aria-label="Cambiar de Studio">
       <a class="studio-link" data-studio-link="silhouette" href="../index.html" title="Silueta Studio · Alt+1">◆ <span class="studio-link-label">Silueta</span><kbd>Alt+1</kbd></a>
       <a class="studio-link" data-studio-link="text" href="../text-studio/index.html" title="Text Studio · Alt+2">Tt <span class="studio-link-label">Texto</span><kbd>Alt+2</kbd></a>
@@ -28,98 +25,122 @@
   <main class="lab-shell">
     <aside class="panel controls-panel" aria-label="Configuración de Light Lab">
       <section class="lab-intro">
-        <div class="eyebrow">LIGHT LAB · FASE 1 DE 8</div>
-        <h1>Paletas, luces, pieles y materiales</h1>
-        <p>Elige un punto de partida. El motor detallado de color se conectará sobre esta arquitectura en la Fase 2.</p>
+        <div class="eyebrow">LIGHT LAB · FASE 2 DE 8</div>
+        <h1>Generador detallado de color</h1>
+        <p>Describe una piel, material o cabello, o construye la paleta con controles precisos.</p>
+      </section>
+
+      <section class="control-section prompt-section">
+        <div class="section-heading"><span>01</span><h2>Describe lo que buscas</h2></div>
+        <textarea id="descriptionInput" class="description-input" rows="3" placeholder="Ej.: piel morena clara oliva, cálida, con sombras frías y luz suave"></textarea>
+        <div class="example-chips" aria-label="Ejemplos">
+          <button type="button" data-example="piel morena clara oliva cálida con sombras frías">Morena oliva</button>
+          <button type="button" data-example="piel azul grisácea fantástica, suave y fría">Azul fantástica</button>
+          <button type="button" data-example="oro rosa pulido, contrastado y brillante">Oro rosa</button>
+        </div>
+        <button id="interpretBtn" class="generate-button" type="button">✦ Interpretar y generar</button>
+        <p id="interpretationSummary" class="interpretation-summary">Piel natural · Muy clara · Cálido</p>
       </section>
 
       <section class="control-section">
-        <div class="section-heading"><span>01</span><h2>Categoría</h2></div>
+        <div class="section-heading"><span>02</span><h2>Categoría</h2></div>
         <div id="categoryGrid" class="category-grid" role="list"></div>
       </section>
 
       <section class="control-section">
-        <div class="section-heading"><span>02</span><h2>Punto de partida</h2></div>
-        <label class="field-label" for="presetSelect">Preset visual</label>
+        <div class="section-heading"><span>03</span><h2>Variedad y preset</h2></div>
+        <label class="field-label" for="presetSelect">Preset detallado</label>
         <select id="presetSelect" class="select-control"></select>
         <p id="presetDescription" class="field-help"></p>
+        <div class="dual-selects">
+          <label><span id="variantLabel">Variedad</span><select id="variantSelect" class="select-control"></select></label>
+          <label id="undertoneField"><span>Subtono</span><select id="undertoneSelect" class="select-control"></select></label>
+        </div>
       </section>
 
-      <section class="control-section is-future" aria-disabled="true">
-        <div class="section-heading"><span>03</span><h2>Color base</h2><b>Fase 2</b></div>
-        <div class="hex-row">
-          <span class="color-placeholder" aria-hidden="true"></span>
-          <input type="text" value="#C68B74" aria-label="HEX base" disabled>
-          <button type="button" disabled>Aplicar</button>
+      <section class="control-section">
+        <div class="section-heading"><span>04</span><h2>Color base HEX</h2></div>
+        <div class="hex-row active-hex">
+          <input id="baseColorPicker" class="base-color-picker" type="color" value="#F1C9B6" aria-label="Selector de color base">
+          <input id="baseHexInput" type="text" value="#F1C9B6" maxlength="7" spellcheck="false" aria-label="HEX base">
+          <button id="applyHexBtn" type="button">Aplicar</button>
         </div>
+        <p id="hexError" class="input-error" hidden>Usa #RGB o #RRGGBB.</p>
+      </section>
+
+      <section class="control-section parameter-section">
+        <div class="section-heading"><span>05</span><h2>Ajustes</h2></div>
+        <div class="parameter-list">
+          <label><span>Calidez <output data-output="warmth">0</output></span><input data-param="warmth" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Saturación <output data-output="saturation">0</output></span><input data-param="saturation" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Contraste <output data-output="contrast">0</output></span><input data-param="contrast" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Sombras <output data-output="shadowDepth">0</output></span><input data-param="shadowDepth" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Luces <output data-output="lightStrength">0</output></span><input data-param="lightStrength" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Especular <output data-output="specular">0</output></span><input data-param="specular" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Suavidad <output data-output="softness">0</output></span><input data-param="softness" type="range" min="-50" max="50" value="0"></label>
+        </div>
+        <button id="generateBtn" class="secondary-generate" type="button">Generar paleta detallada</button>
       </section>
     </aside>
 
     <section class="preview-column" aria-label="Previsualización">
       <div class="preview-toolbar">
-        <div>
-          <span class="eyebrow">PREVIEW 2D BÁSICA</span>
-          <h2 id="previewTitle">Piel natural</h2>
-        </div>
+        <div><span class="eyebrow">PREVIEW 2D</span><h2 id="previewTitle">Piel natural</h2></div>
         <div id="previewTabs" class="view-tabs" role="tablist" aria-label="Tipo de preview">
           <button type="button" class="is-active" data-view="sphere" role="tab" aria-selected="true">Esfera</button>
           <button type="button" data-view="band" role="tab" aria-selected="false">Banda</button>
           <button type="button" data-view="plane" role="tab" aria-selected="false">Plano</button>
         </div>
       </div>
-
       <div class="canvas-card">
-        <canvas id="previewCanvas" width="960" height="560" aria-label="Vista previa de la paleta seleccionada"></canvas>
-        <div class="canvas-caption"><span id="previewModeLabel">Estudio de volumen · esfera</span><span>Renderer 2D base</span></div>
+        <canvas id="previewCanvas" width="960" height="560" aria-label="Vista previa de la paleta"></canvas>
+        <div class="canvas-caption"><span id="previewModeLabel">Estudio de volumen · esfera</span><span>Actualización en tiempo real</span></div>
       </div>
-
       <section class="palette-card">
         <div class="palette-heading">
-          <div><span class="eyebrow">PALETA DE REFERENCIA</span><h2 id="paletteName">Muy clara cálida</h2></div>
-          <span class="phase-note">Edición y copia HEX en Fase 2</span>
+          <div><span class="eyebrow">PALETA DETALLADA · 16 COLORES</span><h2 id="paletteName">Muy clara cálida</h2></div>
+          <span class="phase-note">Clic = copiar HEX · ✎ = editar</span>
         </div>
         <div id="swatchGrid" class="swatch-grid"></div>
       </section>
     </section>
 
-    <aside class="panel status-panel" aria-label="Estado del proyecto">
-      <section class="status-head">
-        <div class="status-orb" aria-hidden="true">✦</div>
-        <div><span class="eyebrow">ESTADO INICIAL</span><h2>Proyecto Light Lab</h2></div>
-      </section>
-
+    <aside class="panel status-panel" aria-label="Estado y edición">
+      <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">MOTOR ACTIVO</span><h2>Light Lab · Fase 2</h2></div></section>
       <dl class="state-list">
         <div><dt>Categoría</dt><dd id="stateCategory">Piel natural</dd></div>
-        <div><dt>Preset</dt><dd id="statePreset">Muy clara cálida</dd></div>
-        <div><dt>Paleta</dt><dd id="stateColors">12 colores</dd></div>
-        <div><dt>Esquema</dt><dd>kaoru.light-lab.project</dd></div>
+        <div><dt>Variedad</dt><dd id="stateVariant">Muy clara</dd></div>
+        <div><dt>Base</dt><dd id="stateBase">#F1C9B6</dd></div>
+        <div><dt>Paleta</dt><dd id="stateColors">16 colores</dd></div>
       </dl>
 
+      <section id="swatchEditor" class="swatch-editor" hidden>
+        <div class="editor-title"><div><span class="eyebrow">EDITAR COLOR</span><h3 id="editRole">Base principal</h3></div><button id="closeEditorBtn" type="button" aria-label="Cerrar">×</button></div>
+        <div class="hex-row active-hex"><input id="editColorPicker" class="base-color-picker" type="color" value="#000000"><input id="editHexInput" type="text" maxlength="7"><button id="applyEditBtn" type="button">Guardar</button></div>
+        <p id="editHexError" class="input-error" hidden>HEX inválido.</p>
+      </section>
+
       <section class="architecture-card">
-        <h3>Arquitectura preparada</h3>
+        <h3>Disponible ahora</h3>
         <ul>
-          <li class="is-ready">Estado y presets</li>
-          <li class="is-ready">Renderer 2D</li>
-          <li class="is-ready">Estructura de exportación</li>
-          <li>Motor de paletas</li>
-          <li>Iluminación avanzada</li>
-          <li>Extracción y 3D</li>
+          <li class="is-ready">HEX manual y validación</li>
+          <li class="is-ready">Descripción libre interpretada</li>
+          <li class="is-ready">Pieles y subtonos combinables</li>
+          <li class="is-ready">16 luces, sombras y transiciones</li>
+          <li class="is-ready">Copia y edición de swatches</li>
+          <li>Extracción desde imágenes · Fase 3</li>
         </ul>
       </section>
 
-      <button id="downloadStructureBtn" class="primary-button" type="button">Descargar estructura .lls.json</button>
-      <p class="button-help">Guarda el estado base portable de esta fase. Las paletas editables se habilitarán más adelante.</p>
+      <button id="copyAllBtn" class="copy-all-button" type="button">Copiar los 16 HEX</button>
+      <button id="downloadStructureBtn" class="primary-button" type="button">Descargar proyecto .lls.json</button>
+      <p class="button-help">Todos los colores individuales se copian con un clic.</p>
     </aside>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">
-    <span class="theme-icon-wrap" aria-hidden="true">
-      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg>
-      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg>
-    </span>
-  </button>
+  <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?v=15.0"></script>
-  <script type="module" src="./js/main.js?v=1.0"></script>
+  <script type="module" src="./js/main.js?v=2.0"></script>
 </body>
 </html>

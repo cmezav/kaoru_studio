@@ -1,18 +1,24 @@
 import { LIGHT_LAB_CATEGORIES } from './presets.js';
+import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 
-export const LIGHT_LAB_STATE_VERSION = 1;
+export const LIGHT_LAB_STATE_VERSION = 2;
 
 export function createInitialState() {
   const category = LIGHT_LAB_CATEGORIES[0];
   const preset = category.presets[0];
+  const params = { ...DEFAULT_PARAMS, ...preset.params };
+  const entries = generateDetailedPalette({ categoryId: category.id, baseHex: preset.baseHex, params });
   return {
     version: LIGHT_LAB_STATE_VERSION,
     project: { id: null, name: 'Proyecto Light Lab', createdAt: null, updatedAt: null },
-    selection: { categoryId: category.id, presetId: preset.id, previewMode: 'sphere' },
-    palette: { source: 'phase-1-preset-preview', baseHex: null, colors: [...preset.colors], roles: [] },
+    selection: { categoryId: category.id, presetId: preset.id, variantId: preset.variantId, undertoneId: preset.undertoneId, previewMode: 'sphere' },
+    description: '',
+    interpretation: 'Piel natural · Muy clara · Cálido',
+    params,
+    palette: { source: 'phase-2-generator', baseHex: preset.baseHex, colors: entries.map((item) => item.hex), entries, roles: entries.map((item) => item.role) },
     lighting: { enabled: false, key: null, ambient: null, bounce: null, rim: null },
     reference: { image: null, extractedColors: [] },
-    ui: { activePanel: 'category', phase: 1 }
+    ui: { activePanel: 'category', phase: 2, selectedSwatchIndex: null }
   };
 }
 
