@@ -7,7 +7,7 @@
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
   <title>Kaoru's Studio — Image Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=13.0">
+  <link rel="stylesheet" href="./styles.css?v=14.3">
 </head>
 <body data-studio="image">
   <div class="image-app">
@@ -65,7 +65,9 @@
               <p class="helper">Mantiene una zona enfocada y genera bokeh a partir de luces reales de la imagen.</p>
               <div id="lensControls"></div>
               <label class="select-row"><span>Forma de apertura</span><select id="lensShape"><option value="circle">Círculo</option><option value="octagon">Octágono</option><option value="diamond">Rombo</option><option value="triangle">Triángulo</option></select></label>
-              <button class="secondary full" id="focusModeBtn" type="button">◎ Elegir foco en el lienzo</button>
+              <label class="switch-row"><span>Preview en vivo</span><input id="liveLensPreview" type="checkbox"><i></i></label>
+              <p class="helper">Recomendado: déjalo apagado. Ajusta los sliders y pulsa “Aplicar preview”.</p>
+              <div class="button-grid"><button class="secondary" id="applyLensPreviewBtn" type="button">Aplicar preview</button><button class="secondary" id="focusModeBtn" type="button">◎ Elegir foco</button></div>
             </div>
           </details>
 
@@ -121,6 +123,7 @@
         <div class="stage-toolbar">
           <div class="file-info"><strong id="fileName">Sin imagen</strong><span id="imageMeta">Importa una imagen para comenzar</span></div>
           <div class="toolbar-actions">
+            <button class="ghost text-btn repair-preview" id="repairPreviewBtn" type="button" disabled title="Si la preview se congela o queda procesando, fuerza un refresco del lienzo">↻ Reparar preview</button>
             <button class="ghost" id="undoBtn" type="button" disabled title="Ctrl+Z">↶</button>
             <button class="ghost" id="redoBtn" type="button" disabled title="Ctrl+Shift+Z">↷</button>
             <button class="ghost text-btn" id="saveProjectBtn" type="button" disabled>Guardar</button>
@@ -151,18 +154,18 @@
   </div>
   <div class="toast" id="toast"></div>
 
-  <script src="../shared/studioGallery.js?v=13"></script>
-  <script src="../shared/namingSystem.js?v=13"></script>
-  <script src="../shared/studioBridge.js?v=13"></script>
-  <script src="./js/state.js?v=13"></script>
-  <script src="./js/history.js?v=13"></script>
-  <script src="./js/filters.js?v=13"></script>
-  <script src="./js/lensBlur.js?v=13"></script>
-  <script src="./js/renderer.js?v=13"></script>
-  <script src="./js/previewPipeline.js?v=13"></script>
-  <script src="./js/exportPipeline.js?v=13"></script>
-  <script src="./js/storage.js?v=13"></script>
-  <script src="./js/ui.js?v=13"></script>
-  <script src="./js/main.js?v=13"></script>
+  <script src="../shared/studioGallery.js?v=14.3.3"></script>
+  <script src="../shared/namingSystem.js?v=14.3.3"></script>
+  <script src="../shared/studioBridge.js?v=14.3.3"></script>
+  <script src="./js/state.js?v=14.3.3"></script>
+  <script src="./js/history.js?v=14.3.3"></script>
+  <script src="./js/filters.js?v=14.3.3"></script>
+  <script src="./js/lensBlur.js?v=14.3.3"></script>
+  <script src="./js/renderer.js?v=14.3.3"></script>
+  <script src="./js/previewPipeline.js?v=14.3.3"></script>
+  <script src="./js/exportPipeline.js?v=14.3.3"></script>
+  <script src="./js/storage.js?v=14.3.3"></script>
+  <script src="./js/ui.js?v=14.3.3"></script>
+  <script src="./js/main.js?v=14.3.3"></script>
 </body>
 </html>
