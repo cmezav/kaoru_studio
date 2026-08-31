@@ -131,7 +131,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   openRemoveBg(){window.open('https://www.remove.bg/es','_blank','noopener,noreferrer')}
   render(){
     const activeStudio=studios.find(s=>s.id===this.state.active)||studios[0];
-    return h('div',{className:kaoru-app },
+    return h('div',{className:'kaoru-app'+(this.state.active==='reader'?' is-reader':'')},
       h('aside',{className:'rail'},
         h('div',{className:'rail-brand'},h(Logo,{})),
         h('nav',{className:'rail-nav','aria-label':'Studios'},...studios.map(studio=>h('button',{

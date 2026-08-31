@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-1';
+const CACHE_NAME = 'kaoru-archive-reader-shell-2';
 
 const CORE = [
   './',
@@ -65,19 +65,30 @@ function isReaderShell(path) {
   );
 }
 
-async function cachedFirst(request) {
+async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(request, { ignoreSearch: true });
 
-  if (cached) return cached;
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
 
-  const response = await fetch(request);
+    if (
+      response &&
+      response.ok &&
+      request.method === 'GET'
+    ) {
+      await cache.put(request, response.clone());
+    }
 
-  if (response && response.ok && request.method === 'GET') {
-    cache.put(request, response.clone());
+    return response;
+  } catch (error) {
+    const cached = await cache.match(
+      request,
+      { ignoreSearch: true }
+    );
+
+    if (cached) return cached;
+    throw error;
   }
-
-  return response;
 }
 
 self.addEventListener('fetch', (event) => {
@@ -91,15 +102,21 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       (async () => {
         try {
-          return await cachedFirst(event.request);
+          return await networkFirst(event.request);
         } catch (_) {
           const cache = await caches.open(CACHE_NAME);
 
           if (path && path.startsWith('legacy/reader/')) {
-            return cache.match('./legacy/reader/index.html', { ignoreSearch: true });
+            return cache.match(
+              './legacy/reader/index.html',
+              { ignoreSearch: true }
+            );
           }
 
-          return cache.match('./index.html', { ignoreSearch: true });
+          return cache.match(
+            './index.html',
+            { ignoreSearch: true }
+          );
         }
       })()
     );
@@ -107,5 +124,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(cachedFirst(event.request));
+  event.respondWith(networkFirst(event.request));
 });

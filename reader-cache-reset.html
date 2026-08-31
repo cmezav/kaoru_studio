@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Restableciendo Reader</title>
+  <style>
+    html,body{margin:0;min-height:100%;background:#000;color:#eee;font-family:Arial,Helvetica,sans-serif}
+    body{display:grid;place-items:center;padding:24px}
+    main{width:min(520px,100%);text-align:center}
+    h1{font:700 28px/1.2 Georgia,"Times New Roman",serif}
+    p{color:#ccc;line-height:1.6}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Actualizando Kaoru's Studio…</h1>
+    <p id="status">Limpiando únicamente la caché offline del Reader.</p>
+  </main>
+  <script>
+  (async function () {
+    const status = document.getElementById('status');
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations =
+          await navigator.serviceWorker.getRegistrations();
+
+        await Promise.all(
+          registrations
+            .filter(function (registration) {
+              return registration.scope.indexOf('/kaoru_studio/') !== -1;
+            })
+            .map(function (registration) {
+              return registration.unregister();
+            })
+        );
+      }
+
+      if ('caches' in window) {
+        const keys = await caches.keys();
+
+        await Promise.all(
+          keys
+            .filter(function (key) {
+              return key.indexOf('kaoru-archive-reader-shell-') === 0;
+            })
+            .map(function (key) {
+              return caches.delete(key);
+            })
+        );
+      }
+
+      status.textContent =
+        'Listo. Abriendo la versión corregida…';
+
+      setTimeout(function () {
+        location.replace(
+          './?reader-cache-reset=' + Date.now()
+        );
+      }, 350);
+    } catch (error) {
+      status.textContent =
+        'No se pudo limpiar automáticamente. Cierra las pestañas de Kaoru Studio y vuelve a intentarlo.';
+      console.error(error);
+    }
+  }());
+  </script>
+</body>
+</html>
