@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio - 3D Lighting Studio Fase 4</title>
+  <title>Kaoru's Studio - 3D Lighting Studio Fase 5</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=4.0">
+  <link rel="stylesheet" href="./styles.css?v=5.0">
 
   <script type="importmap">
   {
@@ -41,45 +41,141 @@
   <main class="three-shell">
     <aside class="three-panel three-controls">
       <section class="intro">
-        <span class="eyebrow">3D LIGHTING STUDIO - FASE 4 DE 6</span>
-        <h1>Anatomia humana 3D</h1>
-        <p>Cabeza, busto y cuerpo completo usan una base humana parametrica real en vez de geometria inventada.</p>
+        <span class="eyebrow">3D LIGHTING STUDIO - FASE 5 DE 6</span>
+        <h1>Luces 3D completas</h1>
+        <p>Hasta ocho luces directas con HEX libre y manipulacion espacial sobre cabeza, busto o cuerpo.</p>
       </section>
 
       <section class="control-section">
-        <div class="section-heading">
-          <span>01</span>
-          <h2>Modelo / encuadre</h2>
-        </div>
-
+        <div class="section-heading"><span>01</span><h2>Modelo / encuadre</h2></div>
         <div id="modelCards" class="model-cards"></div>
-
-        <p class="help">Cabeza, busto y cuerpo comparten la misma anatomia para que las proporciones y la respuesta de luz sean consistentes.</p>
       </section>
 
       <section class="control-section">
-        <div class="section-heading">
-          <span>02</span>
-          <h2>Color base</h2>
-        </div>
-
+        <div class="section-heading"><span>02</span><h2>Color base</h2></div>
         <div class="color-row">
           <input id="baseColor" type="color" value="#C98E78" aria-label="Color base">
           <input id="baseHex" type="text" maxlength="7" value="#C98E78" spellcheck="false" aria-label="HEX base">
         </div>
+      </section>
 
-        <p class="help">La piel usa material continuo. Fase 6 permitira reemplazar este color por una paleta completa de Light Lab.</p>
+      <section class="control-section lighting-section">
+        <div class="section-heading"><span>03</span><h2>Luces directas</h2></div>
+
+        <div class="lighting-master">
+          <label><span>Iluminacion</span><input id="lightingEnabled" type="checkbox" checked></label>
+          <label><span>Mostrar luces 3D</span><input id="showLightHelpers" type="checkbox" checked></label>
+        </div>
+
+        <div id="lightList" class="light-list"></div>
+
+        <button id="addLightBtn" class="wide-action light-add" type="button">+ Agregar luz</button>
+
+        <div class="light-editor">
+          <div class="light-editor-top">
+            <input id="lightName" type="text" value="Luz principal" aria-label="Nombre de luz">
+            <label class="mini-check"><input id="lightEnabled" type="checkbox" checked><span>Activa</span></label>
+          </div>
+
+          <div class="color-row light-color-row">
+            <input id="lightColor" type="color" value="#FFE0CC" aria-label="Color de luz">
+            <input id="lightHex" type="text" maxlength="7" value="#FFE0CC" spellcheck="false" aria-label="HEX de luz">
+          </div>
+
+          <label class="range-control">
+            <span>Intensidad <output id="lightIntensityOut">82%</output></span>
+            <input id="lightIntensity" type="range" min="0" max="200" step="1" value="82">
+          </label>
+
+          <label class="range-control">
+            <span>Azimut <output id="lightAzimuthOut">42 deg</output></span>
+            <input id="lightAzimuth" type="range" min="-180" max="180" step="1" value="42">
+          </label>
+
+          <label class="range-control">
+            <span>Elevacion <output id="lightElevationOut">48 deg</output></span>
+            <input id="lightElevation" type="range" min="-85" max="85" step="1" value="48">
+          </label>
+
+          <label class="range-control">
+            <span>Distancia <output id="lightDistanceOut">5.2</output></span>
+            <input id="lightDistance" type="range" min="1.5" max="12" step="0.1" value="5.2">
+          </label>
+
+          <label class="range-control">
+            <span>Suavidad <output id="lightSoftnessOut">45%</output></span>
+            <input id="lightSoftness" type="range" min="0" max="100" step="1" value="45">
+          </label>
+
+          <div class="light-editor-actions">
+            <button id="duplicateLightBtn" type="button">Duplicar</button>
+            <button id="deleteLightBtn" type="button">Eliminar</button>
+          </div>
+        </div>
+
+        <p class="help">Selecciona una esfera luminosa en el viewport y arrastra el gizmo para mover esa luz directamente en 3D.</p>
+      </section>
+
+      <section class="control-section environment-section">
+        <div class="section-heading"><span>04</span><h2>Ambiente y rebotes</h2></div>
+
+        <div class="environment-grid">
+          <div class="environment-item">
+            <strong>Ambiente</strong>
+            <div class="environment-color">
+              <input id="ambientColor" type="color" value="#D8DEFF">
+              <input id="ambientHex" type="text" maxlength="7" value="#D8DEFF">
+            </div>
+            <label class="range-control compact">
+              <span>Intensidad <output id="ambientIntensityOut">18%</output></span>
+              <input id="ambientIntensity" type="range" min="0" max="100" value="18">
+            </label>
+          </div>
+
+          <div class="environment-item">
+            <strong>Sombra</strong>
+            <div class="environment-color">
+              <input id="shadowColor" type="color" value="#3A2945">
+              <input id="shadowHex" type="text" maxlength="7" value="#3A2945">
+            </div>
+            <label class="range-control compact">
+              <span>Intensidad <output id="shadowIntensityOut">16%</output></span>
+              <input id="shadowIntensity" type="range" min="0" max="100" value="16">
+            </label>
+          </div>
+
+          <div class="environment-item">
+            <strong>Rebote</strong>
+            <div class="environment-color">
+              <input id="bounceColor" type="color" value="#7898FF">
+              <input id="bounceHex" type="text" maxlength="7" value="#7898FF">
+            </div>
+            <label class="range-control compact">
+              <span>Intensidad <output id="bounceIntensityOut">12%</output></span>
+              <input id="bounceIntensity" type="range" min="0" max="100" value="12">
+            </label>
+          </div>
+
+          <div class="environment-item">
+            <strong>Rim</strong>
+            <div class="environment-color">
+              <input id="rimColor" type="color" value="#B994FF">
+              <input id="rimHex" type="text" maxlength="7" value="#B994FF">
+            </div>
+            <label class="range-control compact">
+              <span>Intensidad <output id="rimIntensityOut">14%</output></span>
+              <input id="rimIntensity" type="range" min="0" max="100" value="14">
+            </label>
+          </div>
+        </div>
       </section>
 
       <section class="control-section palette-ready-section">
-        <div class="section-heading">
-          <span>03</span>
-          <h2>Paletas Light Lab</h2>
-        </div>
+        <div class="section-heading"><span>05</span><h2>Paletas Light Lab</h2></div>
 
         <div class="palette-ready-card">
           <strong id="paletteBridgeStatus">16 colores preparados para Light Lab</strong>
-          <span>Sombras, medios tonos, luces, rebote, rim y especulares se conectaran en Fase 6.</span>
+          <span>La Fase 6 conectara las paletas completas con material, sombras, rebotes, rim y luces.</span>
           <div class="palette-dots" aria-hidden="true">
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           </div>
@@ -87,10 +183,7 @@
       </section>
 
       <section class="control-section scene-controls">
-        <div class="section-heading">
-          <span>04</span>
-          <h2>Escena y camara</h2>
-        </div>
+        <div class="section-heading"><span>06</span><h2>Escena y camara</h2></div>
 
         <div id="cameraPresetButtons" class="camera-presets">
           <button type="button" data-camera-preset="front">Frente</button>
@@ -102,82 +195,64 @@
         <button id="resetCameraBtn" class="wide-action" type="button">Restablecer camara</button>
 
         <label class="scene-toggle">
-          <span>
-            <strong>Aristas tecnicas</strong>
-            <small>No se usan sobre los modelos GLB limpios</small>
-          </span>
+          <span><strong>Aristas tecnicas</strong><small>No se usan en GLB limpios</small></span>
           <input id="edgeToggle" type="checkbox" disabled>
         </label>
 
         <label class="scene-toggle">
-          <span>
-            <strong>Cuadricula</strong>
-            <small>Referencia espacial</small>
-          </span>
+          <span><strong>Cuadricula</strong><small>Referencia espacial</small></span>
           <input id="gridToggle" type="checkbox" checked>
         </label>
 
         <label class="scene-toggle">
-          <span>
-            <strong>Sombras</strong>
-            <small>Sombras proyectadas en piso</small>
-          </span>
+          <span><strong>Sombras</strong><small>Hasta 4 luces directas proyectan sombra</small></span>
           <input id="shadowToggle" type="checkbox" checked>
         </label>
-
-        <div class="mouse-guide">
-          <div><b>Arrastrar izq.</b><span>Orbitar</span></div>
-          <div><b>Rueda</b><span>Zoom</span></div>
-          <div><b>Arrastrar der.</b><span>Pan</span></div>
-        </div>
       </section>
     </aside>
 
     <section class="three-stage-column">
       <div class="stage-toolbar">
         <div>
-          <span class="eyebrow">ESTUDIO ANATOMICO 3D</span>
+          <span class="eyebrow">ESTUDIO DE LUZ 3D</span>
           <h2 id="stageTitle">Asaro / Planos</h2>
         </div>
 
         <div class="stage-badges">
           <span id="webglBadge">Comprobando WebGL...</span>
-          <span>Fase 4</span>
+          <span>Fase 5</span>
         </div>
       </div>
 
       <div class="viewport-card">
-        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de anatomia humana"></canvas>
+        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de iluminacion 3D"></canvas>
 
         <div class="viewport-overlay">
-          <strong id="viewportMessage">Cargando modelos 3D...</strong>
-          <span>Three.js + GLB local</span>
+          <strong id="viewportMessage">Cargando iluminacion 3D...</strong>
+          <span>Three.js + luces editables</span>
         </div>
 
         <div class="viewport-footer">
           <span>Mouse: orbitar</span>
           <span>Rueda: zoom</span>
-          <span>Click derecho: pan</span>
-          <span>Paletas completas: Fase 6</span>
+          <span>Click luz: seleccionar</span>
+          <span>Gizmo: mover luz</span>
         </div>
       </div>
 
       <section class="roadmap-card">
         <div><b>F2</b><span>Motor 3D y camara</span></div>
         <div><b>F3</b><span>Cabeza por planos GLB</span></div>
-        <div class="is-current"><b>F4</b><span>Cabeza, busto y cuerpo real</span></div>
-        <div><b>F5</b><span>Multiples luces 3D movibles</span></div>
-        <div><b>F6</b><span>Light Lab, Galeria y exportacion</span></div>
+        <div><b>F4</b><span>Anatomia humana</span></div>
+        <div class="is-current"><b>F5</b><span>Luces 3D movibles</span></div>
+        <div><b>F6</b><span>Light Lab, modelos, Galeria y exportacion</span></div>
       </section>
     </section>
 
     <aside class="three-panel three-status">
       <section class="status-hero">
         <span class="status-orb">3D</span>
-        <div>
-          <span class="eyebrow">ANATOMIA + PLANOS</span>
-          <h2>Estado</h2>
-        </div>
+        <div><span class="eyebrow">ILUMINACION 3D</span><h2>Estado</h2></div>
       </section>
 
       <dl class="status-list">
@@ -185,27 +260,28 @@
         <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos</dd></div>
         <div><dt>Fuente</dt><dd id="stateSource">Head Planes Reference</dd></div>
         <div><dt>Morphs</dt><dd id="stateMorphs">No aplica</dd></div>
+        <div><dt>Luces</dt><dd id="stateLights">2 / 8</dd></div>
+        <div><dt>Seleccionada</dt><dd id="stateSelectedLight">Luz principal</dd></div>
         <div><dt>Base</dt><dd id="stateColor">#C98E78</dd></div>
         <div><dt>Motor</dt><dd id="stateEngine">Cargando</dd></div>
         <div><dt>Camara</dt><dd id="stateCamera">Cargando</dd></div>
       </dl>
 
       <section class="architecture-card">
-        <span class="eyebrow">BASE HUMANA CC0</span>
-        <h3>MakeHuman / MPFB2</h3>
-        <p>El cuerpo anatomico procede de una base parametrica CC0 y conserva sus morph targets para futuras opciones de cuerpo y rostro.</p>
+        <span class="eyebrow">CONTROL 3D</span>
+        <h3>Luces movibles</h3>
+        <p>Las esferas del viewport representan las luces directas. Selecciona una y mueve el gizmo para cambiar su posicion.</p>
       </section>
 
       <section class="next-card">
-        <span class="eyebrow">SIGUIENTE</span>
-        <h3>Fase 5 - Luces 3D completas</h3>
-        <p>Multiples luces movibles con HEX libre, intensidad, distancia, suavidad, elevacion y contribucion individual.</p>
+        <span class="eyebrow">FASE FINAL</span>
+        <h3>Fase 6 - Integracion completa</h3>
+        <p>Paletas Light Lab, importar modelos 3D locales, guardado, Galeria y exportacion.</p>
       </section>
     </aside>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">&#9788;</button>
 
   <script src="../shared/studioBridge.js?v=18.0"></script>
@@ -236,7 +312,7 @@
     window.addEventListener('error', function (event) {
       var text = String(event && (event.message || event.error) || '');
 
-      if (/module|script|import|three|scene3d|state\.js|human|asaro/i.test(text)) {
+      if (/module|script|import|three|scene3d|state\.js|human|asaro|lighting|transform/i.test(text)) {
         showStartupProblem('Fallo al cargar un modulo JavaScript. Recarga sin cache.');
       }
     });
@@ -244,8 +320,8 @@
     window.addEventListener('unhandledrejection', function (event) {
       var text = String(event && event.reason || '');
 
-      if (/module|script|import|three|scene3d|state\.js|human|asaro/i.test(text)) {
-        showStartupProblem('Fallo al cargar un modelo 3D. Recarga la pagina.');
+      if (/module|script|import|three|scene3d|state\.js|human|asaro|lighting|transform/i.test(text)) {
+        showStartupProblem('Fallo al cargar el sistema 3D. Recarga la pagina.');
       }
     });
 
@@ -257,6 +333,6 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?v=4.0"></script>
+  <script type="module" src="./js/main.js?v=5.0"></script>
 </body>
 </html>

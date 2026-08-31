@@ -2,8 +2,9 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createAsaroHead } from './asaroHead.js?v=3.1';
 import { createHumanModel } from './humanModel.js?v=4.0';
+import { createLightingRig } from './lighting3d.js?v=5.0';
 
-export const SCENE3D_PHASE = 4;
+export const SCENE3D_PHASE = 5;
 
 const ASARO_GLB_URL = new URL(
   '../assets/models/head_planes_reference.glb?v=3.3',
@@ -70,12 +71,8 @@ async function createAsaroFromGlb(THREE, color) {
   });
   colorMaterial.userData.subjectColor = true;
 
-  let meshCount = 0;
-
   source.traverse((object) => {
     if (!object.isMesh) return;
-
-    meshCount += 1;
     object.castShadow = true;
     object.receiveShadow = true;
     object.material = colorMaterial;
@@ -83,19 +80,14 @@ async function createAsaroFromGlb(THREE, color) {
 
   fitObjectToView(THREE, source, -1.05, 3.2);
 
-  const bounds = new THREE.Box3().setFromObject(container);
-
   return {
     root: container,
-    planeCount: 0,
     materials: [colorMaterial],
     colorMaterials: [colorMaterial],
-    bounds,
+    bounds: new THREE.Box3().setFromObject(container),
     source: 'glb',
     morphCount: 0,
-    setEdgesVisible() {
-      // No mostrar triangulacion interna del GLB.
-    }
+    setEdgesVisible() {}
   };
 }
 
@@ -117,7 +109,7 @@ export async function create3dScene(canvas, options = {}) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.VSMShadowMap;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x15121a);
@@ -138,30 +130,14 @@ export async function create3dScene(canvas, options = {}) {
   controls.maxPolarAngle = Math.PI * 0.95;
   controls.target.set(0, 0.78, 0);
 
-  const hemisphere = new THREE.HemisphereLight(0xd8deff, 0x302538, 1.25);
-  scene.add(hemisphere);
-
-  const key = new THREE.DirectionalLight(0xffe4d6, 4.4);
-  key.position.set(4.2, 6.2, 4.5);
-  key.castShadow = true;
-  key.shadow.mapSize.set(2048, 2048);
-  key.shadow.camera.left = -7;
-  key.shadow.camera.right = 7;
-  key.shadow.camera.top = 8;
-  key.shadow.camera.bottom = -7;
-  key.shadow.camera.near = 0.1;
-  key.shadow.camera.far = 28;
-  key.shadow.bias = -0.00035;
-  key.shadow.normalBias = 0.025;
-  scene.add(key);
-
-  const fill = new THREE.DirectionalLight(0x7898ff, 0.48);
-  fill.position.set(-4, 2.5, 1);
-  scene.add(fill);
-
-  const rim = new THREE.DirectionalLight(0xb994ff, 0.62);
-  rim.position.set(-2.5, 4.5, -4.5);
-  scene.add(rim);
+  const lightingRig = createLightingRig({
+    THREE,
+    scene,
+    camera,
+    renderer,
+    orbitControls: controls,
+    onTransform: options.onLightTransform
+  });
 
   const floorMaterial = new THREE.MeshStandardMaterial({
     color: 0x29242f,
@@ -248,6 +224,7 @@ export async function create3dScene(canvas, options = {}) {
 
   function setShadowsEnabled(enabled) {
     renderer.shadowMap.enabled = Boolean(enabled);
+    lightingRig.setShadowsEnabled(enabled);
 
     subjectRoot.traverse((object) => {
       if (object.isMesh) {
@@ -335,6 +312,8 @@ export async function create3dScene(canvas, options = {}) {
     camera.position.set(...frame.position);
     controls.target.set(...frame.target);
     controls.update();
+
+    lightingRig.setTarget(frame.target);
   }
 
   async function setModel(kind, color = '#C98E78') {
@@ -387,8 +366,28 @@ export async function create3dScene(canvas, options = {}) {
     }
 
     setShadowsEnabled(options.shadowsEnabled !== false);
-    setEdgesVisible(options.edgesVisible === true);
+    setEdgesVisible(false);
     setCameraPreset(options.cameraPreset || 'three-quarter');
+  }
+
+  function applyLightingState(lighting) {
+    lightingRig.applyState(lighting);
+  }
+
+  function setSelectedLight(id) {
+    lightingRig.setSelected(id);
+  }
+
+  function setLightHelpersVisible(visible) {
+    lightingRig.setShowHelpers(visible);
+  }
+
+  function setLightTransformCallback(callback) {
+    lightingRig.setOnTransform(callback);
+  }
+
+  function pickLight(clientX, clientY, rect) {
+    return lightingRig.pickLight(clientX, clientY, rect);
   }
 
   function resize() {
@@ -428,6 +427,9 @@ export async function create3dScene(canvas, options = {}) {
 
   setGridVisible(options.gridVisible !== false);
   setShadowsEnabled(options.shadowsEnabled !== false);
+  applyLightingState(options.lighting || {});
+  setSelectedLight(options.lighting?.selectedLightId);
+  setLightHelpersVisible(options.lighting?.showHelpers !== false);
   setCameraPreset(options.cameraPreset || 'three-quarter');
   applyTheme(document.documentElement.dataset.theme || 'day');
   resize();
@@ -444,6 +446,11 @@ export async function create3dScene(canvas, options = {}) {
     setEdgesVisible,
     setShadowsEnabled,
     setCameraPreset,
+    applyLightingState,
+    setSelectedLight,
+    setLightHelpersVisible,
+    setLightTransformCallback,
+    pickLight,
     resize,
     applyTheme,
     getCurrentModel: () => currentModel,
@@ -459,6 +466,7 @@ export async function create3dScene(canvas, options = {}) {
       resizeObserver.disconnect();
       renderer.setAnimationLoop(null);
       controls.dispose();
+      lightingRig.dispose();
       clearSubject();
       floor.geometry.dispose();
       floorMaterial.dispose();

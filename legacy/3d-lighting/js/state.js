@@ -1,9 +1,9 @@
-export const THREE_STUDIO_STATE_VERSION = 4;
+export const THREE_STUDIO_STATE_VERSION = 5;
 
 export function createInitial3dState() {
   return {
     version: THREE_STUDIO_STATE_VERSION,
-    phase: 4,
+    phase: 5,
     selectedModel: 'asaro',
     baseColor: '#C98E78',
     engine: {
@@ -31,7 +31,48 @@ export function createInitial3dState() {
     },
     lighting: {
       enabled: true,
-      lights: []
+      showHelpers: true,
+      selectedLightId: 'key',
+      ambient: {
+        color: '#D8DEFF',
+        intensity: 18
+      },
+      shadow: {
+        color: '#3A2945',
+        intensity: 16
+      },
+      bounce: {
+        color: '#7898FF',
+        intensity: 12
+      },
+      rim: {
+        color: '#B994FF',
+        intensity: 14
+      },
+      lights: [
+        {
+          id: 'key',
+          name: 'Luz principal',
+          color: '#FFE0CC',
+          intensity: 82,
+          azimuth: 42,
+          elevation: 48,
+          distance: 5.2,
+          softness: 45,
+          enabled: true
+        },
+        {
+          id: 'fill',
+          name: 'Relleno',
+          color: '#7898FF',
+          intensity: 28,
+          azimuth: -58,
+          elevation: 18,
+          distance: 5.6,
+          softness: 72,
+          enabled: true
+        }
+      ]
     },
     project: {
       id: null,
