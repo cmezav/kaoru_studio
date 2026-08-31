@@ -7,8 +7,9 @@ import {
   getProgress,
   putProgress,
   getAsset,
-  putAsset
-} from './reader-db.js?cache=cloud-sync-1';
+  putAsset,
+  listAssets
+} from './reader-db.js?cache=pdf-reader-1';
 
 import {
   READING_FONT_ASSET_ID
@@ -20,6 +21,8 @@ const VAULT_PATH = `${VAULT_ROOT}/vault.json`;
 const STATE_PATH = `${VAULT_ROOT}/state.enc`;
 const PROGRESS_PATH = `${VAULT_ROOT}/progress.enc`;
 const FONT_PATH = `${VAULT_ROOT}/assets/reading-font.enc`;
+const PDF_DIR = `${VAULT_ROOT}/pdfs`;
+const PDF_ASSET_PREFIX = 'pdf:';
 const KDF_ITERATIONS = 250000;
 const CHECK_TEXT = 'KAORU_ARCHIVE_READER_VAULT_V1';
 
@@ -239,6 +242,46 @@ async function decryptJson(text, aes) {
 
   return JSON.parse(decoder.decode(unpacked));
 }
+async function encryptBinary(bytes, aes) {
+  const packed = await compress(bytes);
+  const envelope = await encryptBytes(packed.bytes, aes);
+
+  return JSON.stringify({
+    ...envelope,
+    kind: 'binary',
+    compression: packed.compression
+  });
+}
+
+async function decryptBinary(text, aes) {
+  const envelope = JSON.parse(text);
+
+  if (envelope?.kind !== 'binary') {
+    throw new Error('El archivo PDF cifrado no es valido.');
+  }
+
+  const bytes = await decryptBytes(envelope, aes);
+  return decompress(bytes, envelope.compression);
+}
+
+async function writeEncryptedBinary(
+  path,
+  bytes,
+  message,
+  sha = ''
+) {
+  const text = await encryptBinary(
+    bytes,
+    cloud.keys.aes
+  );
+
+  return cloud.client.putFile(
+    path,
+    text,
+    message,
+    sha
+  );
+}
 
 async function encryptedToken(token, aes) {
   return encryptBytes(encoder.encode(token), aes);
@@ -423,6 +466,21 @@ async function bookPath(bookId) {
     .join('');
 
   return `${VAULT_ROOT}/books/${hex}.enc`;
+}
+async function pdfPath(bookId) {
+  const signed = new Uint8Array(
+    await crypto.subtle.sign(
+      'HMAC',
+      cloud.keys.hmac,
+      encoder.encode(`pdf:${bookId}`)
+    )
+  );
+
+  const hex = Array.from(signed)
+    .map((value) => value.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `${PDF_DIR}/${hex}.enc`;
 }
 
 function cleanBookForCloud(book) {
@@ -734,12 +792,17 @@ async function loadState() {
     STATE_PATH,
     {
       version: 1,
-      deleted: {}
+      deleted: {},
+      pdfs: {}
     }
   );
 
   if (!result.value.deleted) {
     result.value.deleted = {};
+  }
+
+  if (!result.value.pdfs) {
+    result.value.pdfs = {};
   }
 
   return result;
@@ -914,6 +977,116 @@ async function syncBooks(state) {
   };
 }
 
+
+async function syncPdfAssets(state) {
+  const books = (await listBooks()).filter(
+    (book) =>
+      String(book?.format || '').toLowerCase() === 'pdf' &&
+      !state.deleted?.[book.id]
+  );
+
+  const localAssets = (await listAssets()).filter(
+    (asset) => String(asset?.id || '').startsWith(PDF_ASSET_PREFIX)
+  );
+
+  const localMap = new Map(
+    localAssets.map((asset) => [
+      String(asset.id).slice(PDF_ASSET_PREFIX.length),
+      asset
+    ])
+  );
+
+  const remoteDirectory = await cloud.client.listDir(PDF_DIR);
+  const remoteSha = new Map(
+    remoteDirectory
+      .filter((item) => item.type === 'file')
+      .map((item) => [item.path, item.sha])
+  );
+
+  let pulled = 0;
+  let pushed = 0;
+
+  for (const book of books) {
+    let remoteMeta = state.pdfs?.[book.id] || null;
+    let local = localMap.get(book.id) || null;
+    const path = await pdfPath(book.id);
+
+    if (
+      remoteMeta &&
+      (
+        !local ||
+        Number(remoteMeta.updatedAt || 0) >
+        Number(local.updatedAt || 0)
+      )
+    ) {
+      const file = await cloud.client.getFile(path);
+
+      if (file) {
+        const bytes = await decryptBinary(
+          file.text,
+          cloud.keys.aes
+        );
+
+        const buffer = bytes.buffer.slice(
+          bytes.byteOffset,
+          bytes.byteOffset + bytes.byteLength
+        );
+
+        local = {
+          id: `${PDF_ASSET_PREFIX}${book.id}`,
+          name: book.fileName || `${book.title}.pdf`,
+          mime: 'application/pdf',
+          size: bytes.byteLength,
+          updatedAt: Number(remoteMeta.updatedAt || Date.now()),
+          bytes: buffer
+        };
+
+        await putAsset(local);
+        localMap.set(book.id, local);
+        pulled += 1;
+      } else {
+        delete state.pdfs[book.id];
+        remoteMeta = null;
+      }
+    }
+
+    if (
+      local &&
+      (
+        !remoteMeta ||
+        Number(local.updatedAt || 0) >
+        Number(remoteMeta.updatedAt || 0)
+      )
+    ) {
+      const bytes = local.bytes instanceof ArrayBuffer
+        ? new Uint8Array(local.bytes)
+        : new Uint8Array(
+            local.bytes?.buffer ||
+            local.bytes ||
+            []
+          );
+
+      await writeEncryptedBinary(
+        path,
+        bytes,
+        `reader: guardar PDF ${book.title}`,
+        remoteSha.get(path) || ''
+      );
+
+      state.pdfs[book.id] = {
+        updatedAt: Number(local.updatedAt || Date.now()),
+        size: Number(local.size || bytes.byteLength)
+      };
+
+      pushed += 1;
+    }
+  }
+
+  return {
+    pulled,
+    pushed
+  };
+}
 async function syncProgress(state) {
   const remote = await readEncryptedJson(
     PROGRESS_PATH,
@@ -1097,6 +1270,7 @@ async function saveStateIfNeeded(state, stateSha, beforeJson) {
     {
       version: 1,
       deleted: state.deleted || {},
+      pdfs: state.pdfs || {},
       updatedAt: Date.now()
     },
     'reader: sincronizar estado',
@@ -1126,6 +1300,7 @@ export async function syncCloud() {
     const stateBefore = JSON.stringify(state);
 
     const books = await syncBooks(state);
+    const pdfs = await syncPdfAssets(state);
     const progress = await syncProgress(state);
     const font = await syncFont();
 
@@ -1138,6 +1313,8 @@ export async function syncCloud() {
     const summary = [
       books.pulled ? `${books.pulled} obra(s) descargada(s)` : '',
       books.pushed ? `${books.pushed} obra(s) subida(s)` : '',
+      pdfs.pulled ? `${pdfs.pulled} PDF descargado(s)` : '',
+      pdfs.pushed ? `${pdfs.pushed} PDF subido(s)` : '',
       progress.pulled ? 'progreso actualizado' : '',
       font.direction === 'pulled' ? 'fuente descargada' : '',
       font.direction === 'pushed' ? 'fuente subida' : ''
@@ -1155,6 +1332,7 @@ export async function syncCloud() {
 
     return {
       books,
+      pdfs,
       progress,
       font
     };
@@ -1206,6 +1384,23 @@ export async function deleteBookEverywhere(bookId) {
       `reader: eliminar ${bookId}`
     );
   }
+  const pdfRemotePath = await pdfPath(bookId);
+  const pdfDirectory = await cloud.client.listDir(PDF_DIR);
+  const remotePdf = pdfDirectory.find(
+    (item) => item.path === pdfRemotePath
+  );
+
+  if (remotePdf?.sha) {
+    await cloud.client.deleteFile(
+      pdfRemotePath,
+      remotePdf.sha,
+      `reader: eliminar PDF ${bookId}`
+    );
+  }
+
+  if (state.pdfs?.[bookId]) {
+    delete state.pdfs[bookId];
+  }
 
   const remoteProgress = await readEncryptedJson(
     PROGRESS_PATH,
@@ -1231,6 +1426,7 @@ export async function deleteBookEverywhere(bookId) {
     {
       version: 1,
       deleted: state.deleted,
+      pdfs: state.pdfs || {},
       updatedAt: Date.now()
     },
     `reader: registrar eliminacion ${bookId}`,

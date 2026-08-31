@@ -5,12 +5,21 @@ import {
   deleteBook,
   getProgress,
   putProgress
-} from './reader-db.js?cache=cloud-sync-1';
+} from './reader-db.js?cache=pdf-reader-1';
 
 import {
   parseEpub
 } from './epub-parser.js?cache=archive-reader';
 
+import {
+  isPdfBook,
+  pdfProgressPercent,
+  pdfProgressText,
+  parsePdfFile,
+  openPdfDocument,
+  closePdfDocument,
+  savePdfPosition
+} from './pdf-reader.js?cache=pdf-reader-1';
 import {
   importReadingFont,
   loadSavedReadingFont
@@ -26,7 +35,7 @@ import {
   syncCloud,
   scheduleCloudSync,
   deleteBookEverywhere
-} from './reader-cloud.js?cache=cloud-sync-1';
+} from './reader-cloud.js?cache=cloud-sync-pdf-2';
 
 const SESSION_KEY = 'kaoru.archive-reader.session';
 const READING_PREFS_KEY = 'kaoru.archive-reader.reading-prefs';
@@ -323,6 +332,9 @@ function escapeHtml(value) {
 }
 
 function progressPercent(book, progress) {
+  if (isPdfBook(book)) {
+    return pdfProgressPercent(book, progress);
+  }
   if (!book?.chapters?.length || !progress) return 0;
 
   const chapter = Math.max(
@@ -341,6 +353,9 @@ function progressPercent(book, progress) {
 }
 
 function progressText(book, progress) {
+  if (isPdfBook(book)) {
+    return pdfProgressText(book, progress);
+  }
   if (!progress) return 'Sin empezar';
 
   const chapter = book.chapters[
@@ -355,15 +370,31 @@ function progressText(book, progress) {
 
 function cardMarkup(book, progress) {
   const percent = progressPercent(book, progress);
+  const pdf = isPdfBook(book);
 
-  return `
-    <span class="book-title">${escapeHtml(book.title)}</span>
-    <span class="book-author">by ${escapeHtml(book.author)}</span>
-    <span class="book-meta">
+  const authorLine = pdf
+    ? (
+        book.author
+          ? escapeHtml(book.author)
+          : escapeHtml(book.fileName || 'Documento PDF')
+      )
+    : `by ${escapeHtml(book.author)}`;
+
+  const meta = pdf
+    ? `
+      <span>PDF</span>
+      <span>${Number(book.pageCount || 1)} páginas</span>
+    `
+    : `
       <span>${Number(book.storyChapterCount || book.chapters.length)} capítulos</span>
       ${book.language ? `<span>${escapeHtml(book.language)}</span>` : ''}
       ${book.ao3WorkId ? `<span>AO3 #${escapeHtml(book.ao3WorkId)}</span>` : ''}
-    </span>
+    `;
+
+  return `
+    <span class="book-title">${escapeHtml(book.title)}</span>
+    <span class="book-author">${authorLine}</span>
+    <span class="book-meta">${meta}</span>
     <span class="progress-track"><i style="width:${percent}%"></i></span>
   `;
 }
@@ -481,10 +512,21 @@ async function renderLibrary() {
 async function showLibrary(fromHistory = false) {
   await saveCurrentPosition(true);
   await exitImmersiveMode();
+  await closePdfDocument();
+
   currentBook = null;
-  document.body.classList.remove('is-reading');
+  document.body.classList.remove(
+    'is-reading',
+    'is-pdf-reading'
+  );
+
   elements.readerView.hidden = true;
   elements.libraryView.hidden = false;
+
+  if (elements.pdfView) {
+    elements.pdfView.hidden = true;
+  }
+
   writeSession({ view: 'library' });
 
   if (!fromHistory) {
@@ -560,6 +602,11 @@ function currentRatio() {
 
 async function saveCurrentPosition(immediate = false) {
   if (!currentBook) return;
+
+  if (isPdfBook(currentBook)) {
+    await savePdfPosition(immediate);
+    return;
+  }
 
   const perform = async () => {
     const anchor = currentAnchor();
@@ -693,17 +740,56 @@ async function openBook(bookId, chapterIndex = 0, restore = true) {
   }
 
   currentBook = book;
-  currentChapterIndex = Math.max(
-    0,
-    Math.min(book.chapters.length - 1, Number(chapterIndex) || 0)
-  );
-
   book.lastOpenedAt = Date.now();
   await putBook(book);
 
   elements.libraryView.hidden = true;
+
+  if (isPdfBook(book)) {
+    elements.readerView.hidden = true;
+
+    if (elements.pdfView) {
+      elements.pdfView.hidden = false;
+    }
+
+    document.body.classList.add(
+      'is-reading',
+      'is-pdf-reading'
+    );
+
+    try {
+      await openPdfDocument(
+        book,
+        {
+          restore,
+          onSession: writeSession
+        }
+      );
+    } catch (error) {
+      console.error(error);
+      setStatus(
+        error?.message ||
+        'No se pudo abrir este PDF.'
+      );
+      await showLibrary();
+    }
+
+    return;
+  }
+
+  document.body.classList.remove('is-pdf-reading');
   elements.readerView.hidden = false;
+
+  if (elements.pdfView) {
+    elements.pdfView.hidden = true;
+  }
+
   document.body.classList.add('is-reading');
+
+  currentChapterIndex = Math.max(
+    0,
+    Math.min(book.chapters.length - 1, Number(chapterIndex) || 0)
+  );
 
   await renderChapter(restore);
 }
@@ -725,14 +811,21 @@ async function changeChapter(delta) {
   }
 }
 
-async function importEpub(file) {
+async function importReaderFile(file) {
   if (!file) return;
 
-  setStatus('Analizando EPUB…');
+  const pdf =
+    String(file.name || '').toLowerCase().endsWith('.pdf') ||
+    file.type === 'application/pdf';
+
+  setStatus(pdf ? 'Analizando PDF…' : 'Analizando EPUB…');
   elements.importBtn.disabled = true;
 
   try {
-    const book = await parseEpub(file);
+    const book = pdf
+      ? await parsePdfFile(file)
+      : await parseEpub(file);
+
     const previous = await getBook(book.id);
 
     if (previous) {
@@ -743,7 +836,11 @@ async function importEpub(file) {
     book.contentUpdatedAt = Date.now();
 
     await putBook(book);
-    setStatus(`${book.title} guardado en este dispositivo.`);
+
+    setStatus(
+      `${book.title} guardado en este dispositivo.`
+    );
+
     await renderLibrary();
 
     if (isCloudUnlocked()) {
@@ -751,9 +848,14 @@ async function importEpub(file) {
     }
   } catch (error) {
     console.error(error);
+
     setStatus(
       error?.message ||
-      'No se pudo abrir este EPUB.'
+      (
+        pdf
+          ? 'No se pudo abrir este PDF.'
+          : 'No se pudo abrir este EPUB.'
+      )
     );
   } finally {
     elements.importBtn.disabled = false;
@@ -933,7 +1035,7 @@ elements.immersiveReading?.addEventListener('change', () => {
   if (elements.immersiveStatus) {
     elements.immersiveStatus.textContent =
       readingPreferences.immersive
-        ? 'Se intentará activar pantalla completa cuando toques una historia.'
+        ? 'Se intentará activar pantalla completa cuando toques una obra.'
         : 'Lectura inmersiva desactivada.';
   }
 });
@@ -943,10 +1045,15 @@ elements.importBtn.addEventListener('click', () => {
 });
 
 elements.epubInput.addEventListener('change', () => {
-  importEpub(elements.epubInput.files?.[0]);
+  importReaderFile(elements.epubInput.files?.[0]);
 });
 
 elements.libraryBtn.addEventListener('click', returnToLibrary);
+
+window.addEventListener(
+  'kaoru:pdf-library-request',
+  returnToLibrary
+);
 elements.prevChapterBtn.addEventListener('click', () => changeChapter(-1));
 elements.nextChapterBtn.addEventListener('click', () => changeChapter(1));
 
@@ -971,7 +1078,10 @@ window.addEventListener('popstate', () => {
 });
 
 window.addEventListener('scroll', () => {
-  if (document.body.classList.contains('is-reading')) {
+  if (
+    document.body.classList.contains('is-reading') &&
+    !document.body.classList.contains('is-pdf-reading')
+  ) {
     saveCurrentPosition(false);
   }
 }, { passive: true });
@@ -1022,7 +1132,7 @@ async function boot() {
   if (elements.immersiveStatus) {
     elements.immersiveStatus.textContent =
       readingPreferences.immersive
-        ? 'Se intentará activar pantalla completa cuando toques una historia.'
+        ? 'Se intentará activar pantalla completa cuando toques una obra.'
         : 'Lectura inmersiva desactivada.';
   }
 
@@ -1050,7 +1160,10 @@ async function boot() {
   const session = readSession();
 
   if (
-    session?.view === 'reader' &&
+    (
+      session?.view === 'reader' ||
+      session?.view === 'pdf'
+    ) &&
     session.bookId
   ) {
     const progress = await getProgress(session.bookId);

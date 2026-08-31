@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
-  <link rel="stylesheet" href="./reader.css?cache=reader-polish-3">
+  <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=pdf-reader-1">
+  <link rel="stylesheet" href="./reader.css?cache=pdf-reader-1">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -13,10 +14,10 @@
       <div>
         <p class="eyebrow">ARCHIVE READER</p>
         <h1>Biblioteca</h1>
-        <p class="library-subtitle">EPUB de AO3 · local primero · lectura offline.</p>
+        <p class="library-subtitle">EPUB y PDF · local primero · lectura offline.</p>
       </div>
       <div class="library-actions">
-        <button id="importBtn" type="button">Importar EPUB</button>
+        <button id="importBtn" type="button">Importar EPUB / PDF</button>
         <button id="leaveReaderBtn" class="secondary-action" type="button">Kaoru's Studio</button>
       </div>
       <input id="epubInput" type="file" hidden>
@@ -75,8 +76,7 @@
 
         <div class="settings-body">
           <p class="settings-help">
-            Usa un repositorio <strong>privado</strong> separado. Las historias,
-            el progreso y la fuente se cifran con tu clave antes de guardarse allí.
+            Usa un repositorio <strong>privado</strong> separado. Los EPUB, PDFs, el progreso y la fuente se cifran con tu clave antes de guardarse allí.
           </p>
 
           <div class="sync-grid">
@@ -148,7 +148,7 @@
       <div id="libraryList" class="library-list"></div>
       <div id="emptyLibrary" class="empty-library">
         <strong>Aún no hay obras guardadas.</strong>
-        <span>Descarga un EPUB desde AO3 e impórtalo aquí.</span>
+        <span>Importa un EPUB de AO3 o cualquier PDF que quieras leer.</span>
       </div>
     </section>
 
@@ -175,6 +175,83 @@
     </article>
   </main>
 
-  <script type="module" src="./reader.js?cache=reader-polish-3"></script>
+
+  <main id="pdfView" class="pdf-view" hidden>
+    <section id="pdfPages" class="pdf-pages" aria-label="Páginas del PDF"></section>
+
+    <button
+      id="pdfControlHandle"
+      class="pdf-control-handle is-faint"
+      type="button"
+      aria-label="Abrir controles del PDF"
+      title="Controles del PDF"
+    ></button>
+
+    <aside id="pdfControls" class="pdf-controls" aria-hidden="true" aria-label="Controles del PDF">
+      <div class="pdf-controls-head">
+        <strong>PDF</strong>
+        <button id="pdfControlsClose" class="pdf-controls-close" type="button" aria-label="Ocultar controles">×</button>
+      </div>
+
+      <div class="pdf-page-jump">
+        <label for="pdfPageInput">Página</label>
+        <input id="pdfPageInput" type="number" min="1" step="1" inputmode="numeric" value="1">
+        <span id="pdfPageTotal" class="pdf-page-total">/ 1</span>
+      </div>
+
+      <form id="pdfSearchForm" class="pdf-search-form" role="search">
+        <input id="pdfSearchInput" type="search" placeholder="Buscar texto…" autocomplete="off" enterkeyhint="search">
+        <button type="submit">Buscar</button>
+      </form>
+
+      <div class="pdf-search-nav">
+        <button id="pdfSearchPrev" type="button" aria-label="Coincidencia anterior">‹</button>
+        <span id="pdfSearchCount" class="pdf-search-count">0 / 0</span>
+        <button id="pdfSearchNext" type="button" aria-label="Coincidencia siguiente">›</button>
+        <button id="pdfSearchClear" type="button" aria-label="Quitar búsqueda" title="Quitar resaltados">×</button>
+      </div>
+
+      <p id="pdfSearchStatus" class="pdf-search-status" role="status"></p>
+      <button id="pdfLibraryBtn" class="pdf-library-action" type="button">Biblioteca</button>
+    </aside>
+  </main>
+
+<div
+  id="pdfPasswordDialog"
+  class="pdf-password-dialog"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pdfPasswordTitle"
+>
+  <form id="pdfPasswordForm" class="pdf-password-card">
+    <p class="pdf-password-kicker">PDF CIFRADO</p>
+    <h2 id="pdfPasswordTitle">PDF protegido</h2>
+    <p id="pdfPasswordMessage" class="pdf-password-message">
+      Este PDF está cifrado. Escribe su contraseña para abrirlo.
+    </p>
+
+    <label for="pdfPasswordInput">Contraseña</label>
+    <input
+      id="pdfPasswordInput"
+      type="password"
+      autocomplete="off"
+      enterkeyhint="done"
+      placeholder="Contraseña del PDF"
+    >
+
+    <p class="pdf-password-privacy">
+      Kaoru no guarda ni sincroniza esta contraseña.
+    </p>
+
+    <div class="pdf-password-actions">
+      <button id="pdfPasswordCancel" class="secondary-action" type="button">Cancelar</button>
+      <button type="submit">Abrir PDF</button>
+    </div>
+  </form>
+</div>
+
+  <script type="module" src="./reader.js?cache=pdf-reader-1"></script>
 </body>
 </html>

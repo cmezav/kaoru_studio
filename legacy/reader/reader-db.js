@@ -78,9 +78,14 @@ export async function listBooks() {
 
 export async function deleteBook(id) {
   const db = await openReaderDb();
-  const tx = db.transaction([BOOK_STORE, PROGRESS_STORE], 'readwrite');
+  const tx = db.transaction(
+    [BOOK_STORE, PROGRESS_STORE, ASSET_STORE],
+    'readwrite'
+  );
+
   tx.objectStore(BOOK_STORE).delete(id);
   tx.objectStore(PROGRESS_STORE).delete(id);
+  tx.objectStore(ASSET_STORE).delete(`pdf:${id}`);
   await txPromise(tx);
 }
 
