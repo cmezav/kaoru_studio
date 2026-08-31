@@ -4,7 +4,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 export const HUMAN_MODEL_PHASE = 4;
 
 const HUMAN_GLB_URL = new URL(
-  '../assets/models/realistic_human.glb?v=4.0',
+  '../assets/models/realistic_human.glb?v=4.1',
   import.meta.url
 ).href;
 
@@ -90,6 +90,11 @@ export async function createHumanModel(THREE, options = {}) {
     meshCount += 1;
     object.castShadow = true;
     object.receiveShadow = true;
+
+    if (object.geometry) {
+      object.geometry.computeVertexNormals?.();
+      object.geometry.normalizeNormals?.();
+    }
 
     const originalName = [
       object.name,

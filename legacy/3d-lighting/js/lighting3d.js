@@ -234,9 +234,9 @@ export function createLightingRig(options) {
     light.shadow.mapSize.set(512, 512);
     light.shadow.camera.near = 0.1;
     light.shadow.camera.far = 40;
-    light.shadow.bias = -0.00035;
-    light.shadow.normalBias = 0.025;
-    light.shadow.blurSamples = 8;
+    light.shadow.bias = -0.00005;
+    light.shadow.normalBias = 0.085;
+    light.shadow.radius = 4;
 
     const lightTarget = new THREE.Object3D();
     lightTarget.name = `kaoru-target-${config.id}`;

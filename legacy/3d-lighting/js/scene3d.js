@@ -1,8 +1,8 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createAsaroHead } from './asaroHead.js?v=3.1';
-import { createHumanModel } from './humanModel.js?v=4.0';
-import { createLightingRig } from './lighting3d.js?v=5.0';
+import { createHumanModel } from './humanModel.js?v=4.1';
+import { createLightingRig } from './lighting3d.js?v=5.1';
 
 export const SCENE3D_PHASE = 5;
 
@@ -109,7 +109,7 @@ export async function create3dScene(canvas, options = {}) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.VSMShadowMap;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x15121a);

@@ -1,11 +1,11 @@
-import { create3dStore } from './state.js?v=5.0';
+import { create3dStore } from './state.js?v=5.1';
 import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=4.0';
-import { detectWebGL, create3dScene } from './scene3d.js?v=5.0';
+import { detectWebGL, create3dScene } from './scene3d.js?v=5.1';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,
   duplicate3dLight
-} from './lighting3d.js?v=5.0';
+} from './lighting3d.js?v=5.1';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
