@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=pdf-reader-1">
-  <link rel="stylesheet" href="./reader.css?cache=reader-native-zoom-6">
+  <link rel="stylesheet" href="./reader.css?cache=reader-progress-multi-9">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -40,7 +40,7 @@
         <summary>
           <span>
             <strong>Lectura</strong>
-            <small id="readingSummary">16 px · inmersiva en móvil</small>
+            <small id="readingSummary">16 px · despejada en móvil</small>
           </span>
           <span class="status-badge">Aa</span>
         </summary>
@@ -60,10 +60,10 @@
           <label class="immersive-toggle" for="immersiveReading">
             <input id="immersiveReading" type="checkbox">
             <span>
-              <strong>Lectura inmersiva</strong>
+              <strong>Vista despejada</strong>
               <small>
-                Al tocar una historia intenta ocultar las barras del navegador y del sistema
-                usando pantalla completa. Puedes salir con Atrás o volviendo a Biblioteca.
+                Mantiene la lectura limpia sin activar la pantalla completa
+                del navegador ni mostrar avisos del sistema.
               </small>
             </span>
           </label>
@@ -245,6 +245,6 @@
   </form>
 </div>
 
-  <script type="module" src="./reader.js?cache=reader-native-zoom-6"></script>
+  <script type="module" src="./reader.js?cache=reader-progress-multi-9"></script>
 </body>
 </html>

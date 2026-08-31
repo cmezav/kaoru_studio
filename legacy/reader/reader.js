@@ -162,7 +162,7 @@ function refreshReadingPreferencesUi() {
 
   if (elements.readingSummary) {
     elements.readingSummary.textContent =
-      `${size}px · ${readingPreferences.immersive ? 'inmersiva' : 'normal'}`;
+      `${size}px · ${readingPreferences.immersive ? 'despejada' : 'normal'}`;
   }
 }
 
@@ -176,87 +176,24 @@ function saveReadingPreferences() {
   refreshReadingPreferencesUi();
 }
 
-function fullscreenDocument() {
-  try {
-    if (
-      window.top &&
-      window.top !== window &&
-      window.top.document
-    ) {
-      return window.top.document;
-    }
-  } catch (_) {}
-
-  return document;
-}
-
-function isFullscreenActive() {
-  const doc = fullscreenDocument();
-
-  return Boolean(
-    doc.fullscreenElement ||
-    doc.webkitFullscreenElement
-  );
-}
-
 async function enterImmersiveMode() {
-  if (!readingPreferences.immersive || isFullscreenActive()) {
-    return;
-  }
+  document.body.classList.toggle(
+    'reader-soft-immersive',
+    Boolean(readingPreferences.immersive)
+  );
 
-  const doc = fullscreenDocument();
-  const target = doc.documentElement;
-  const request =
-    target.requestFullscreen ||
-    target.webkitRequestFullscreen;
-
-  if (typeof request !== 'function') {
-    if (elements.immersiveStatus) {
-      elements.immersiveStatus.textContent =
-        'Este navegador no permite pantalla completa desde Kaoru Reader. Al deslizar, el navegador todavía puede ocultar parte de sus barras.';
-    }
-    return;
-  }
-
-  try {
-    await request.call(
-      target,
-      { navigationUI: 'hide' }
-    );
-
-    if (elements.immersiveStatus) {
-      elements.immersiveStatus.textContent =
-        'Lectura inmersiva activa.';
-    }
-  } catch (error) {
-    console.warn('Fullscreen no disponible', error);
-
-    if (elements.immersiveStatus) {
-      elements.immersiveStatus.textContent =
-        'El teléfono no permitió ocultar todas las barras. La lectura seguirá funcionando normalmente.';
-    }
+  if (elements.immersiveStatus) {
+    elements.immersiveStatus.textContent = '';
   }
 }
 
 async function exitImmersiveMode() {
-  const doc = fullscreenDocument();
+  document.body.classList.remove('reader-soft-immersive');
 
-  if (!(
-    doc.fullscreenElement ||
-    doc.webkitFullscreenElement
-  )) {
-    return;
+  if (elements.immersiveStatus) {
+    elements.immersiveStatus.textContent = '';
   }
-
-  try {
-    if (typeof doc.exitFullscreen === 'function') {
-      await doc.exitFullscreen();
-    } else if (typeof doc.webkitExitFullscreen === 'function') {
-      doc.webkitExitFullscreen();
-    }
-  } catch (_) {}
 }
-
 function libraryHistoryUrl() {
   return `${location.pathname}${location.search}`;
 }
@@ -402,19 +339,23 @@ async function renderLibrary() {
   elements.emptyLibrary.hidden = books.length > 0;
   elements.libraryList.replaceChildren();
 
-  let bestContinue = null;
+  const continueItems = [];
 
   for (const book of books) {
     const progress = await getProgress(book.id);
 
+    const percent = progressPercent(book, progress);
+
     if (
       progress &&
-      progressPercent(book, progress) < 99 &&
-      (!bestContinue || progress.updatedAt > bestContinue.progress.updatedAt)
+      percent < 99
     ) {
-      bestContinue = { book, progress };
+      continueItems.push({
+        book,
+        progress,
+        percent
+      });
     }
-
     const card = document.createElement('article');
     card.className = 'book-card';
 
@@ -425,11 +366,10 @@ async function renderLibrary() {
     main.addEventListener('click', () => {
       openBookFromUserGesture(
         book.id,
-        0,
-        false
+        progress?.chapterIndex || 0,
+        Boolean(progress)
       );
     });
-
     const footer = document.createElement('div');
     footer.className = 'book-card-footer';
 
@@ -479,32 +419,44 @@ async function renderLibrary() {
     elements.libraryList.appendChild(card);
   }
 
-  if (bestContinue) {
+  continueItems.sort(
+    (a, b) =>
+      Number(b.progress?.updatedAt || 0) -
+      Number(a.progress?.updatedAt || 0)
+  );
+
+  if (continueItems.length) {
     elements.continueSection.hidden = false;
-    elements.continueCard.className = 'continue-card';
+    elements.continueCard.className =
+      'continue-card continue-list';
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.innerHTML = `
-      ${cardMarkup(bestContinue.book, bestContinue.progress)}
-      <span class="progress-label">${escapeHtml(progressText(bestContinue.book, bestContinue.progress))}</span>
-    `;
+    elements.continueCard.replaceChildren();
 
-    button.addEventListener('click', () => {
-      openBookFromUserGesture(
-        bestContinue.book.id,
-        bestContinue.progress.chapterIndex || 0,
-        true
-      );
-    });
+    for (const item of continueItems) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'continue-book';
 
-    elements.continueCard.replaceChildren(button);
+      button.innerHTML = `
+        ${cardMarkup(item.book, item.progress)}
+        <span class="progress-label">${escapeHtml(progressText(item.book, item.progress))}</span>
+      `;
+
+      button.addEventListener('click', () => {
+        openBookFromUserGesture(
+          item.book.id,
+          item.progress?.chapterIndex || 0,
+          true
+        );
+      });
+
+      elements.continueCard.appendChild(button);
+    }
   } else {
     elements.continueSection.hidden = true;
     elements.continueCard.replaceChildren();
   }
 }
-
 async function showLibrary(fromHistory = false) {
   await saveCurrentPosition(true);
   await exitImmersiveMode();
@@ -1071,14 +1023,19 @@ elements.immersiveReading?.addEventListener('change', () => {
 
   saveReadingPreferences();
 
+  document.body.classList.toggle(
+    'reader-soft-immersive',
+    Boolean(readingPreferences.immersive) &&
+    (
+      document.body.classList.contains('is-reading') ||
+      document.body.classList.contains('is-pdf-reading')
+    )
+  );
+
   if (elements.immersiveStatus) {
-    elements.immersiveStatus.textContent =
-      readingPreferences.immersive
-        ? 'Se intentará activar pantalla completa cuando toques una obra.'
-        : 'Lectura inmersiva desactivada.';
+    elements.immersiveStatus.textContent = '';
   }
 });
-
 elements.importBtn.addEventListener('click', () => {
   elements.epubInput.click();
 });

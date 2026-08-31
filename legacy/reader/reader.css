@@ -1259,3 +1259,44 @@ body{
   No forzamos transform, zoom CSS ni touch handlers propios.
   El navegador hace el pinch; Kaoru solo permite también pan-x.
 */
+/* Continuar leyendo: varias obras independientes */
+.continue-card.continue-list{
+  display:grid;
+  gap:10px;
+  margin-top:14px;
+  padding:0;
+  border:0;
+  background:none;
+  box-shadow:none;
+}
+
+.continue-card.continue-list .continue-book{
+  box-sizing:border-box;
+  width:100%;
+  min-width:0;
+  padding:16px;
+  border:1px solid #555;
+  background:#000;
+  color:#eee;
+  box-shadow:1px 1px 3px #000;
+  text-align:left;
+}
+
+.continue-card.continue-list .continue-book:hover,
+.continue-card.continue-list .continue-book:focus{
+  background:#000;
+  color:#eee;
+  border-color:#5998D6;
+  box-shadow:1px 1px 3px #000;
+}
+
+.continue-card.continue-list .progress-label{
+  display:block;
+  margin-top:12px;
+}
+
+/* Vista despejada sin Fullscreen API */
+body.reader-soft-immersive .reader-view,
+body.reader-soft-immersive .pdf-view{
+  min-height:100dvh;
+}
