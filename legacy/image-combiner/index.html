@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
+  <title>Kaoru's Studio - Image Combiner Studio</title>
+  <link rel="icon" href="../../logo.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css?v=1.0">
+</head>
+
+<body data-studio="combiner">
+  <div class="combiner-app">
+    <header class="standalone-header">
+      <a class="brand" href="../../index.html#combiner">
+        <img src="../../logo.png" alt="" onerror="this.hidden=true">
+        <span>Kaoru's Studio</span>
+        <b>Image Combiner</b>
+      </a>
+
+      <nav class="standalone-nav" aria-label="Cambiar de Studio">
+        <a data-studio-link="silhouette" href="../index.html">Silueta</a>
+        <a data-studio-link="text" href="../text-studio/index.html">Texto</a>
+        <a data-studio-link="image" href="../image-studio/index.html">Imagen</a>
+        <a data-studio-link="light" href="../light-lab/index.html">Light Lab</a>
+        <a data-studio-link="3d" href="../3d-lighting/index.html">3D</a>
+        <a data-studio-link="combiner" href="./index.html">Combiner</a>
+        <a data-studio-link="gallery" href="../gallery/index.html">Galeria</a>
+      </nav>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel settings-panel">
+        <section class="intro">
+          <span class="eyebrow">IMAGE COMBINER - FASE 1 DE 6</span>
+          <h1>Combina imagenes</h1>
+          <p>Crea un lienzo, pega varias imagenes y acomodalas libremente.</p>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title"><span>01</span><h2>Lienzo</h2></div>
+
+          <label class="field">
+            <span>Preset</span>
+            <select id="canvasPreset"></select>
+          </label>
+
+          <div class="grid2">
+            <label class="field"><span>Ancho px</span><input id="canvasWidth" type="number" min="32" max="10000" value="1080"></label>
+            <label class="field"><span>Alto px</span><input id="canvasHeight" type="number" min="32" max="10000" value="1080"></label>
+          </div>
+
+          <div class="button-grid">
+            <button class="primary" id="applyCanvasBtn" type="button">Aplicar tamano</button>
+            <button class="secondary" id="savePresetBtn" type="button">Guardar preset</button>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title"><span>02</span><h2>Fondo</h2></div>
+
+          <label class="radio-row">
+            <input id="colorBg" type="radio" name="backgroundMode" checked>
+            <span>Color</span>
+          </label>
+
+          <div class="color-row">
+            <input id="backgroundColor" type="color" value="#FFFFFF">
+            <input id="backgroundHex" type="text" maxlength="7" value="#FFFFFF" spellcheck="false">
+          </div>
+
+          <label class="radio-row">
+            <input id="transparentBg" type="radio" name="backgroundMode">
+            <span>Transparente</span>
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <div class="section-title"><span>03</span><h2>Imagenes</h2></div>
+
+          <button class="primary full" id="importImagesBtn" type="button">+ Agregar imagenes</button>
+          <input id="imageFiles" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+
+          <div class="drop-zone" id="dropZone">
+            <strong>Arrastra imagenes al lienzo</strong>
+            <small>o pega una imagen con Ctrl+V</small>
+          </div>
+
+          <p class="helper">PNG, JPG, WEBP y GIF. Puedes seleccionar varios archivos a la vez.</p>
+        </section>
+
+        <section class="panel-section" id="layerControls">
+          <div class="section-title"><span>04</span><h2>Imagen seleccionada</h2></div>
+          <strong class="selected-name" id="selectedName">Ninguna imagen seleccionada</strong>
+
+          <div class="grid2 transform-grid">
+            <label class="field"><span>X</span><input id="layerX" type="number" step="1" disabled></label>
+            <label class="field"><span>Y</span><input id="layerY" type="number" step="1" disabled></label>
+            <label class="field"><span>Ancho</span><input id="layerW" type="number" min="20" step="1" disabled></label>
+            <label class="field"><span>Alto</span><input id="layerH" type="number" min="20" step="1" disabled></label>
+            <label class="field"><span>Rotacion</span><input id="layerRotation" type="number" min="-360" max="360" step="1" disabled></label>
+          </div>
+
+          <label class="range-field">
+            <span>Opacidad <output id="layerOpacityOut">100%</output></span>
+            <input id="layerOpacity" type="range" min="0" max="100" value="100" disabled>
+          </label>
+
+          <label class="check-row">
+            <input id="aspectLock" type="checkbox" checked>
+            <span>Mantener proporcion</span>
+          </label>
+
+          <div class="button-grid two">
+            <button class="secondary" id="duplicateBtn" type="button" disabled>Duplicar</button>
+            <button class="secondary danger" id="deleteBtn" type="button" disabled>Eliminar</button>
+            <button class="secondary" id="flipXBtn" type="button" disabled>Voltear X</button>
+            <button class="secondary" id="flipYBtn" type="button" disabled>Voltear Y</button>
+            <button class="secondary" id="forwardBtn" type="button" disabled>Subir capa</button>
+            <button class="secondary" id="backwardBtn" type="button" disabled>Bajar capa</button>
+          </div>
+
+          <p class="helper">Ctrl+D duplica. Delete elimina. Flechas mueven; Shift+flechas mueve 10 px.</p>
+        </section>
+      </aside>
+
+      <section class="stage-column">
+        <header class="stage-toolbar">
+          <div>
+            <span class="eyebrow">LIENZO</span>
+            <strong id="canvasInfo">1080 x 1080px</strong>
+          </div>
+
+          <div class="toolbar-actions">
+            <button id="undoBtn" class="ghost" type="button" disabled title="Ctrl+Z">Deshacer</button>
+            <button id="redoBtn" class="ghost" type="button" disabled title="Ctrl+Shift+Z">Rehacer</button>
+            <select id="zoomSelect" class="zoom-select" title="Zoom">
+              <option value="fit">Ajustar</option>
+              <option value="0.25">25%</option>
+              <option value="0.5">50%</option>
+              <option value="0.75">75%</option>
+              <option value="1">100%</option>
+              <option value="1.5">150%</option>
+            </select>
+            <button id="fitBtn" class="ghost" type="button">Centrar</button>
+            <button id="exportPngBtn" class="primary export-btn" type="button">Descargar PNG</button>
+          </div>
+        </header>
+
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="stage-shell" id="stageShell">
+            <div class="canvas-stage" id="canvasStage" data-background="color">
+              <div class="empty-canvas-hint" id="emptyCanvasHint">
+                <strong>Tu composicion empieza aqui</strong>
+                <span>Agrega o pega imagenes para comenzar</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="stage-footer">
+          <span id="layerCount">0 imagenes</span>
+          <span>Arrastra para mover - tirador inferior para escalar - tirador superior para rotar</span>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../shared/studioBridge.js?v=19.0"></script>
+  <script src="./js/presets.js?v=1.0"></script>
+  <script src="./js/state.js?v=1.0"></script>
+  <script src="./js/main.js?v=1.0"></script>
+</body>
+</html>

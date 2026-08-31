@@ -22,3 +22,5 @@ html[data-theme=night]{--bg:#0e0c12;--surface:rgba(23,20,29,.92);--surface-solid
 @media(max-width:760px){.silhouette-shell-actions .shell-action-secondary{display:none}.shell-action-primary{font-size:0;width:36px;padding:0}.shell-action-primary::after{content:'⇩';font-size:16px}}
 
 .accent-indigo.is-active{color:#7657df}
+
+.accent-coral.is-active{color:#d94d7b}
