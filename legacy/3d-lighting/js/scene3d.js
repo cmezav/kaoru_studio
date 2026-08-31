@@ -3,7 +3,7 @@ import { createAsaroHead } from './asaroHead.js?v=3.1';
 
 export const SCENE3D_PHASE = 3;
 
-const ASARO_GLB_URL = '../assets/models/head_planes_reference.glb?v=3.1';
+const ASARO_GLB_URL = new URL('../assets/models/head_planes_reference.glb?v=3.2', import.meta.url).href;
 
 export function detectWebGL() {
   try {
@@ -211,6 +211,7 @@ export async function create3dScene(canvas, options = {}) {
   let currentAsaro = null;
   let currentPlaneCount = 0;
   let currentSource = 'prototype';
+  let currentLoadError = null;
   let loadVersion = 0;
   let disposed = false;
 
@@ -245,6 +246,7 @@ export async function create3dScene(canvas, options = {}) {
     currentAsaro = null;
     currentPlaneCount = 0;
     currentSource = 'prototype';
+    currentLoadError = null;
   }
 
   function addHead(group, color, y = 1.15, scale = 1) {
@@ -340,10 +342,12 @@ export async function create3dScene(canvas, options = {}) {
       try {
         currentAsaro = await createAsaroFromGlb(THREE, color);
         currentSource = 'glb';
+        currentLoadError = null;
       } catch (error) {
         console.warn('No se pudo cargar el GLB de Asaro. Usando fallback.', error);
         currentAsaro = createAsaroHead(THREE, { color });
         currentSource = 'fallback';
+        currentLoadError = String(error?.message || error || 'GLB load error');
       }
 
       if (disposed || version !== loadVersion) {
@@ -459,7 +463,8 @@ export async function create3dScene(canvas, options = {}) {
       id: currentModel,
       planeCount: currentPlaneCount,
       originalAsaro: currentModel === 'asaro',
-      source: currentSource
+      source: currentSource,
+      loadError: currentLoadError
     }),
     dispose() {
       disposed = true;

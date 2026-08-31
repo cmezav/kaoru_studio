@@ -1,6 +1,6 @@
-import { create3dStore } from './state.js?v=3.1';
-import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=3.1';
-import { detectWebGL, create3dScene } from './scene3d.js?v=3.1';
+import { create3dStore } from './state.js?v=3.2';
+import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=3.2';
+import { detectWebGL, create3dScene } from './scene3d.js?v=3.2';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -69,8 +69,11 @@ function renderCards(state) {
 function describeAsaroSource() {
   const info = engine?.getModelInfo?.();
   if (!info || info.id !== 'asaro') return 'Modelo por planos';
-  if (info.source === 'glb') return 'Modelo GLB de referencia';
-  if (info.source === 'fallback') return 'Fallback generado por codigo';
+  if (info.source === 'glb') return 'Modelo GLB cargado';
+  if (info.source === 'fallback') {
+    const detail = String(info.loadError || '').replace(/\s+/g, ' ').trim();
+    return detail ? `Fallback: ${detail.slice(0, 48)}` : 'Fallback generado por codigo';
+  }
   return 'Modelo por planos';
 }
 
