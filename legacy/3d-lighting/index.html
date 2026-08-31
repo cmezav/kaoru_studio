@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio Fase 3</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=3.0">
+  <link rel="stylesheet" href="./styles.css?v=3.1">
 
   <script type="importmap">
   {
@@ -147,7 +147,7 @@
 
         <div class="viewport-overlay">
           <strong id="viewportMessage">Cargando cabeza por planos...</strong>
-          <span>Three.js + modelo original Kaoru</span>
+          <span>Three.js + modelo GLB de referencia</span>
         </div>
 
         <div class="viewport-footer">
@@ -187,8 +187,8 @@
 
       <section class="architecture-card">
         <span class="eyebrow">MODELO ORIGINAL</span>
-        <h3>Sin modelo 3D externo</h3>
-        <p>La cabeza se genera en codigo mediante superficies planas propias. No se descarga ni reutiliza un modelo Asaro de terceros.</p>
+        <h3>Modelo GLB integrado</h3>
+        <p>La cabeza usa un archivo GLB de referencia integrado en el proyecto. Si el GLB no carga, se usa un fallback generado por codigo.</p>
       </section>
 
       <section class="next-card">
@@ -252,6 +252,6 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?v=3.0"></script>
+  <script type="module" src="./js/main.js?v=3.1"></script>
 </body>
 </html>

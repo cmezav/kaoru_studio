@@ -1,6 +1,6 @@
-import { create3dStore } from './state.js?v=3.0';
-import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=3.0';
-import { detectWebGL, create3dScene } from './scene3d.js?v=3.0';
+import { create3dStore } from './state.js?v=3.1';
+import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=3.1';
+import { detectWebGL, create3dScene } from './scene3d.js?v=3.1';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -42,10 +42,7 @@ function toast(message) {
   elements.toast.textContent = message;
   elements.toast.classList.add('is-visible');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(
-    () => elements.toast.classList.remove('is-visible'),
-    1600
-  );
+  toastTimer = setTimeout(() => elements.toast.classList.remove('is-visible'), 1600);
 }
 
 function renderCards(state) {
@@ -62,11 +59,19 @@ function renderCards(state) {
       button.innerHTML = `
         <strong>${entry.name}</strong>
         <small>${entry.description}</small>
-        <em>${entry.ready ? 'MODELO F3' : 'PROTOTIPO'}</em>
+        <em>${entry.ready ? 'MODELO GLB' : 'PROTOTIPO'}</em>
       `;
       return button;
     })
   );
+}
+
+function describeAsaroSource() {
+  const info = engine?.getModelInfo?.();
+  if (!info || info.id !== 'asaro') return 'Modelo por planos';
+  if (info.source === 'glb') return 'Modelo GLB de referencia';
+  if (info.source === 'fallback') return 'Fallback generado por codigo';
+  return 'Modelo por planos';
 }
 
 function renderState(state) {
@@ -74,13 +79,14 @@ function renderState(state) {
   const suffix = model.ready ? '' : ' - prototipo';
 
   elements.stageTitle.textContent = `${model.name}${suffix}`;
-  elements.stateModel.textContent = model.ready
-    ? model.name
-    : `${model.name} (proto)`;
+  elements.stateModel.textContent = model.ready ? model.name : `${model.name} (proto)`;
   elements.stateColor.textContent = state.baseColor;
-  elements.statePlanes.textContent = model.planeCount
-    ? `${model.planeCount} planos faciales`
-    : 'Prototipo';
+
+  if (state.selectedModel === 'asaro') {
+    elements.statePlanes.textContent = describeAsaroSource();
+  } else {
+    elements.statePlanes.textContent = 'Prototipo';
+  }
 
   elements.baseColor.value = state.baseColor;
   if (document.activeElement !== elements.baseHex) {
@@ -99,7 +105,9 @@ function updateEngineFromState(state) {
   if (!engine) return;
 
   if (engine.getCurrentModel() !== state.selectedModel) {
-    engine.setModel(state.selectedModel, state.baseColor);
+    engine.setModel(state.selectedModel, state.baseColor).then(() => {
+      renderState(store.getState());
+    });
   }
 
   engine.setBaseColor(state.baseColor);
@@ -112,95 +120,58 @@ elements.cards.addEventListener('click', (event) => {
   const button = event.target.closest('[data-model]');
   if (!button) return;
 
-  store.setState((state) => ({
-    ...state,
-    selectedModel: button.dataset.model
-  }));
+  store.setState((state) => ({ ...state, selectedModel: button.dataset.model }));
 });
 
 elements.baseColor.addEventListener('input', () => {
   const hex = normalizeHex(elements.baseColor.value);
   if (!hex) return;
-
-  store.setState((state) => ({
-    ...state,
-    baseColor: hex
-  }));
+  store.setState((state) => ({ ...state, baseColor: hex }));
 });
 
 elements.baseHex.addEventListener('change', () => {
   const hex = normalizeHex(elements.baseHex.value);
-
   if (!hex) {
     elements.baseHex.value = store.getState().baseColor;
     toast('HEX invalido.');
     return;
   }
-
-  store.setState((state) => ({
-    ...state,
-    baseColor: hex
-  }));
+  store.setState((state) => ({ ...state, baseColor: hex }));
 });
 
 elements.gridToggle.addEventListener('change', () => {
   store.setState((state) => ({
     ...state,
-    scene: {
-      ...state.scene,
-      gridVisible: elements.gridToggle.checked
-    }
+    scene: { ...state.scene, gridVisible: elements.gridToggle.checked }
   }));
 });
 
 elements.shadowToggle.addEventListener('change', () => {
   store.setState((state) => ({
     ...state,
-    scene: {
-      ...state.scene,
-      shadowsEnabled: elements.shadowToggle.checked
-    }
+    scene: { ...state.scene, shadowsEnabled: elements.shadowToggle.checked }
   }));
 });
 
 elements.edgeToggle.addEventListener('change', () => {
   store.setState((state) => ({
     ...state,
-    scene: {
-      ...state.scene,
-      edgesVisible: elements.edgeToggle.checked
-    }
+    scene: { ...state.scene, edgesVisible: elements.edgeToggle.checked }
   }));
 });
 
 elements.resetCamera.addEventListener('click', () => {
   engine?.setCameraPreset('three-quarter');
-
-  store.setState((state) => ({
-    ...state,
-    camera: {
-      ...state.camera,
-      preset: 'three-quarter'
-    }
-  }));
-
+  store.setState((state) => ({ ...state, camera: { ...state.camera, preset: 'three-quarter' } }));
   toast('Camara restablecida.');
 });
 
 elements.cameraPresets.addEventListener('click', (event) => {
   const button = event.target.closest('[data-camera-preset]');
   if (!button || !engine) return;
-
   const preset = button.dataset.cameraPreset;
   engine.setCameraPreset(preset);
-
-  store.setState((state) => ({
-    ...state,
-    camera: {
-      ...state.camera,
-      preset
-    }
-  }));
+  store.setState((state) => ({ ...state, camera: { ...state.camera, preset } }));
 });
 
 document.addEventListener('studio-theme-change', (event) => {
@@ -216,7 +187,6 @@ async function start() {
   renderState(store.getState());
 
   const webgl = detectWebGL();
-
   if (!webgl) {
     elements.webglBadge.textContent = 'WebGL no disponible';
     elements.stateEngine.textContent = 'Sin WebGL';
@@ -225,13 +195,8 @@ async function start() {
 
     store.setState((state) => ({
       ...state,
-      engine: {
-        ...state.engine,
-        status: 'unsupported',
-        webgl: false
-      }
+      engine: { ...state.engine, status: 'unsupported', webgl: false }
     }));
-
     return;
   }
 
@@ -240,7 +205,6 @@ async function start() {
 
   try {
     const state = store.getState();
-
     engine = await create3dScene(elements.canvas, {
       model: state.selectedModel,
       color: state.baseColor,
@@ -251,7 +215,6 @@ async function start() {
     });
 
     window.ThreeLightingEngine = engine;
-
     elements.webglBadge.textContent = 'Three.js r185 - WebGL';
     elements.stateEngine.textContent = 'Three.js + WebGL';
     elements.stateCamera.textContent = 'Orbita + zoom + pan';
@@ -269,24 +232,15 @@ async function start() {
     }));
   } catch (error) {
     console.error(error);
-
     elements.webglBadge.textContent = 'Error al cargar motor';
     elements.stateEngine.textContent = 'Motor no cargado';
     elements.stateCamera.textContent = 'No disponible';
     elements.viewportMessage.textContent = 'No se pudo cargar el motor 3D';
-
     const detail = elements.viewportOverlay?.querySelector('span');
-    if (detail) {
-      detail.textContent = 'Recarga la pagina. Si persiste, revisa la consola.';
-    }
-
+    if (detail) detail.textContent = 'Recarga la pagina. Si persiste, revisa la consola.';
     store.setState((state) => ({
       ...state,
-      engine: {
-        ...state.engine,
-        status: 'load-error',
-        webgl: true
-      }
+      engine: { ...state.engine, status: 'load-error', webgl: true }
     }));
   }
 }

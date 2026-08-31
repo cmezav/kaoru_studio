@@ -11,5 +11,11 @@
 The 3D Lighting Studio uses Three.js for WebGL rendering, camera controls,
 geometry, materials, lighting and shadow mapping.
 
-No third-party Asaro model or human model is bundled in this phase.
-The definitive Asaro-like head will be an original model created for this project.
+## Planar head reference model
+
+- Local asset: legacy/3d-lighting/assets/models/head_planes_reference.glb
+- Origin: user-supplied GLB selected during the Fase 3 GLB hotfix installer.
+- Expected source: a planar head reference model compatible with artistic Asaro-style study.
+
+If the selected asset came from a third-party source, keep the original author,
+source page and license information with the project records.

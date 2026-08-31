@@ -2,10 +2,10 @@ export const MODEL_REGISTRY = [
   {
     id: 'asaro',
     name: 'Asaro / Planos',
-    description: 'Modelo propio F3 con 52 planos faciales para estudio de luz.',
+    description: 'Modelo GLB de referencia importado para estudio de planos y luz.',
     phase: 3,
     ready: true,
-    planeCount: 52
+    planeCount: 0
   },
   {
     id: 'realistic-head',

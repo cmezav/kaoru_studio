@@ -1,6 +1,9 @@
-import { createAsaroHead } from './asaroHead.js?v=3.0';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { createAsaroHead } from './asaroHead.js?v=3.1';
 
 export const SCENE3D_PHASE = 3;
+
+const ASARO_GLB_URL = '../assets/models/head_planes_reference.glb?v=3.1';
 
 export function detectWebGL() {
   try {
@@ -13,6 +16,104 @@ export function detectWebGL() {
   } catch (_) {
     return false;
   }
+}
+
+function loadGltf(loader, url) {
+  return new Promise((resolve, reject) => {
+    loader.load(url, resolve, undefined, reject);
+  });
+}
+
+function fitObjectToView(THREE, object, floorY = -1.05, targetHeight = 3.2) {
+  const box = new THREE.Box3().setFromObject(object);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+
+  const scale = size.y > 0 ? targetHeight / size.y : 1;
+  object.scale.setScalar(scale);
+  object.updateMatrixWorld(true);
+
+  const box2 = new THREE.Box3().setFromObject(object);
+  const center2 = box2.getCenter(new THREE.Vector3());
+  const min2 = box2.min.clone();
+
+  object.position.x -= center2.x;
+  object.position.z -= center2.z;
+  object.position.y += floorY - min2.y;
+  object.updateMatrixWorld(true);
+}
+
+async function createAsaroFromGlb(THREE, color) {
+  const loader = new GLTFLoader();
+  const gltf = await loadGltf(loader, ASARO_GLB_URL);
+
+  const root = gltf.scene || gltf.scenes?.[0];
+  if (!root) {
+    throw new Error('El GLB no contiene una escena utilizable.');
+  }
+
+  const container = new THREE.Group();
+  container.name = 'kaoru-asaro-glb';
+  const edgeRoot = new THREE.Group();
+  edgeRoot.name = 'asaro-plane-edges';
+  container.add(root);
+  container.add(edgeRoot);
+
+  const colorMaterial = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.83,
+    metalness: 0.0,
+    side: THREE.DoubleSide
+  });
+  colorMaterial.userData.subjectColor = true;
+
+  const edgeMaterial = new THREE.LineBasicMaterial({
+    color: 0x261c22,
+    transparent: true,
+    opacity: 0.36,
+    depthTest: true
+  });
+
+  let meshCount = 0;
+
+  root.traverse((object) => {
+    if (!object.isMesh) return;
+
+    meshCount += 1;
+    object.castShadow = true;
+    object.receiveShadow = true;
+    object.material = colorMaterial;
+
+    if (object.geometry) {
+      const edgeGeometry = new THREE.EdgesGeometry(object.geometry, 16);
+      const lines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+      lines.name = `${object.name || 'mesh'}-edge`;
+      lines.renderOrder = 4;
+      object.add(lines);
+    }
+  });
+
+  fitObjectToView(THREE, root, -1.05, 3.2);
+
+  container.userData.asaroModel = true;
+  container.userData.edgeRoot = edgeRoot;
+  container.userData.meshCount = meshCount;
+
+  return {
+    root: container,
+    planeCount: 0,
+    edgeRoot,
+    materials: [colorMaterial, edgeMaterial],
+    colorMaterials: [colorMaterial],
+    source: 'glb',
+    setEdgesVisible(visible) {
+      root.traverse((object) => {
+        if (object.type === 'LineSegments') {
+          object.visible = Boolean(visible);
+        }
+      });
+    }
+  };
 }
 
 export async function create3dScene(canvas, options = {}) {
@@ -52,7 +153,7 @@ export async function create3dScene(canvas, options = {}) {
   controls.maxDistance = 13;
   controls.minPolarAngle = 0.12;
   controls.maxPolarAngle = Math.PI * 0.93;
-  controls.target.set(0, 0.82, 0);
+  controls.target.set(0, 0.78, 0);
 
   const hemisphere = new THREE.HemisphereLight(0xd8deff, 0x302538, 1.25);
   scene.add(hemisphere);
@@ -109,6 +210,8 @@ export async function create3dScene(canvas, options = {}) {
   let currentModel = null;
   let currentAsaro = null;
   let currentPlaneCount = 0;
+  let currentSource = 'prototype';
+  let loadVersion = 0;
   let disposed = false;
 
   function subjectMaterial(color, roughness = 0.58) {
@@ -141,6 +244,7 @@ export async function create3dScene(canvas, options = {}) {
     subjectMaterials = [];
     currentAsaro = null;
     currentPlaneCount = 0;
+    currentSource = 'prototype';
   }
 
   function addHead(group, color, y = 1.15, scale = 1) {
@@ -175,14 +279,7 @@ export async function create3dScene(canvas, options = {}) {
     group.add(nose);
   }
 
-  function cylinderBetween(
-    group,
-    color,
-    radius,
-    height,
-    position,
-    rotationZ = 0
-  ) {
+  function cylinderBetween(group, color, radius, height, position, rotationZ = 0) {
     const mesh = enableShadow(new THREE.Mesh(
       new THREE.CylinderGeometry(radius, radius * 1.04, height, 20),
       subjectMaterial(color, 0.63)
@@ -210,22 +307,8 @@ export async function create3dScene(canvas, options = {}) {
       chest.position.y = -0.2;
       group.add(chest);
 
-      cylinderBetween(
-        group,
-        color,
-        0.26,
-        1.45,
-        [-1.2, -0.18, 0],
-        Math.PI * 0.44
-      );
-      cylinderBetween(
-        group,
-        color,
-        0.26,
-        1.45,
-        [1.2, -0.18, 0],
-        -Math.PI * 0.44
-      );
+      cylinderBetween(group, color, 0.26, 1.45, [-1.2, -0.18, 0], Math.PI * 0.44);
+      cylinderBetween(group, color, 0.26, 1.45, [1.2, -0.18, 0], -Math.PI * 0.44);
     } else {
       addHead(group, color, 2.35, 0.52);
 
@@ -248,22 +331,39 @@ export async function create3dScene(canvas, options = {}) {
     return group;
   }
 
-  function setModel(kind, color = '#C98E78') {
+  async function setModel(kind, color = '#C98E78') {
+    const version = ++loadVersion;
     clearSubject();
     currentModel = kind;
 
     if (kind === 'asaro') {
-      currentAsaro = createAsaroHead(THREE, { color });
+      try {
+        currentAsaro = await createAsaroFromGlb(THREE, color);
+        currentSource = 'glb';
+      } catch (error) {
+        console.warn('No se pudo cargar el GLB de Asaro. Usando fallback.', error);
+        currentAsaro = createAsaroHead(THREE, { color });
+        currentSource = 'fallback';
+      }
+
+      if (disposed || version !== loadVersion) {
+        return;
+      }
+
       currentAsaro.materials.forEach((material) => {
         subjectMaterials.push(material);
       });
-      currentPlaneCount = currentAsaro.planeCount;
+      currentPlaneCount = currentAsaro.planeCount || 0;
       currentAsaro.setEdgesVisible(options.edgesVisible !== false);
       subjectRoot.add(currentAsaro.root);
       return;
     }
 
+    currentSource = 'prototype';
     const model = createPrototype(kind, color);
+    if (disposed || version !== loadVersion) {
+      return;
+    }
     subjectRoot.add(model);
   }
 
@@ -291,22 +391,10 @@ export async function create3dScene(canvas, options = {}) {
   }
 
   const presets = {
-    front: {
-      position: [0, 0.85, 6.6],
-      target: [0, 0.78, 0.08]
-    },
-    'three-quarter': {
-      position: [4.4, 2.45, 6.3],
-      target: [0, 0.78, 0.02]
-    },
-    side: {
-      position: [6.8, 0.95, 0.10],
-      target: [0, 0.78, 0.02]
-    },
-    back: {
-      position: [0, 1.0, -6.8],
-      target: [0, 0.82, -0.12]
-    }
+    front: { position: [0, 0.85, 6.6], target: [0, 0.78, 0.08] },
+    'three-quarter': { position: [4.4, 2.45, 6.3], target: [0, 0.78, 0.02] },
+    side: { position: [6.8, 0.95, 0.10], target: [0, 0.78, 0.02] },
+    back: { position: [0, 1.0, -6.8], target: [0, 0.82, -0.12] }
   };
 
   function setCameraPreset(name = 'three-quarter') {
@@ -344,7 +432,7 @@ export async function create3dScene(canvas, options = {}) {
     renderer.render(scene, camera);
   });
 
-  setModel(options.model || 'asaro', options.color || '#C98E78');
+  await setModel(options.model || 'asaro', options.color || '#C98E78');
   setGridVisible(options.gridVisible !== false);
   setEdgesVisible(options.edgesVisible !== false);
   setShadowsEnabled(options.shadowsEnabled !== false);
@@ -370,7 +458,8 @@ export async function create3dScene(canvas, options = {}) {
     getModelInfo: () => ({
       id: currentModel,
       planeCount: currentPlaneCount,
-      originalAsaro: currentModel === 'asaro'
+      originalAsaro: currentModel === 'asaro',
+      source: currentSource
     }),
     dispose() {
       disposed = true;
