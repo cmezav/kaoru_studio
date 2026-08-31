@@ -1,6 +1,6 @@
 import { clamp, mixHex, normalizeHex } from './colorUtils.js';
 
-export const LIGHTING_ENGINE_PHASE = 4;
+export const LIGHTING_ENGINE_PHASE = 5;
 export const MAX_DIRECT_LIGHTS = 8;
 
 const LIGHT_COLORS = [
@@ -42,11 +42,11 @@ export function createDefaultLighting() {
   const first = createDirectLight({
     id: 'front-soft-main',
     name: 'Luz principal',
-    color: '#FFF1D6',
-    intensity: 64,
-    direction: 0,
-    elevation: 20,
-    softness: 72
+    color: '#FFF2D9',
+    intensity: 74,
+    direction: -12,
+    elevation: 18,
+    softness: 62
   });
 
   return {
@@ -54,10 +54,10 @@ export function createDefaultLighting() {
     enabled: true,
     lights: [first],
     selectedLightId: first.id,
-    ambient: { color: '#B7C4D9', intensity: 18 },
-    shadow: { color: '#4A4254', intensity: 22 },
-    bounce: { color: '#D9A58E', intensity: 8 },
-    rim: { color: '#CDE7FF', intensity: 0 }
+    ambient: { color: '#AEB8CF', intensity: 14 },
+    shadow: { color: '#363144', intensity: 34 },
+    bounce: { color: '#D19B83', intensity: 14 },
+    rim: { color: '#D8E8FF', intensity: 8 }
   };
 }
 
@@ -81,141 +81,145 @@ export const LIGHTING_SCENES = [
   {
     id: 'front-soft',
     name: 'Frente suave',
-    description: 'Ilumina la cara u objeto de frente sin sombras muy fuertes.',
-    preview: preview('#FFF0D0', '#8796B0', '#252633', '50%', '28%'),
+    description: 'Ilumina de frente con volumen claro y sombras suaves.',
+    preview: preview('#FFF0CF', '#6D7893', '#1C1F2C', '38%', '26%'),
     build: () => createDefaultLighting()
   },
   {
     id: 'side',
     name: 'De lado',
-    description: 'Un lado queda más iluminado y el otro más oscuro.',
-    preview: preview('#FFE2B7', '#20263A', '#131722', '24%', '42%'),
+    description: 'Un lado se ilumina y el otro se oscurece bastante más.',
+    preview: preview('#FFDFA9', '#172031', '#0E121A', '22%', '40%'),
     build: () => {
       const lighting = baseLighting('side');
       lighting.lights = [
         createDirectLight({
           id: 'side-main',
-          name: 'Luz de lado',
-          color: '#FFE0B2',
-          intensity: 76,
-          direction: -78,
-          elevation: 20,
-          softness: 38
+          name: 'Luz lateral',
+          color: '#FFE1AF',
+          intensity: 84,
+          direction: -82,
+          elevation: 18,
+          softness: 28
         })
       ];
       lighting.selectedLightId = 'side-main';
-      lighting.ambient = { color: '#71809A', intensity: 10 };
-      lighting.shadow = { color: '#2C3142', intensity: 48 };
-      lighting.bounce = { color: '#B57B65', intensity: 6 };
+      lighting.ambient = { color: '#5D6984', intensity: 8 };
+      lighting.shadow = { color: '#252838', intensity: 56 };
+      lighting.bounce = { color: '#BC816B', intensity: 10 };
+      lighting.rim = { color: '#C9E0FF', intensity: 2 };
       return lighting;
     }
   },
   {
     id: 'split',
     name: 'Mitad luz / mitad sombra',
-    description: 'Divide claramente la figura entre una zona iluminada y otra oscura.',
-    preview: preview('#FFD9AA', '#10131B', '#090B10', '18%', '45%'),
+    description: 'Separa la figura en dos zonas muy claras: una iluminada y otra oscura.',
+    preview: preview('#FFD19A', '#0F1218', '#07080B', '18%', '46%'),
     build: () => {
       const lighting = baseLighting('split');
       lighting.lights = [
         createDirectLight({
           id: 'split-main',
           name: 'Luz lateral fuerte',
-          color: '#FFD7A6',
-          intensity: 86,
+          color: '#FFD7A3',
+          intensity: 92,
           direction: -92,
-          elevation: 8,
-          softness: 12
+          elevation: 6,
+          softness: 6
         })
       ];
       lighting.selectedLightId = 'split-main';
-      lighting.ambient = { color: '#536078', intensity: 3 };
-      lighting.shadow = { color: '#151927', intensity: 72 };
-      lighting.bounce = { color: '#A96655', intensity: 2 };
+      lighting.ambient = { color: '#39435A', intensity: 2 };
+      lighting.shadow = { color: '#10131B', intensity: 84 };
+      lighting.bounce = { color: '#87594D', intensity: 3 };
+      lighting.rim = { color: '#B9D9FF', intensity: 0 };
       return lighting;
     }
   },
   {
     id: 'dramatic',
     name: 'Dramática',
-    description: 'Sombras profundas y una luz marcada para un aspecto intenso.',
-    preview: preview('#FFC06E', '#1D1721', '#0B090E', '30%', '20%'),
+    description: 'Más profundidad, sombras intensas y brillos fuertes.',
+    preview: preview('#FFB45A', '#1B1220', '#08070A', '30%', '18%'),
     build: () => {
       const lighting = baseLighting('dramatic');
       lighting.lights = [
         createDirectLight({
           id: 'dramatic-main',
-          name: 'Luz fuerte',
-          color: '#FFC474',
-          intensity: 90,
-          direction: -48,
-          elevation: 56,
-          softness: 10
+          name: 'Luz dramática',
+          color: '#FFC26A',
+          intensity: 96,
+          direction: -46,
+          elevation: 54,
+          softness: 8
         })
       ];
       lighting.selectedLightId = 'dramatic-main';
-      lighting.ambient = { color: '#443850', intensity: 4 };
-      lighting.shadow = { color: '#211522', intensity: 76 };
-      lighting.bounce = { color: '#8D4F3D', intensity: 4 };
+      lighting.ambient = { color: '#362B44', intensity: 3 };
+      lighting.shadow = { color: '#170E19', intensity: 88 };
+      lighting.bounce = { color: '#7E4A3B', intensity: 4 };
+      lighting.rim = { color: '#F6E0B8', intensity: 6 };
       return lighting;
     }
   },
   {
     id: 'backlight',
     name: 'Contraluz',
-    description: 'La luz viene desde atrás y destaca sobre todo el borde de la figura.',
-    preview: preview('#F4F7FF', '#1A2335', '#080B12', '78%', '28%'),
+    description: 'La luz viene desde atrás y resalta el borde.',
+    preview: preview('#F4F7FF', '#132136', '#080B12', '82%', '26%'),
     build: () => {
       const lighting = baseLighting('backlight');
       lighting.lights = [
         createDirectLight({
           id: 'back-main',
-          name: 'Luz desde atrás',
-          color: '#E8F4FF',
+          name: 'Luz trasera',
+          color: '#EEF7FF',
           intensity: 34,
-          direction: 170,
+          direction: 174,
           elevation: 30,
-          softness: 34
+          softness: 30
         })
       ];
       lighting.selectedLightId = 'back-main';
-      lighting.ambient = { color: '#344663', intensity: 6 };
-      lighting.shadow = { color: '#161B27', intensity: 62 };
-      lighting.bounce = { color: '#394C66', intensity: 2 };
-      lighting.rim = { color: '#D9F1FF', intensity: 82 };
+      lighting.ambient = { color: '#283752', intensity: 5 };
+      lighting.shadow = { color: '#101521', intensity: 70 };
+      lighting.bounce = { color: '#44566E', intensity: 2 };
+      lighting.rim = { color: '#DAF2FF', intensity: 88 };
       return lighting;
     }
   },
   {
     id: 'top',
     name: 'Desde arriba',
-    description: 'La parte superior recibe más luz y debajo aparecen sombras marcadas.',
-    preview: preview('#FFF1D5', '#282331', '#111016', '50%', '8%'),
+    description: 'La parte superior recibe más luz; debajo cae la sombra.',
+    preview: preview('#FFF1D3', '#221D29', '#0D0C10', '50%', '10%'),
     build: () => {
       const lighting = baseLighting('top');
       lighting.lights = [
         createDirectLight({
           id: 'top-main',
           name: 'Luz superior',
-          color: '#FFF0D1',
-          intensity: 82,
+          color: '#FFF1D3',
+          intensity: 88,
           direction: 0,
           elevation: 84,
-          softness: 26
+          softness: 18
         })
       ];
       lighting.selectedLightId = 'top-main';
-      lighting.ambient = { color: '#777489', intensity: 8 };
-      lighting.shadow = { color: '#30293A', intensity: 58 };
-      lighting.bounce = { color: '#AC7660', intensity: 4 };
+      lighting.ambient = { color: '#6C6A7D', intensity: 6 };
+      lighting.shadow = { color: '#2B2330', intensity: 62 };
+      lighting.bounce = { color: '#B37E66', intensity: 4 };
+      lighting.rim = { color: '#F8E6C4', intensity: 4 };
       return lighting;
     }
   },
   {
     id: 'bottom',
     name: 'Desde abajo',
-    description: 'La luz sube desde abajo y crea un efecto extraño o inquietante.',
-    preview: preview('#BDF6E0', '#292238', '#100E16', '50%', '88%'),
+    description: 'La luz viene desde abajo y crea un efecto raro o inquietante.',
+    preview: preview('#BDF6E0', '#201B2B', '#0C0A12', '50%', '88%'),
     build: () => {
       const lighting = baseLighting('bottom');
       lighting.lights = [
@@ -223,110 +227,112 @@ export const LIGHTING_SCENES = [
           id: 'bottom-main',
           name: 'Luz inferior',
           color: '#B8F2DD',
-          intensity: 74,
+          intensity: 78,
           direction: 0,
-          elevation: -76,
-          softness: 24
+          elevation: -74,
+          softness: 18
         })
       ];
       lighting.selectedLightId = 'bottom-main';
-      lighting.ambient = { color: '#4B4164', intensity: 7 };
-      lighting.shadow = { color: '#2B2037', intensity: 62 };
-      lighting.bounce = { color: '#74C7B2', intensity: 14 };
+      lighting.ambient = { color: '#433A58', intensity: 6 };
+      lighting.shadow = { color: '#231A2F', intensity: 66 };
+      lighting.bounce = { color: '#73C8B4', intensity: 18 };
+      lighting.rim = { color: '#D9FFF3', intensity: 2 };
       return lighting;
     }
   },
   {
     id: 'warm',
     name: 'Atardecer cálido',
-    description: 'Naranjas y dorados como una habitación o una escena al atardecer.',
-    preview: preview('#FFB15E', '#78415F', '#2B1720', '30%', '38%'),
+    description: 'Naranjas y dorados más intensos, como luz de tarde.',
+    preview: preview('#FFAE58', '#6E3652', '#23131C', '30%', '36%'),
     build: () => {
       const lighting = baseLighting('warm');
       lighting.lights = [
         createDirectLight({
           id: 'warm-main',
           name: 'Luz cálida',
-          color: '#FFB36B',
-          intensity: 74,
-          direction: -42,
-          elevation: 24,
-          softness: 52
+          color: '#FFB463',
+          intensity: 82,
+          direction: -44,
+          elevation: 20,
+          softness: 42
         })
       ];
       lighting.selectedLightId = 'warm-main';
-      lighting.ambient = { color: '#806D91', intensity: 18 };
-      lighting.shadow = { color: '#4A365E', intensity: 38 };
-      lighting.bounce = { color: '#E98662', intensity: 18 };
+      lighting.ambient = { color: '#7E6B92', intensity: 14 };
+      lighting.shadow = { color: '#4C345E', intensity: 44 };
+      lighting.bounce = { color: '#EE885B', intensity: 22 };
+      lighting.rim = { color: '#FFD8A4', intensity: 8 };
       return lighting;
     }
   },
   {
     id: 'cool',
     name: 'Noche azul',
-    description: 'Una iluminación fría y azulada para escenas nocturnas.',
-    preview: preview('#83B7FF', '#1A2754', '#091127', '66%', '30%'),
+    description: 'Luz fría para escenas nocturnas con más contraste.',
+    preview: preview('#79B2FF', '#162657', '#071022', '72%', '26%'),
     build: () => {
       const lighting = baseLighting('cool');
       lighting.lights = [
         createDirectLight({
           id: 'cool-main',
           name: 'Luz azul',
-          color: '#84AFFF',
-          intensity: 54,
-          direction: 38,
-          elevation: 46,
-          softness: 58
+          color: '#7FAEFF',
+          intensity: 60,
+          direction: 36,
+          elevation: 42,
+          softness: 44
         })
       ];
       lighting.selectedLightId = 'cool-main';
-      lighting.ambient = { color: '#263B70', intensity: 30 };
-      lighting.shadow = { color: '#211D45', intensity: 52 };
-      lighting.bounce = { color: '#486BA1', intensity: 8 };
-      lighting.rim = { color: '#8EDCFF', intensity: 22 };
+      lighting.ambient = { color: '#223A74', intensity: 28 };
+      lighting.shadow = { color: '#18173D', intensity: 58 };
+      lighting.bounce = { color: '#436B9D', intensity: 8 };
+      lighting.rim = { color: '#A6ECFF', intensity: 24 };
       return lighting;
     }
   },
   {
     id: 'dual',
     name: 'Azul + naranja',
-    description: 'Una luz fría y otra cálida desde lados distintos.',
-    preview: preview('#FF855C', '#4DAFFF', '#251A2E', '22%', '42%'),
+    description: 'Una luz fría y otra cálida para un look mucho más cinematográfico.',
+    preview: preview('#FF7A56', '#53B0FF', '#1F1527', '22%', '44%'),
     build: () => {
       const lighting = baseLighting('dual');
       lighting.lights = [
         createDirectLight({
           id: 'dual-warm',
           name: 'Luz naranja',
-          color: '#FF795C',
-          intensity: 60,
+          color: '#FF7A58',
+          intensity: 66,
           direction: -58,
-          elevation: 20,
-          softness: 32
+          elevation: 18,
+          softness: 20
         }),
         createDirectLight({
           id: 'dual-cool',
           name: 'Luz azul',
-          color: '#5CB8FF',
-          intensity: 55,
+          color: '#57B7FF',
+          intensity: 60,
           direction: 66,
-          elevation: 34,
-          softness: 38
+          elevation: 30,
+          softness: 28
         }, 1)
       ];
       lighting.selectedLightId = 'dual-warm';
-      lighting.ambient = { color: '#694C87', intensity: 16 };
-      lighting.shadow = { color: '#372849', intensity: 42 };
-      lighting.bounce = { color: '#A86470', intensity: 7 };
-      lighting.rim = { color: '#A6E8FF', intensity: 14 };
+      lighting.ambient = { color: '#5F4A7D', intensity: 14 };
+      lighting.shadow = { color: '#2B213A', intensity: 52 };
+      lighting.bounce = { color: '#A46870', intensity: 7 };
+      lighting.rim = { color: '#AEEBFF', intensity: 16 };
       return lighting;
     }
   },
   {
     id: 'stage',
     name: 'Escenario de color',
-    description: 'Varias luces de colores como en concierto, club o fotografía creativa.',
-    preview: preview('#56E7FF', '#FF4FA7', '#211134', '28%', '24%'),
+    description: 'Luces creativas de colores como escenario, foto o concierto.',
+    preview: preview('#56E7FF', '#FF4FA7', '#211134', '30%', '20%'),
     build: () => {
       const lighting = baseLighting('stage');
       lighting.lights = [
@@ -334,43 +340,43 @@ export const LIGHTING_SCENES = [
           id: 'stage-cyan',
           name: 'Luz celeste',
           color: '#55E7FF',
-          intensity: 56,
+          intensity: 62,
           direction: -72,
-          elevation: 50,
-          softness: 26
+          elevation: 48,
+          softness: 18
         }),
         createDirectLight({
           id: 'stage-pink',
           name: 'Luz rosada',
           color: '#FF4FA7',
-          intensity: 52,
-          direction: 70,
-          elevation: 28,
-          softness: 30
+          intensity: 58,
+          direction: 72,
+          elevation: 22,
+          softness: 20
         }, 1),
         createDirectLight({
           id: 'stage-purple',
           name: 'Luz morada',
           color: '#9A64FF',
-          intensity: 34,
+          intensity: 42,
           direction: 8,
-          elevation: 72,
-          softness: 44
+          elevation: 70,
+          softness: 34
         }, 2)
       ];
       lighting.selectedLightId = 'stage-cyan';
-      lighting.ambient = { color: '#362255', intensity: 20 };
-      lighting.shadow = { color: '#1A1328', intensity: 48 };
-      lighting.bounce = { color: '#6048A0', intensity: 8 };
-      lighting.rim = { color: '#9AE9FF', intensity: 22 };
+      lighting.ambient = { color: '#311E52', intensity: 18 };
+      lighting.shadow = { color: '#160F28', intensity: 54 };
+      lighting.bounce = { color: '#583F92', intensity: 9 };
+      lighting.rim = { color: '#9AE9FF', intensity: 26 };
       return lighting;
     }
   },
   {
     id: 'silhouette',
     name: 'Silueta',
-    description: 'La figura queda casi oscura con una luz fuerte detrás o en el borde.',
-    preview: preview('#FFF1B5', '#08090D', '#020205', '84%', '28%'),
+    description: 'Casi toda la figura queda oscura y la luz solo marca el borde.',
+    preview: preview('#FFF1B5', '#06070B', '#010204', '84%', '28%'),
     build: () => {
       const lighting = baseLighting('silhouette');
       lighting.lights = [
@@ -378,17 +384,17 @@ export const LIGHTING_SCENES = [
           id: 'silhouette-back',
           name: 'Luz trasera',
           color: '#FFE8A8',
-          intensity: 20,
+          intensity: 16,
           direction: 176,
           elevation: 20,
-          softness: 34
+          softness: 28
         })
       ];
       lighting.selectedLightId = 'silhouette-back';
-      lighting.ambient = { color: '#1B1C25', intensity: 0 };
-      lighting.shadow = { color: '#08090E', intensity: 94 };
-      lighting.bounce = { color: '#222734', intensity: 0 };
-      lighting.rim = { color: '#FFF0B9', intensity: 74 };
+      lighting.ambient = { color: '#161821', intensity: 0 };
+      lighting.shadow = { color: '#05070A', intensity: 98 };
+      lighting.bounce = { color: '#1F2430', intensity: 0 };
+      lighting.rim = { color: '#FFF0B9', intensity: 82 };
       return lighting;
     }
   }
@@ -422,32 +428,92 @@ export function activeLights(lighting) {
       );
 }
 
+function descriptor(entry) {
+  return `${entry?.name || ''} ${entry?.group || ''} ${entry?.role || ''}`.toLowerCase();
+}
+
+function toneBand(entry) {
+  const text = descriptor(entry);
+
+  if (/oclusi|occlusion/.test(text)) return -1.0;
+  if (/profunda|deep/.test(text)) return -0.88;
+  if (/sombra media|mid shadow/.test(text)) return -0.66;
+  if (/sombra suave|soft shadow/.test(text)) return -0.48;
+  if (/transicion fria|transición fría|cool transition/.test(text)) return -0.26;
+  if (/base secundaria|secondary base/.test(text)) return -0.12;
+  if (/base principal|main base|principal/.test(text)) return 0.0;
+  if (/transicion calida|transición cálida|warm transition/.test(text)) return 0.18;
+  if (/circulacion|circulación|circulation/.test(text)) return 0.24;
+  if (/medio tono claro|light midtone/.test(text)) return 0.34;
+  if (/luz suave|soft light/.test(text)) return 0.46;
+  if (/luz media|mid light/.test(text)) return 0.62;
+  if (/luz fuerte|strong light/.test(text)) return 0.76;
+  if (/highlight/.test(text)) return 0.88;
+  if (/rebote|bounce/.test(text)) return 0.68;
+  if (/especular|specular/.test(text)) return 1.0;
+
+  if (/shadow|sombra|oscura/.test(text)) return -0.52;
+  if (/light|luz|brillo/.test(text)) return 0.56;
+  return 0.0;
+}
+
+function warmthBias(entry) {
+  const text = descriptor(entry);
+  if (/fria|frío|frio|cool|azul/.test(text)) return -1;
+  if (/calida|cálida|warm|naranja|oro|gold/.test(text)) return 1;
+  return 0;
+}
+
+function primaryLightColor(lighting) {
+  const lights = activeLights(lighting);
+  return lights[0]?.color || '#FFF1D6';
+}
+
+function secondaryLightColor(lighting) {
+  const lights = activeLights(lighting);
+  return lights[1]?.color || lights[0]?.color || '#9CCBFF';
+}
+
 function roleStrength(entry, kind) {
-  const role =
-    `${entry.group || ''} ${entry.role || ''}`.toLowerCase();
+  const band = toneBand(entry);
+  const abs = Math.abs(band);
+  const bright = band > 0;
+  const text = descriptor(entry);
 
-  const isShadow =
-    /shadow|sombra|oscura/.test(role);
+  if (kind === 'shadow') {
+    if (band <= -0.75) return 1.0;
+    if (band < 0) return 0.68;
+    return /specular|highlight/.test(text) ? 0.02 : 0.14;
+  }
 
-  const isLight =
-    /light|luz|highlight|brillo|especular/.test(role);
+  if (kind === 'direct') {
+    if (band >= 0.85) return 1.0;
+    if (band > 0.55) return 0.88;
+    if (band > 0.2) return 0.62;
+    if (band < -0.45) return 0.16;
+    if (band < 0) return 0.28;
+    return 0.46;
+  }
 
-  const isBounce =
-    /bounce|rebote|ambiente/.test(role);
+  if (kind === 'bounce') {
+    if (/rebote|bounce/.test(text)) return 1.0;
+    if (band > 0.4) return 0.36;
+    if (band < -0.45) return 0.18;
+    return 0.30;
+  }
 
-  if (kind === 'direct')
-    return isLight ? 1 : isShadow ? .22 : isBounce ? .48 : .62;
+  if (kind === 'rim') {
+    if (bright) return 0.58 + abs * 0.2;
+    return 0.18;
+  }
 
-  if (kind === 'shadow')
-    return isShadow ? 1 : isLight ? .08 : .36;
+  if (kind === 'ambient') {
+    if (band <= -0.7) return 0.18;
+    if (band >= 0.75) return 0.26;
+    return 0.36;
+  }
 
-  if (kind === 'bounce')
-    return isShadow ? .72 : isBounce ? 1 : isLight ? .2 : .42;
-
-  if (kind === 'rim')
-    return isLight ? .88 : isBounce ? 1 : isShadow ? .12 : .34;
-
-  return isShadow ? .58 : isLight ? .34 : .48;
+  return 0.32;
 }
 
 function applyDirectLight(hex, entry, light) {
@@ -464,16 +530,16 @@ function applyDirectLight(hex, entry, light) {
     clamp(light.softness, 0, 100) / 100;
 
   const spatial =
-    .82 +
-    direction * .08 +
-    elevation * .13;
+    0.90 +
+    direction * 0.10 +
+    elevation * 0.14;
 
   const amount =
     clamp(light.intensity, 0, 100) /
     100 *
     roleStrength(entry, 'direct') *
     spatial *
-    (.58 - softness * .12);
+    (0.70 - softness * 0.18);
 
   return mixHex(hex, light.color, amount);
 }
@@ -486,9 +552,7 @@ function applyComponent(
   scale
 ) {
   const color = normalizeHex(component?.color);
-
-  if (!color || !component?.intensity)
-    return hex;
+  if (!color || !component?.intensity) return hex;
 
   const amount =
     clamp(component.intensity, 0, 100) /
@@ -497,6 +561,41 @@ function applyComponent(
     scale;
 
   return mixHex(hex, color, amount);
+}
+
+function applyToneStructure(hex, entry, lighting) {
+  const band = toneBand(entry);
+  const shadowColor = normalizeHex(lighting?.shadow?.color) || '#25222E';
+  const mainLight = primaryLightColor(lighting);
+  const secondLight = secondaryLightColor(lighting);
+  const warmBias = warmthBias(entry);
+
+  let out = hex;
+
+  if (band < 0) {
+    const shadowAmount =
+      Math.min(0.82, Math.abs(band) * 0.58 + (lighting.shadow?.intensity || 0) / 300);
+    out = mixHex(out, shadowColor, shadowAmount);
+
+    if (band > -0.45) {
+      out = mixHex(out, secondLight, 0.06);
+    }
+  } else if (band > 0) {
+    const liftAmount = Math.min(0.78, band * 0.44);
+    out = mixHex(out, mainLight, liftAmount);
+
+    if (band > 0.6) {
+      out = mixHex(out, '#FFF9F1', Math.min(0.28, (band - 0.58) * 0.36));
+    }
+  }
+
+  if (warmBias > 0) {
+    out = mixHex(out, normalizeHex(lighting?.bounce?.color) || '#D59B7E', 0.08);
+  } else if (warmBias < 0) {
+    out = mixHex(out, normalizeHex(lighting?.rim?.color) || '#BBD9FF', 0.08);
+  }
+
+  return out;
 }
 
 export function applyLightingToPalette(
@@ -526,6 +625,7 @@ export function applyLightingToPalette(
 
   return source.map((entry) => {
     let hex = entry.hex;
+    hex = applyToneStructure(hex, entry, lighting);
 
     if (!onlyLightId) {
       hex = applyComponent(
@@ -533,7 +633,7 @@ export function applyLightingToPalette(
         entry,
         lighting.ambient,
         'ambient',
-        .34
+        0.30
       );
 
       hex = applyComponent(
@@ -541,7 +641,7 @@ export function applyLightingToPalette(
         entry,
         lighting.shadow,
         'shadow',
-        .58
+        0.72
       );
     }
 
@@ -559,7 +659,7 @@ export function applyLightingToPalette(
         entry,
         lighting.bounce,
         'bounce',
-        .42
+        0.54
       );
 
       hex = applyComponent(
@@ -567,7 +667,7 @@ export function applyLightingToPalette(
         entry,
         lighting.rim,
         'rim',
-        .46
+        0.56
       );
     }
 
