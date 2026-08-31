@@ -458,10 +458,29 @@ async function renderLibrary() {
   }
 }
 async function showLibrary(fromHistory = false) {
-  /*
-    Primero cambiamos la interfaz. Así el botón Library responde
-    aunque una escritura local tarde más de lo normal.
-  */
+  clearTimeout(saveTimer);
+
+  const epubSnapshot =
+    currentBook && !isPdfBook(currentBook)
+      ? captureEpubProgressSnapshot()
+      : null;
+
+  if (currentBook && isPdfBook(currentBook)) {
+    try {
+      await Promise.race([
+        savePdfPosition(true),
+        new Promise((resolve) =>
+          window.setTimeout(resolve, 450)
+        )
+      ]);
+    } catch (error) {
+      console.warn(
+        'Guardado PDF al volver a Biblioteca',
+        error
+      );
+    }
+  }
+
   document.body.classList.remove(
     'is-reading',
     'is-pdf-reading',
@@ -483,23 +502,17 @@ async function showLibrary(fromHistory = false) {
 
   window.scrollTo(0, 0);
 
-  /*
-    El progreso ya se guarda durante el scroll. Este guardado final
-    no debe impedir que el usuario vuelva a Biblioteca.
-  */
-  try {
-    await Promise.race([
-      saveCurrentPosition(true),
-      new Promise((resolve) => window.setTimeout(resolve, 450))
-    ]);
-  } catch (error) {
-    console.warn('Guardado al volver a Biblioteca', error);
+  if (epubSnapshot) {
+    await persistEpubProgress(epubSnapshot);
   }
 
   try {
     await closePdfDocument();
   } catch (error) {
-    console.warn('Cierre PDF al volver a Biblioteca', error);
+    console.warn(
+      'Cierre PDF al volver a Biblioteca',
+      error
+    );
   }
 
   currentBook = null;
@@ -550,11 +563,15 @@ function currentAnchor() {
   if (!anchors.length) {
     return {
       anchorIndex: 0,
-      anchorOffset: 0
+      anchorViewportTop: 0
     };
   }
 
-  const targetY = Math.max(24, window.innerHeight * 0.22);
+  const targetY = Math.max(
+    24,
+    window.innerHeight * 0.22
+  );
+
   let chosen = anchors[0];
   let index = 0;
 
@@ -567,7 +584,8 @@ function currentAnchor() {
 
   return {
     anchorIndex: index,
-    anchorOffset: window.scrollY - chosen.offsetTop
+    anchorViewportTop:
+      chosen.getBoundingClientRect().top
   };
 }
 
@@ -577,7 +595,44 @@ function currentRatio() {
     document.documentElement.scrollHeight - window.innerHeight
   );
 
-  return Math.max(0, Math.min(1, window.scrollY / max));
+  return Math.max(
+    0,
+    Math.min(1, window.scrollY / max)
+  );
+}
+
+function captureEpubProgressSnapshot() {
+  if (
+    !currentBook ||
+    isPdfBook(currentBook)
+  ) {
+    return null;
+  }
+
+  const anchor = currentAnchor();
+
+  return {
+    bookId: currentBook.id,
+    chapterIndex: currentChapterIndex,
+    anchorIndex: anchor.anchorIndex,
+    anchorViewportTop: anchor.anchorViewportTop,
+    ratio: currentRatio(),
+    updatedAt: Date.now()
+  };
+}
+
+async function persistEpubProgress(snapshot) {
+  if (!snapshot?.bookId) return;
+
+  try {
+    await putProgress(snapshot);
+
+    if (isCloudUnlocked()) {
+      scheduleCloudSync(120000);
+    }
+  } catch (error) {
+    console.warn('Guardado EPUB', error);
+  }
 }
 
 async function saveCurrentPosition(immediate = false) {
@@ -589,22 +644,11 @@ async function saveCurrentPosition(immediate = false) {
   }
 
   const perform = async () => {
-    const anchor = currentAnchor();
+    const snapshot = captureEpubProgressSnapshot();
 
-    try {
-      await putProgress({
-        bookId: currentBook.id,
-        chapterIndex: currentChapterIndex,
-        anchorIndex: anchor.anchorIndex,
-        anchorOffset: anchor.anchorOffset,
-        ratio: currentRatio(),
-        updatedAt: Date.now()
-      });
-
-      if (isCloudUnlocked()) {
-        scheduleCloudSync(120000);
-      }
-    } catch (_) {}
+    if (snapshot) {
+      await persistEpubProgress(snapshot);
+    }
   };
 
   clearTimeout(saveTimer);
@@ -634,28 +678,80 @@ async function restorePosition(bookId, chapterIndex, token) {
       const anchor = anchors[
         Math.max(
           0,
-          Math.min(anchors.length - 1, Number(progress.anchorIndex) || 0)
+          Math.min(
+            anchors.length - 1,
+            Number(progress.anchorIndex) || 0
+          )
         )
       ];
 
-      if (anchor) {
+      if (
+        anchor &&
+        progress.anchorViewportTop !== undefined &&
+        progress.anchorViewportTop !== null &&
+        Number.isFinite(Number(progress.anchorViewportTop))
+      ) {
+        const absoluteAnchorTop =
+          window.scrollY +
+          anchor.getBoundingClientRect().top;
+
+        const max = Math.max(
+          0,
+          document.documentElement.scrollHeight -
+          window.innerHeight
+        );
+
+        const target = Math.max(
+          0,
+          Math.min(
+            max,
+            absoluteAnchorTop -
+            Number(progress.anchorViewportTop)
+          )
+        );
+
+        window.scrollTo(0, target);
+        return;
+      }
+
+      const legacyOffset = Number(progress.anchorOffset);
+      const legacyLimit = Math.max(
+        1600,
+        window.innerHeight * 2
+      );
+
+      if (
+        anchor &&
+        Number.isFinite(legacyOffset) &&
+        Math.abs(legacyOffset) <= legacyLimit
+      ) {
         window.scrollTo(
           0,
-          Math.max(0, anchor.offsetTop + (Number(progress.anchorOffset) || 0))
+          Math.max(0, anchor.offsetTop + legacyOffset)
         );
+        return;
+      }
+
+      const ratio = Math.max(
+        0,
+        Math.min(1, Number(progress.ratio) || 0)
+      );
+
+      if (ratio >= 0.985) {
+        window.scrollTo(0, 0);
         return;
       }
 
       const max = Math.max(
         0,
-        document.documentElement.scrollHeight - window.innerHeight
+        document.documentElement.scrollHeight -
+        window.innerHeight
       );
 
-      window.scrollTo(0, max * Math.max(0, Math.min(1, Number(progress.ratio) || 0)));
+      window.scrollTo(0, max * ratio);
     });
   });
 }
-
 function prepareChapterAnchors() {
   readingAnchors().forEach((element, index) => {
     element.dataset.readerAnchor = String(index);
@@ -783,7 +879,8 @@ async function changeChapter(delta) {
   }
 
   const count = currentBook.chapters.length;
-  const next = currentChapterIndex + Number(delta || 0);
+  const next =
+    currentChapterIndex + Number(delta || 0);
 
   if (
     next < 0 ||
@@ -792,41 +889,15 @@ async function changeChapter(delta) {
     return;
   }
 
-  const previousBook = currentBook;
-  const previousChapterIndex = currentChapterIndex;
-  const previousAnchor = currentAnchor();
-  const previousRatio = currentRatio();
-
-  /*
-    Cambiamos capítulo inmediatamente. El usuario no tiene que
-    esperar a IndexedDB para ver que el botón respondió.
-  */
   currentChapterIndex = next;
 
   try {
     await renderChapter(false);
   } catch (error) {
-    console.error('Render de capítulo', error);
-    currentChapterIndex = previousChapterIndex;
-    return;
-  }
-
-  /*
-    Guardado extra del capítulo anterior usando una instantánea.
-    No usa currentChapterIndex, así que no puede sobrescribir el
-    capítulo nuevo por una carrera asíncrona.
-  */
-  try {
-    await putProgress({
-      bookId: previousBook.id,
-      chapterIndex: previousChapterIndex,
-      anchorIndex: previousAnchor.anchorIndex,
-      anchorOffset: previousAnchor.anchorOffset,
-      ratio: previousRatio,
-      updatedAt: Date.now()
-    });
-  } catch (error) {
-    console.warn('Guardado del capítulo anterior', error);
+    console.error(
+      'Cambio de capítulo',
+      error
+    );
   }
 
   if (isCloudUnlocked()) {
@@ -1196,7 +1267,14 @@ window.addEventListener('offline', () => {
   }
 });
 
-window.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', () => {
+  if (
+    document.visibilityState === 'hidden' &&
+    document.body.classList.contains('is-reading')
+  ) {
+    saveCurrentPosition(true);
+  }
+
   if (
     document.visibilityState === 'hidden' &&
     isCloudUnlocked()
@@ -1204,7 +1282,6 @@ window.addEventListener('visibilitychange', () => {
     scheduleCloudSync(1000);
   }
 });
-
 window.addEventListener('pagehide', () => {
   saveCurrentPosition(true);
 });
@@ -1219,13 +1296,23 @@ window.parent?.postMessage(
 
 async function boot() {
   refreshReadingPreferencesUi();
-  ensureLibraryHistoryState();
+
+  const session = readSession();
+
+  const resumeFromReadingRefresh =
+    location.hash === '#reading' &&
+    (
+      session?.view === 'reader' ||
+      session?.view === 'pdf'
+    ) &&
+    Boolean(session?.bookId);
+
+  if (!resumeFromReadingRefresh) {
+    ensureLibraryHistoryState();
+  }
 
   if (elements.immersiveStatus) {
-    elements.immersiveStatus.textContent =
-      readingPreferences.immersive
-        ? 'Se intentará activar pantalla completa cuando toques una obra.'
-        : 'Lectura inmersiva desactivada.';
+    elements.immersiveStatus.textContent = '';
   }
 
   applySavedCloudUi();
@@ -1234,7 +1321,9 @@ async function boot() {
     const asset = await loadSavedReadingFont();
 
     if (asset) {
-      elements.fontSummary.textContent = asset.name || 'Lucida Sans';
+      elements.fontSummary.textContent =
+        asset.name || 'Lucida Sans';
+
       elements.fontStatus.textContent =
         'Tipografía cargada desde este dispositivo.';
     }
@@ -1244,15 +1333,33 @@ async function boot() {
 
   await renderLibrary();
 
-  if (
-    ENTRY_MODE === 'library' &&
-    location.hash !== '#reading'
-  ) {
-    writeSession({ view: 'library' });
+  if (resumeFromReadingRefresh) {
+    try {
+      history.replaceState(
+        { [READER_HISTORY_KEY]: 'reader' },
+        '',
+        readingHistoryUrl()
+      );
+    } catch (_) {}
+
+    const progress =
+      await getProgress(session.bookId);
+
+    await openBook(
+      session.bookId,
+      progress?.chapterIndex ??
+        session.chapterIndex ??
+        0,
+      true
+    );
+
     return;
   }
 
-  const session = readSession();
+  if (ENTRY_MODE === 'library') {
+    writeSession({ view: 'library' });
+    return;
+  }
 
   if (
     (
@@ -1261,18 +1368,20 @@ async function boot() {
     ) &&
     session.bookId
   ) {
-    const progress = await getProgress(session.bookId);
+    const progress =
+      await getProgress(session.bookId);
 
     pushReadingHistoryState();
 
     await openBook(
       session.bookId,
-      progress?.chapterIndex ?? session.chapterIndex ?? 0,
+      progress?.chapterIndex ??
+        session.chapterIndex ??
+        0,
       true
     );
   }
 }
-
 boot().catch((error) => {
   console.error(error);
   setStatus('No se pudo iniciar la biblioteca local.');
