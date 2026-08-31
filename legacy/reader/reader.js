@@ -676,7 +676,7 @@ elements.leaveReaderBtn.addEventListener('click', () => {
     window.parent.postMessage(
       {
         type: 'kaoru:navigate',
-        studio: 'silhouette'
+        studio: 'home'
       },
       '*'
     );

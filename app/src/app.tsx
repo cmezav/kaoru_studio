@@ -1,7 +1,7 @@
 declare const React: any;
 declare const ReactDOM: any;
 
-type StudioId = 'silhouette' | 'text' | 'image' | 'light' | '3d' | 'combiner' | 'gallery' | 'reader';
+type StudioId = 'home' | 'silhouette' | 'text' | 'image' | 'light' | '3d' | 'combiner' | 'gallery' | 'reader';
 type Theme = 'day' | 'night';
 type Studio = { id: StudioId; name: string; short: string; subtitle: string; src: string; accent: string; icon: any; hotkey: string };
 
@@ -29,6 +29,7 @@ function Icon(props:{name:string}) {
 }
 
 const studios:Studio[]=[
+  {id:'home',name:'Inicio',short:'Inicio',subtitle:'Tu espacio creativo',src:'./legacy/home/index.html?embed=1',accent:'home',icon:h(Icon,{name:'gallery'}),hotkey:'Inicio'},
   {id:'silhouette',name:'Silueta Studio',short:'Silueta',subtitle:'Formas, máscaras y composiciones',src:'./legacy/index.html?embed=1',accent:'violet',icon:h(Icon,{name:'silhouette'}),hotkey:'Alt+1'},
   {id:'text',name:'Text Studio',short:'Texto',subtitle:'Tipografía y efectos avanzados',src:'./legacy/text-studio/index.html?embed=1',accent:'rose',icon:h(Icon,{name:'text'}),hotkey:'Alt+2'},
   {id:'image',name:'Image Studio',short:'Imagen',subtitle:'Ajustes, filtros y exportación',src:'./legacy/image-studio/index.html?embed=1',accent:'blue',icon:h(Icon,{name:'image'}),hotkey:'Alt+3'},
@@ -40,7 +41,7 @@ const studios:Studio[]=[
 ];
 
 function readTheme():Theme{try{return localStorage.getItem(THEME_KEY)==='night'?'night':'day'}catch(_){return'day'}}
-function hashStudio():StudioId{const v=location.hash.replace('#','') as StudioId;return studios.some(s=>s.id===v)?v:'silhouette'}
+function hashStudio():StudioId{const v=location.hash.replace('#','') as StudioId;return studios.some(s=>s.id===v)?v:'home'}
 
 class Logo extends React.Component<any,{failed:boolean}>{
   constructor(props:any){super(props);this.state={failed:false}}
@@ -131,7 +132,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   openRemoveBg(){window.open('https://www.remove.bg/es','_blank','noopener,noreferrer')}
   render(){
     const activeStudio=studios.find(s=>s.id===this.state.active)||studios[0];
-    return h('div',{className:'kaoru-app'+(this.state.active==='reader'?' is-reader':'')},
+    return h('div',{className:'kaoru-app'+(this.state.active==='reader'?' is-reader':'')+(this.state.active==='home'?' is-home':'')},
       h('aside',{className:'rail'},
         h('div',{className:'rail-brand'},h(Logo,{})),
         h('nav',{className:'rail-nav','aria-label':'Studios'},...studios.map(studio=>h('button',{

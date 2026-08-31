@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-3';
+const CACHE_NAME = 'kaoru-archive-reader-shell-4';
 
 const CORE = [
   './',
@@ -8,6 +8,7 @@ const CORE = [
   './vendor/react-dom.production.min.js',
   './app/dist/app.css',
   './app/dist/app.js',
+  './legacy/home/index.html',
   './legacy/reader/index.html',
   './legacy/reader/reader.css',
   './legacy/reader/reader.js',
@@ -63,6 +64,7 @@ function isReaderShell(path) {
     path === 'vendor/react-dom.production.min.js' ||
     path === 'app/dist/app.css' ||
     path === 'app/dist/app.js' ||
+    path.startsWith('legacy/home/') ||
     path.startsWith('legacy/reader/')
   );
 }

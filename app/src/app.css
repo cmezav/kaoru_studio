@@ -32,3 +32,12 @@ html[data-theme=night]{--bg:#0e0c12;--surface:rgba(23,20,29,.92);--surface-solid
   .kaoru-app.is-reader .frame-shell{height:100%;padding:0;background:#000}
   .kaoru-app.is-reader .studio-frame{height:100%;border:0;border-radius:0;box-shadow:none;background:#000}
 }
+.accent-home.is-active{color:#8b5cf6}
+@media(max-width:800px){
+  .kaoru-app.is-home{display:block}
+  .kaoru-app.is-home .rail,
+  .kaoru-app.is-home .appbar{display:none}
+  .kaoru-app.is-home .main-shell{display:block;height:100%;min-height:0}
+  .kaoru-app.is-home .frame-shell{height:100%;padding:0}
+  .kaoru-app.is-home .studio-frame{height:100%;border:0;border-radius:0;box-shadow:none}
+}

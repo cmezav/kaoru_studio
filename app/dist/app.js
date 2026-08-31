@@ -20,6 +20,7 @@ function Icon(props) {
     return h('svg', common, ...(paths[name] || []));
 }
 const studios = [
+    { id: 'home', name: 'Inicio', short: 'Inicio', subtitle: 'Tu espacio creativo', src: './legacy/home/index.html?embed=1', accent: 'home', icon: h(Icon, { name: 'gallery' }), hotkey: 'Inicio' },
     { id: 'silhouette', name: 'Silueta Studio', short: 'Silueta', subtitle: 'Formas, máscaras y composiciones', src: './legacy/index.html?embed=1', accent: 'violet', icon: h(Icon, { name: 'silhouette' }), hotkey: 'Alt+1' },
     { id: 'text', name: 'Text Studio', short: 'Texto', subtitle: 'Tipografía y efectos avanzados', src: './legacy/text-studio/index.html?embed=1', accent: 'rose', icon: h(Icon, { name: 'text' }), hotkey: 'Alt+2' },
     { id: 'image', name: 'Image Studio', short: 'Imagen', subtitle: 'Ajustes, filtros y exportación', src: './legacy/image-studio/index.html?embed=1', accent: 'blue', icon: h(Icon, { name: 'image' }), hotkey: 'Alt+3' },
@@ -35,7 +36,7 @@ function readTheme() { try {
 catch (_) {
     return 'day';
 } }
-function hashStudio() { const v = location.hash.replace('#', ''); return studios.some(s => s.id === v) ? v : 'silhouette'; }
+function hashStudio() { const v = location.hash.replace('#', ''); return studios.some(s => s.id === v) ? v : 'home'; }
 class Logo extends React.Component {
     constructor(props) { super(props); this.state = { failed: false }; }
     render() {
@@ -151,7 +152,7 @@ class App extends React.Component {
     openRemoveBg() { window.open('https://www.remove.bg/es', '_blank', 'noopener,noreferrer'); }
     render() {
         const activeStudio = studios.find(s => s.id === this.state.active) || studios[0];
-        return h('div', { className: 'kaoru-app' + (this.state.active === 'reader' ? ' is-reader' : '') }, h('aside', { className: 'rail' }, h('div', { className: 'rail-brand' }, h(Logo, {})), h('nav', { className: 'rail-nav', 'aria-label': 'Studios' }, ...studios.map(studio => h('button', {
+        return h('div', { className: 'kaoru-app' + (this.state.active === 'reader' ? ' is-reader' : '') + (this.state.active === 'home' ? ' is-home' : '') }, h('aside', { className: 'rail' }, h('div', { className: 'rail-brand' }, h(Logo, {})), h('nav', { className: 'rail-nav', 'aria-label': 'Studios' }, ...studios.map(studio => h('button', {
             key: studio.id, className: `rail-item accent-${studio.accent} ${this.state.active === studio.id ? 'is-active' : ''}`,
             onClick: () => this.navigate(studio.id), title: `${studio.name} · ${studio.hotkey}`, 'aria-current': this.state.active === studio.id ? 'page' : undefined
         }, h('span', { className: 'rail-icon' }, studio.icon), h('span', { className: 'rail-label' }, studio.short)))), h('div', { className: 'rail-bottom' }, h('button', { className: 'rail-item theme-rail', onClick: () => this.setTheme(this.state.theme === 'night' ? 'day' : 'night'), title: this.state.theme === 'night' ? 'Modo claro' : 'Modo oscuro' }, h('span', { className: 'rail-icon' }, h(Icon, { name: this.state.theme === 'night' ? 'sun' : 'moon' })), h('span', { className: 'rail-label' }, this.state.theme === 'night' ? 'Claro' : 'Oscuro')))), h('section', { className: 'main-shell' }, h('header', { className: 'appbar' }, h('div', { className: 'appbar-title' }, h('div', { className: 'crumb-brand' }, "Kaoru's Studio"), h(Icon, { name: 'chevron' }), h('div', { className: 'workspace-title' }, h('strong', null, activeStudio.name), h('span', null, activeStudio.subtitle))), h('div', { className: 'appbar-actions' }, this.state.active === 'silhouette' && h('div', { className: 'silhouette-shell-actions' }, h('button', { className: 'shell-action shell-action-secondary', onClick: () => this.openRemoveBg(), title: 'Abrir Quitafondos' }, 'Quitafondos'), h('button', { className: 'shell-action shell-action-secondary', onClick: () => this.saveBlackTemplate(), title: 'Guardar la silueta como plantilla negra pura' }, '＋ Plantilla negra'), h('button', { className: 'shell-action shell-action-primary', onClick: () => this.exportSilhouette(), title: 'Exportar la silueta como PNG' }, 'Exportar PNG')), h('div', { className: 'shortcut-hint' }, h('span', null, 'Cambiar de Studio'), h('kbd', null, activeStudio.hotkey)), h('button', { className: 'appbar-icon', title: 'Opciones de Kaoru’s Studio' }, h(Icon, { name: 'dots' })))), h('div', { className: 'frame-shell' }, h('iframe', { ref: (el) => this.frame = el, className: 'studio-frame', src: this.state.frameSrc, title: activeStudio.name, onLoad: () => this.onFrameLoad() }))));
