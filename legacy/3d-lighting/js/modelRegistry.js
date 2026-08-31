@@ -2,31 +2,34 @@ export const MODEL_REGISTRY = [
   {
     id: 'asaro',
     name: 'Asaro / Planos',
-    description: 'Modelo GLB de referencia importado para estudio de planos y luz.',
+    description: 'Cabeza por planos GLB para estudiar cortes claros de luz y sombra.',
     phase: 3,
     ready: true,
-    planeCount: 0
+    source: 'head-planes-reference'
   },
   {
     id: 'realistic-head',
     name: 'Cabeza realista',
-    description: 'Prototipo temporal. Modelo anatomico definitivo en Fase 4.',
+    description: 'Encuadre de cabeza sobre la base humana anatomica CC0 de MakeHuman.',
     phase: 4,
-    ready: false
+    ready: true,
+    source: 'makehuman-cc0'
   },
   {
     id: 'bust',
     name: 'Busto',
-    description: 'Prototipo temporal. Busto anatomico definitivo en Fase 4.',
+    description: 'Cabeza, cuello, hombros y torso superior de la base humana CC0.',
     phase: 4,
-    ready: false
+    ready: true,
+    source: 'makehuman-cc0'
   },
   {
     id: 'body',
     name: 'Cuerpo completo',
-    description: 'Prototipo temporal. Cuerpo humano definitivo en Fase 4.',
+    description: 'Cuerpo humano completo y parametricamente preparado para estudio de luz.',
     phase: 4,
-    ready: false
+    ready: true,
+    source: 'makehuman-cc0'
   }
 ];
 

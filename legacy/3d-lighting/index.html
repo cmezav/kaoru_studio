@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio - 3D Lighting Studio Fase 3</title>
+  <title>Kaoru's Studio - 3D Lighting Studio Fase 4</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=3.3">
+  <link rel="stylesheet" href="./styles.css?v=4.0">
 
   <script type="importmap">
   {
@@ -41,20 +41,20 @@
   <main class="three-shell">
     <aside class="three-panel three-controls">
       <section class="intro">
-        <span class="eyebrow">3D LIGHTING STUDIO - FASE 3 DE 6</span>
-        <h1>Cabeza por planos</h1>
-        <p>Modelo propio construido para separar claramente los cambios de valor producidos por la direccion de la luz.</p>
+        <span class="eyebrow">3D LIGHTING STUDIO - FASE 4 DE 6</span>
+        <h1>Anatomia humana 3D</h1>
+        <p>Cabeza, busto y cuerpo completo usan una base humana parametrica real en vez de geometria inventada.</p>
       </section>
 
       <section class="control-section">
         <div class="section-heading">
           <span>01</span>
-          <h2>Modelo</h2>
+          <h2>Modelo / encuadre</h2>
         </div>
 
         <div id="modelCards" class="model-cards"></div>
 
-        <p class="help">Asaro / Planos ya es el modelo propio de Fase 3. Los otros tres siguen siendo prototipos hasta Fase 4.</p>
+        <p class="help">Cabeza, busto y cuerpo comparten la misma anatomia para que las proporciones y la respuesta de luz sean consistentes.</p>
       </section>
 
       <section class="control-section">
@@ -68,13 +68,28 @@
           <input id="baseHex" type="text" maxlength="7" value="#C98E78" spellcheck="false" aria-label="HEX base">
         </div>
 
-        <p class="help">Todos los planos usan el mismo color. Las diferencias visibles deben venir de la luz y la orientacion de cada superficie.</p>
+        <p class="help">La piel usa material continuo. Fase 6 permitira reemplazar este color por una paleta completa de Light Lab.</p>
+      </section>
+
+      <section class="control-section palette-ready-section">
+        <div class="section-heading">
+          <span>03</span>
+          <h2>Paletas Light Lab</h2>
+        </div>
+
+        <div class="palette-ready-card">
+          <strong id="paletteBridgeStatus">16 colores preparados para Light Lab</strong>
+          <span>Sombras, medios tonos, luces, rebote, rim y especulares se conectaran en Fase 6.</span>
+          <div class="palette-dots" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
       </section>
 
       <section class="control-section scene-controls">
         <div class="section-heading">
-          <span>03</span>
-          <h2>Escena y planos</h2>
+          <span>04</span>
+          <h2>Escena y camara</h2>
         </div>
 
         <div id="cameraPresetButtons" class="camera-presets">
@@ -89,9 +104,9 @@
         <label class="scene-toggle">
           <span>
             <strong>Aristas tecnicas</strong>
-            <small>Solo disponibles para el fallback; el GLB se muestra limpio</small>
+            <small>No se usan sobre los modelos GLB limpios</small>
           </span>
-          <input id="edgeToggle" type="checkbox">
+          <input id="edgeToggle" type="checkbox" disabled>
         </label>
 
         <label class="scene-toggle">
@@ -110,17 +125,6 @@
           <input id="shadowToggle" type="checkbox" checked>
         </label>
 
-        <div class="face-plane-guide">
-          <span>Frente</span>
-          <span>Sienes</span>
-          <span>Orbitas</span>
-          <span>Nariz</span>
-          <span>Pomulos</span>
-          <span>Maxilar</span>
-          <span>Menton</span>
-          <span>Mandibula</span>
-        </div>
-
         <div class="mouse-guide">
           <div><b>Arrastrar izq.</b><span>Orbitar</span></div>
           <div><b>Rueda</b><span>Zoom</span></div>
@@ -132,36 +136,36 @@
     <section class="three-stage-column">
       <div class="stage-toolbar">
         <div>
-          <span class="eyebrow">ESTUDIO DE PLANOS 3D</span>
+          <span class="eyebrow">ESTUDIO ANATOMICO 3D</span>
           <h2 id="stageTitle">Asaro / Planos</h2>
         </div>
 
         <div class="stage-badges">
           <span id="webglBadge">Comprobando WebGL...</span>
-          <span>Fase 3</span>
+          <span>Fase 4</span>
         </div>
       </div>
 
       <div class="viewport-card">
-        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de cabeza por planos"></canvas>
+        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de anatomia humana"></canvas>
 
         <div class="viewport-overlay">
-          <strong id="viewportMessage">Cargando cabeza por planos...</strong>
-          <span>Three.js + modelo GLB de referencia</span>
+          <strong id="viewportMessage">Cargando modelos 3D...</strong>
+          <span>Three.js + GLB local</span>
         </div>
 
         <div class="viewport-footer">
           <span>Mouse: orbitar</span>
           <span>Rueda: zoom</span>
           <span>Click derecho: pan</span>
-          <span>GLB: superficie limpia</span>
+          <span>Paletas completas: Fase 6</span>
         </div>
       </div>
 
       <section class="roadmap-card">
         <div><b>F2</b><span>Motor 3D y camara</span></div>
-        <div class="is-current"><b>F3</b><span>Cabeza propia por planos</span></div>
-        <div><b>F4</b><span>Cabeza realista, busto y cuerpo</span></div>
+        <div><b>F3</b><span>Cabeza por planos GLB</span></div>
+        <div class="is-current"><b>F4</b><span>Cabeza, busto y cuerpo real</span></div>
         <div><b>F5</b><span>Multiples luces 3D movibles</span></div>
         <div><b>F6</b><span>Light Lab, Galeria y exportacion</span></div>
       </section>
@@ -171,7 +175,7 @@
       <section class="status-hero">
         <span class="status-orb">3D</span>
         <div>
-          <span class="eyebrow">MODELO POR PLANOS</span>
+          <span class="eyebrow">ANATOMIA + PLANOS</span>
           <h2>Estado</h2>
         </div>
       </section>
@@ -179,22 +183,23 @@
       <dl class="status-list">
         <div><dt>Studio</dt><dd>3D Lighting</dd></div>
         <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos</dd></div>
-        <div><dt>Planos</dt><dd id="statePlanes">52 planos faciales</dd></div>
+        <div><dt>Fuente</dt><dd id="stateSource">Head Planes Reference</dd></div>
+        <div><dt>Morphs</dt><dd id="stateMorphs">No aplica</dd></div>
         <div><dt>Base</dt><dd id="stateColor">#C98E78</dd></div>
         <div><dt>Motor</dt><dd id="stateEngine">Cargando</dd></div>
         <div><dt>Camara</dt><dd id="stateCamera">Cargando</dd></div>
       </dl>
 
       <section class="architecture-card">
-        <span class="eyebrow">MODELO ORIGINAL</span>
-        <h3>Modelo GLB integrado</h3>
-        <p>La cabeza usa un archivo GLB de referencia integrado en el proyecto. Si el GLB no carga, se usa un fallback generado por codigo.</p>
+        <span class="eyebrow">BASE HUMANA CC0</span>
+        <h3>MakeHuman / MPFB2</h3>
+        <p>El cuerpo anatomico procede de una base parametrica CC0 y conserva sus morph targets para futuras opciones de cuerpo y rostro.</p>
       </section>
 
       <section class="next-card">
         <span class="eyebrow">SIGUIENTE</span>
-        <h3>Fase 4 - Anatomia realista</h3>
-        <p>Cabeza humana suave, busto y cuerpo completo para comparar iluminacion realista contra el estudio por planos.</p>
+        <h3>Fase 5 - Luces 3D completas</h3>
+        <p>Multiples luces movibles con HEX libre, intensidad, distancia, suavidad, elevacion y contribucion individual.</p>
       </section>
     </aside>
   </main>
@@ -231,7 +236,7 @@
     window.addEventListener('error', function (event) {
       var text = String(event && (event.message || event.error) || '');
 
-      if (/module|script|import|three|scene3d|state\.js|asaro/i.test(text)) {
+      if (/module|script|import|three|scene3d|state\.js|human|asaro/i.test(text)) {
         showStartupProblem('Fallo al cargar un modulo JavaScript. Recarga sin cache.');
       }
     });
@@ -239,8 +244,8 @@
     window.addEventListener('unhandledrejection', function (event) {
       var text = String(event && event.reason || '');
 
-      if (/module|script|import|three|scene3d|state\.js|asaro/i.test(text)) {
-        showStartupProblem('Fallo al cargar el motor 3D. Revisa la conexion y recarga.');
+      if (/module|script|import|three|scene3d|state\.js|human|asaro/i.test(text)) {
+        showStartupProblem('Fallo al cargar un modelo 3D. Recarga la pagina.');
       }
     });
 
@@ -252,6 +257,6 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?v=3.3"></script>
+  <script type="module" src="./js/main.js?v=4.0"></script>
 </body>
 </html>

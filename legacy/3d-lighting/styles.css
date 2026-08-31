@@ -121,3 +121,21 @@ button,input{font:inherit;color:inherit}
   .control-section{padding-block:9px}
   .mouse-guide{display:none}
 }
+.palette-ready-card{
+  padding:9px;
+  border:1px solid var(--three-line);
+  border-radius:9px;
+  background:var(--three-accent-soft);
+}
+.palette-ready-card strong,.palette-ready-card span{display:block}
+.palette-ready-card strong{font-size:7.5px;color:var(--three-accent)}
+.palette-ready-card span{margin-top:4px;color:var(--three-muted);font-size:6.3px;line-height:1.4}
+.palette-dots{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin-top:7px}
+.palette-dots i{height:8px;border-radius:3px;background:var(--three-accent)}
+.palette-dots i:nth-child(2){opacity:.85}
+.palette-dots i:nth-child(3){opacity:.72}
+.palette-dots i:nth-child(4){opacity:.60}
+.palette-dots i:nth-child(5){opacity:.48}
+.palette-dots i:nth-child(6){opacity:.36}
+.palette-dots i:nth-child(7){opacity:.25}
+.palette-dots i:nth-child(8){opacity:.16}

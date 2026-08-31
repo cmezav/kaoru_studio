@@ -1,9 +1,9 @@
-export const THREE_STUDIO_STATE_VERSION = 3;
+export const THREE_STUDIO_STATE_VERSION = 4;
 
 export function createInitial3dState() {
   return {
     version: THREE_STUDIO_STATE_VERSION,
-    phase: 3,
+    phase: 4,
     selectedModel: 'asaro',
     baseColor: '#C98E78',
     engine: {
@@ -22,6 +22,12 @@ export function createInitial3dState() {
       gridVisible: true,
       shadowsEnabled: true,
       edgesVisible: false
+    },
+    material: {
+      paletteBridgeReady: true,
+      paletteSlots: 16,
+      paletteMode: 'base-only',
+      palette: []
     },
     lighting: {
       enabled: true,
