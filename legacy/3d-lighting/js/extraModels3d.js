@@ -65,6 +65,61 @@ function createSubjectMaterial(
   return material;
 }
 
+function removeExcludedNodes(
+  root,
+  patterns = []
+) {
+  if (!patterns.length) return 0;
+
+  const tests = patterns.map(
+    (pattern) =>
+      new RegExp(
+        String(pattern),
+        'i'
+      )
+  );
+
+  const remove = [];
+
+  root.traverse((object) => {
+    const name =
+      String(
+        object.name || ''
+      );
+
+    if (
+      name &&
+      tests.some(
+        (test) => test.test(name)
+      )
+    ) {
+      remove.push(object);
+    }
+  });
+
+  remove
+    .sort((a, b) => {
+      function depth(node) {
+        let value = 0;
+        let current = node;
+
+        while (current?.parent) {
+          value += 1;
+          current = current.parent;
+        }
+
+        return value;
+      }
+
+      return depth(b) - depth(a);
+    })
+    .forEach((object) => {
+      object.parent?.remove(object);
+    });
+
+  return remove.length;
+}
+
 function prepareMeshes(
   root,
   material
@@ -75,6 +130,18 @@ function prepareMeshes(
     object.castShadow = true;
     object.receiveShadow = true;
     object.material = material;
+
+    const geometry =
+      object.geometry;
+
+    if (
+      geometry &&
+      !geometry.getAttribute?.('normal') &&
+      typeof geometry.computeVertexNormals ===
+        'function'
+    ) {
+      geometry.computeVertexNormals();
+    }
   });
 }
 
@@ -172,6 +239,18 @@ export async function createExternalSubject(
   if (!source) {
     throw new Error(
       'El modelo extra no contiene una malla utilizable.'
+    );
+  }
+
+  if (
+    Array.isArray(
+      config.excludeNames
+    ) &&
+    config.excludeNames.length
+  ) {
+    removeExcludedNodes(
+      source,
+      config.excludeNames
     );
   }
 

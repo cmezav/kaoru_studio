@@ -5,7 +5,7 @@ import { createHumanModel } from './humanModel.js?v=4.1';
 import { createLightingRig } from './lighting3d.js?v=5.1';
 import { applyPaletteToMaterials } from './paletteBridge3d.js?v=6.0';
 import { createCustomModel } from './customModel.js?v=6.0';
-import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=models-extra';
+import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=male-body-clean';
 
 export const SCENE3D_PHASE = 6;
 
@@ -660,7 +660,11 @@ export async function create3dScene(
             name: 'kaoru-male-base',
             floorY: -1.38,
             targetHeight: 5.35,
-            roughness: 0.86
+            roughness: 0.86,
+            excludeNames: [
+              '^Hair$',
+              'Hair'
+            ]
           },
           color
         );
