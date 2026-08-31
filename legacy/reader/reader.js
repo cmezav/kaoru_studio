@@ -458,14 +458,14 @@ async function renderLibrary() {
   }
 }
 async function showLibrary(fromHistory = false) {
-  await saveCurrentPosition(true);
-  await exitImmersiveMode();
-  await closePdfDocument();
-
-  currentBook = null;
+  /*
+    Primero cambiamos la interfaz. Así el botón Library responde
+    aunque una escritura local tarde más de lo normal.
+  */
   document.body.classList.remove(
     'is-reading',
-    'is-pdf-reading'
+    'is-pdf-reading',
+    'reader-soft-immersive'
   );
 
   elements.readerView.hidden = true;
@@ -482,28 +482,60 @@ async function showLibrary(fromHistory = false) {
   }
 
   window.scrollTo(0, 0);
+
+  /*
+    El progreso ya se guarda durante el scroll. Este guardado final
+    no debe impedir que el usuario vuelva a Biblioteca.
+  */
+  try {
+    await Promise.race([
+      saveCurrentPosition(true),
+      new Promise((resolve) => window.setTimeout(resolve, 450))
+    ]);
+  } catch (error) {
+    console.warn('Guardado al volver a Biblioteca', error);
+  }
+
+  try {
+    await closePdfDocument();
+  } catch (error) {
+    console.warn('Cierre PDF al volver a Biblioteca', error);
+  }
+
+  currentBook = null;
+
   await renderLibrary();
 
   if (isCloudUnlocked()) {
     scheduleCloudSync(1500);
   }
 }
-
 async function returnToLibrary() {
-  await saveCurrentPosition(true);
-  await exitImmersiveMode();
+  try {
+    await showLibrary();
+  } catch (error) {
+    console.error('Volver a Biblioteca', error);
 
-  if (
-    document.body.classList.contains('is-reading') &&
-    history.state?.[READER_HISTORY_KEY] === 'reader'
-  ) {
-    history.back();
-    return;
+    /*
+      Fallback visual: incluso si IndexedDB falla, nunca dejamos
+      al usuario atrapado dentro del capítulo.
+    */
+    document.body.classList.remove(
+      'is-reading',
+      'is-pdf-reading',
+      'reader-soft-immersive'
+    );
+
+    elements.readerView.hidden = true;
+    elements.libraryView.hidden = false;
+
+    if (elements.pdfView) {
+      elements.pdfView.hidden = true;
+    }
+
+    window.scrollTo(0, 0);
   }
-
-  await showLibrary();
 }
-
 function readingAnchors() {
   return Array.from(
     elements.chapterContent.querySelectorAll(
@@ -743,22 +775,64 @@ async function openBook(bookId, chapterIndex = 0, restore = true) {
 }
 
 async function changeChapter(delta) {
-  if (!currentBook) return;
+  if (
+    !currentBook ||
+    isPdfBook(currentBook)
+  ) {
+    return;
+  }
 
-  await saveCurrentPosition(true);
+  const count = currentBook.chapters.length;
+  const next = currentChapterIndex + Number(delta || 0);
 
-  const next = currentChapterIndex + delta;
+  if (
+    next < 0 ||
+    next >= count
+  ) {
+    return;
+  }
 
-  if (next < 0 || next >= currentBook.chapters.length) return;
+  const previousBook = currentBook;
+  const previousChapterIndex = currentChapterIndex;
+  const previousAnchor = currentAnchor();
+  const previousRatio = currentRatio();
 
+  /*
+    Cambiamos capítulo inmediatamente. El usuario no tiene que
+    esperar a IndexedDB para ver que el botón respondió.
+  */
   currentChapterIndex = next;
-  await renderChapter(false);
+
+  try {
+    await renderChapter(false);
+  } catch (error) {
+    console.error('Render de capítulo', error);
+    currentChapterIndex = previousChapterIndex;
+    return;
+  }
+
+  /*
+    Guardado extra del capítulo anterior usando una instantánea.
+    No usa currentChapterIndex, así que no puede sobrescribir el
+    capítulo nuevo por una carrera asíncrona.
+  */
+  try {
+    await putProgress({
+      bookId: previousBook.id,
+      chapterIndex: previousChapterIndex,
+      anchorIndex: previousAnchor.anchorIndex,
+      anchorOffset: previousAnchor.anchorOffset,
+      ratio: previousRatio,
+      updatedAt: Date.now()
+    });
+  } catch (error) {
+    console.warn('Guardado del capítulo anterior', error);
+  }
 
   if (isCloudUnlocked()) {
     scheduleCloudSync(1500);
   }
 }
-
 async function importReaderFile(file) {
   if (!file) return;
 
@@ -1044,15 +1118,80 @@ elements.epubInput.addEventListener('change', () => {
   importReaderFile(elements.epubInput.files?.[0]);
 });
 
-elements.libraryBtn.addEventListener('click', returnToLibrary);
+elements.libraryBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  returnToLibrary();
+});
 
 window.addEventListener(
   'kaoru:pdf-library-request',
   returnToLibrary
 );
-elements.prevChapterBtn.addEventListener('click', () => changeChapter(-1));
-elements.nextChapterBtn.addEventListener('click', () => changeChapter(1));
 
+elements.prevChapterBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  changeChapter(-1).catch((error) => {
+    console.error('Capítulo anterior', error);
+  });
+});
+
+elements.nextChapterBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+
+  changeChapter(1).catch((error) => {
+    console.error('Capítulo siguiente', error);
+  });
+});
+
+/*
+  Respaldo táctil móvil. Algunos WebViews retrasan o pierden click,
+  por eso pointerup ejecuta la misma acción cuando el toque es real.
+*/
+function bindReaderPointerAction(element, action) {
+  if (!element) return;
+
+  let lastPointerAction = 0;
+
+  element.addEventListener('pointerup', (event) => {
+    if (
+      event.pointerType !== 'touch' &&
+      event.pointerType !== 'pen'
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+
+    if (now - lastPointerAction < 500) {
+      return;
+    }
+
+    lastPointerAction = now;
+    event.preventDefault();
+    event.stopPropagation();
+    action();
+  });
+}
+
+bindReaderPointerAction(
+  elements.libraryBtn,
+  () => returnToLibrary()
+);
+
+bindReaderPointerAction(
+  elements.prevChapterBtn,
+  () => changeChapter(-1)
+);
+
+bindReaderPointerAction(
+  elements.nextChapterBtn,
+  () => changeChapter(1)
+);
 elements.leaveReaderBtn.addEventListener('click', () => {
   if (window.parent && window.parent !== window) {
     window.parent.postMessage(

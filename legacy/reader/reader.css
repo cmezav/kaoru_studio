@@ -1300,3 +1300,35 @@ body.reader-soft-immersive .reader-view,
 body.reader-soft-immersive .pdf-view{
   min-height:100dvh;
 }
+/* Controles EPUB: prioridad táctil */
+.reader-view,
+.reading-column{
+  position:relative;
+}
+
+.chapter-content{
+  position:relative;
+  z-index:1;
+}
+
+.chapter-footer{
+  position:relative;
+  z-index:100;
+  isolation:isolate;
+  pointer-events:auto!important;
+}
+
+.chapter-actions{
+  position:relative;
+  z-index:101;
+  pointer-events:auto!important;
+}
+
+.chapter-actions button{
+  position:relative;
+  z-index:102;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none;
+}
