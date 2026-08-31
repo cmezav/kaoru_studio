@@ -2,11 +2,11 @@ import { create3dStore } from './state.js?v=6.0';
 import {
   MODEL_REGISTRY,
   modelById
-} from './modelRegistry.js?v=6.1';
+} from './modelRegistry.js?v=6.2';
 import {
   detectWebGL,
   create3dScene
-} from './scene3d.js?v=6.1';
+} from './scene3d.js?v=6.2';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,
@@ -328,9 +328,15 @@ function renderCards(state) {
               ? 'PLANOS GLB'
               : entry.id === 'sphere'
                 ? 'PRUEBA DE PALETA'
-                : entry.id === 'custom'
-                  ? 'MODELO LOCAL'
-                  : 'ANATOMIA CC0'
+                : entry.id === 'cube'
+                  ? 'PLANOS DUROS'
+                  : entry.id === 'asaro-alt'
+                    ? 'CABEZA EXTRA'
+                    : entry.id === 'male-base'
+                      ? 'MALLA LOCAL'
+                      : entry.id === 'custom'
+                        ? 'MODELO LOCAL'
+                        : 'ANATOMIA CC0'
           }</em>
         `;
 
@@ -351,6 +357,18 @@ function sourceDescription(
       state.customModel?.name ||
       'Modelo local'
     );
+  }
+
+  if (state.selectedModel === 'cube') {
+    return 'Cubo 3D nativo';
+  }
+
+  if (state.selectedModel === 'asaro-alt') {
+    return 'Cabeza adicional local';
+  }
+
+  if (state.selectedModel === 'male-base') {
+    return 'Malla masculina local';
   }
 
   if (!info) {

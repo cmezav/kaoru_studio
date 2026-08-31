@@ -5,6 +5,7 @@ import { createHumanModel } from './humanModel.js?v=4.1';
 import { createLightingRig } from './lighting3d.js?v=5.1';
 import { applyPaletteToMaterials } from './paletteBridge3d.js?v=6.0';
 import { createCustomModel } from './customModel.js?v=6.0';
+import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=models-extra';
 
 export const SCENE3D_PHASE = 6;
 
@@ -12,6 +13,17 @@ const ASARO_GLB_URL = new URL(
   '../assets/models/head_planes_reference.glb?v=3.3',
   import.meta.url
 ).href;
+const ASARO_ALT_MODEL_URL = new URL(
+  '../assets/models/asaro-alt-head.glb?cache=models-extra',
+  import.meta.url
+).href;
+const ASARO_ALT_MODEL_FORMAT = 'glb';
+
+const MALE_BASE_MODEL_URL = new URL(
+  '../assets/models/male-base-mesh.obj?cache=models-extra',
+  import.meta.url
+).href;
+const MALE_BASE_MODEL_FORMAT = 'obj';
 
 export function detectWebGL() {
   try {
@@ -381,7 +393,10 @@ export async function create3dScene(
     );
     let rise = height * 0.06;
 
-    if (kind === 'realistic-head') {
+    if (
+      kind === 'realistic-head' ||
+      kind === 'asaro-alt'
+    ) {
       targetY =
         box.max.y -
         height * 0.105;
@@ -540,6 +555,22 @@ export async function create3dScene(
 
       registerAsset(sphere);
       currentLoadError = null;
+    } else if (kind === 'cube') {
+      const cube =
+        createCubeModel(
+          THREE,
+          color
+        );
+
+      if (
+        disposed ||
+        version !== loadVersion
+      ) {
+        return;
+      }
+
+      registerAsset(cube);
+      currentLoadError = null;
     } else if (kind === 'asaro') {
       try {
         const asaro =
@@ -593,6 +624,56 @@ export async function create3dScene(
           'GLB load error'
         );
       }
+    } else if (kind === 'asaro-alt') {
+      const altHead =
+        await createExternalSubject(
+          THREE,
+          {
+            url: ASARO_ALT_MODEL_URL,
+            format: ASARO_ALT_MODEL_FORMAT,
+            source: 'asaro-alt-asset',
+            name: 'kaoru-asaro-alt',
+            floorY: -1.05,
+            targetHeight: 3.2,
+            roughness: 0.84
+          },
+          color
+        );
+
+      if (
+        disposed ||
+        version !== loadVersion
+      ) {
+        return;
+      }
+
+      registerAsset(altHead);
+      currentLoadError = null;
+    } else if (kind === 'male-base') {
+      const maleBody =
+        await createExternalSubject(
+          THREE,
+          {
+            url: MALE_BASE_MODEL_URL,
+            format: MALE_BASE_MODEL_FORMAT,
+            source: 'male-base-asset',
+            name: 'kaoru-male-base',
+            floorY: -1.38,
+            targetHeight: 5.35,
+            roughness: 0.86
+          },
+          color
+        );
+
+      if (
+        disposed ||
+        version !== loadVersion
+      ) {
+        return;
+      }
+
+      registerAsset(maleBody);
+      currentLoadError = null;
     } else if (
       kind === 'realistic-head' ||
       kind === 'bust' ||

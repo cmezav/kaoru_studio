@@ -38,6 +38,27 @@ export const MODEL_REGISTRY = [
     phase: 4,
     ready: true,
     source: 'makehuman-cc0'
+  },
+  {
+    id: 'asaro-alt',
+    name: 'Cabeza extra',
+    description: 'Cabeza adicional para estudiar planos, luces y sombras sin reemplazar el Asaro existente.',
+    ready: true,
+    source: 'asaro-alt-asset'
+  },
+  {
+    id: 'male-base',
+    name: 'Cuerpo masculino base',
+    description: 'Basemesh masculino de cuerpo completo para estudio anatomico de iluminacion.',
+    ready: true,
+    source: 'male-base-asset'
+  },
+  {
+    id: 'cube',
+    name: 'Cubo 3D',
+    description: 'Cubo neutro para estudiar planos duros y cambios claros de luz y sombra.',
+    ready: true,
+    source: 'native-cube'
   }
 ];
 
