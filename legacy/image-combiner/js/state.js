@@ -7,8 +7,8 @@
 
   function initial(){
     return {
-      version:3,
-      phase:3,
+      version:4,
+      phase:4,
       canvas:{
         width:1080,
         height:1080,
@@ -22,7 +22,11 @@
       },
       aspectLock:true,
       alignTarget:'canvas',
-      zoom:'fit'
+      zoom:'fit',
+      cropUi:{
+        enabled:false,
+        mode:'free'
+      }
     };
   }
 

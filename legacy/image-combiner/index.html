@@ -7,7 +7,7 @@
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
   <title>Kaoru's Studio - Image Combiner Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=3.0">
+  <link rel="stylesheet" href="./styles.css?v=4.0">
 </head>
 
 <body data-studio="combiner">
@@ -26,16 +26,16 @@
         <a data-studio-link="light" href="../light-lab/index.html">Light Lab</a>
         <a data-studio-link="3d" href="../3d-lighting/index.html">3D</a>
         <a data-studio-link="combiner" href="./index.html">Combiner</a>
-        <a data-studio-link="gallery" href="../gallery/index.html">Galeria</a>
+        <a data-studio-link="gallery" href="../gallery/index.html">Galería</a>
       </nav>
     </header>
 
     <main class="workspace">
       <aside class="panel settings-panel">
         <section class="intro">
-          <span class="eyebrow">IMAGE COMBINER - FASE 3 DE 6</span>
-          <h1>Recorte y efectos</h1>
-          <p>Recorta cada imagen sin destruirla y añade bordes, sombras, brillo y ajustes visuales.</p>
+          <span class="eyebrow">IMAGE COMBINER - FASE 4 DE 6</span>
+          <h1>Recorte normal + efectos</h1>
+          <p>Se mantiene el crop numérico y ahora se suma un recorte visual clásico con esquinas, borde negro y edición directa sobre la imagen.</p>
         </section>
 
         <section class="panel-section compact-section">
@@ -135,11 +135,21 @@
         </section>
 
         <section class="panel-section visual-section" id="visualControls">
-          <div class="section-title"><span>05</span><h2>Recorte</h2></div>
+          <div class="section-title"><span>05</span><h2>Recorte y efectos</h2></div>
 
           <div class="single-only-note" id="singleOnlyNote">Selecciona una sola imagen para editar su recorte y efectos.</div>
 
           <div id="singleVisualControls">
+            <div class="subsection-heading first-subheading">
+              <strong>Recorte clásico</strong>
+              <div class="button-inline">
+                <button id="toggleCropUiBtn" type="button">Activar recorte visual</button>
+                <button id="exitCropUiBtn" type="button">Salir</button>
+              </div>
+            </div>
+
+            <p class="mini-help">Cuando el recorte visual está activo aparece un borde negro con esquinas y asas para cortar sin deformar la imagen. Esto se suma al crop numérico, no lo reemplaza.</p>
+
             <div class="crop-presets">
               <button type="button" data-crop-preset="original">Original</button>
               <button type="button" data-crop-preset="1">1:1</button>
@@ -293,9 +303,9 @@
 
   <script src="../shared/studioBridge.js?v=19.0"></script>
   <script src="./js/presets.js?v=1.0"></script>
-  <script src="./js/state.js?v=3.0"></script>
+  <script src="./js/state.js?v=4.0"></script>
   <script src="./js/layers.js?v=2.0"></script>
   <script src="./js/effects.js?v=3.0"></script>
-  <script src="./js/main.js?v=3.0"></script>
+  <script src="./js/main.js?v=4.0"></script>
 </body>
 </html>

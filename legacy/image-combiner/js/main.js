@@ -74,6 +74,8 @@
     cropHOut:$('#cropHOut'),
     fitFrameCrop:$('#fitFrameCropBtn'),
     resetCrop:$('#resetCropBtn'),
+    toggleCropUi:$('#toggleCropUiBtn'),
+    exitCropUi:$('#exitCropUiBtn'),
     addBorder:$('#addBorderBtn'),
     bordersList:$('#bordersList'),
 
@@ -151,8 +153,8 @@
 
   function restore(next){
     if(!next) return;
-
     state=next;
+    if(!state.cropUi) state.cropUi={enabled:false,mode:'free'};
     state.layers.forEach(CombinerEffects.ensure);
     render();
   }
@@ -169,6 +171,10 @@
       ids:clean,
       primaryId:clean.includes(primaryId)?primaryId:(clean.at(-1)||null)
     };
+
+    if(clean.length!==1){
+      state.cropUi.enabled=false;
+    }
   }
 
   function toggleSelection(id){
@@ -273,6 +279,99 @@
       `${state.canvas.width} x ${state.canvas.height}px - ${Math.round(scale*100)}%`;
   }
 
+  function getCropEditorRect(layer){
+    const imageAspect=Math.max(1,layer.naturalWidth)/Math.max(1,layer.naturalHeight);
+    const frameAspect=Math.max(1,layer.width)/Math.max(1,layer.height);
+
+    let width=layer.width;
+    let height=layer.height;
+    let x=0;
+    let y=0;
+
+    if(imageAspect>frameAspect){
+      height=layer.width/imageAspect;
+      y=(layer.height-height)/2;
+    }else{
+      width=layer.height*imageAspect;
+      x=(layer.width-width)/2;
+    }
+
+    return {x,y,width,height};
+  }
+
+  function getCropBoxRect(layer){
+    const fit=getCropEditorRect(layer);
+    const crop=layer.crop;
+    return {
+      left:fit.x+fit.width*crop.x,
+      top:fit.y+fit.height*crop.y,
+      width:fit.width*crop.width,
+      height:fit.height*crop.height,
+      fit
+    };
+  }
+
+  function renderCropEditor(node,layer){
+    const editor=document.createElement('div');
+    editor.className='crop-editor';
+
+    const fit=getCropEditorRect(layer);
+
+    const base=document.createElement('img');
+    base.className='editor-image';
+    base.src=layer.src;
+    base.alt='';
+    base.style.left=`${fit.x}px`;
+    base.style.top=`${fit.y}px`;
+    base.style.width=`${fit.width}px`;
+    base.style.height=`${fit.height}px`;
+    editor.appendChild(base);
+
+    const rect=getCropBoxRect(layer);
+
+    const dims={
+      top:{left:fit.x,top:fit.y,width:fit.width,height:Math.max(0,rect.top-fit.y)},
+      left:{left:fit.x,top:rect.top,width:Math.max(0,rect.left-fit.x),height:rect.height},
+      right:{left:rect.left+rect.width,top:rect.top,width:Math.max(0,fit.x+fit.width-(rect.left+rect.width)),height:rect.height},
+      bottom:{left:fit.x,top:rect.top+rect.height,width:fit.width,height:Math.max(0,fit.y+fit.height-(rect.top+rect.height))}
+    };
+
+    Object.values(dims).forEach(dim=>{
+      const mask=document.createElement('div');
+      mask.className='crop-dim';
+      mask.style.left=`${dim.left}px`;
+      mask.style.top=`${dim.top}px`;
+      mask.style.width=`${dim.width}px`;
+      mask.style.height=`${dim.height}px`;
+      editor.appendChild(mask);
+    });
+
+    const box=document.createElement('div');
+    box.className='crop-box';
+    box.dataset.cropRole='move';
+    box.style.left=`${rect.left}px`;
+    box.style.top=`${rect.top}px`;
+    box.style.width=`${rect.width}px`;
+    box.style.height=`${rect.height}px`;
+
+    ['nw','n','ne','e','se','s','sw','w'].forEach(handle=>{
+      const point=document.createElement('button');
+      point.type='button';
+      point.className='crop-handle';
+      point.dataset.cropHandle=handle;
+      box.appendChild(point);
+    });
+
+    editor.appendChild(box);
+
+    const badge=document.createElement('div');
+    badge.className='crop-mode-banner';
+    badge.textContent='MODO RECORTE VISUAL';
+    editor.appendChild(badge);
+
+    node.appendChild(editor);
+  }
+
   function renderLayers(){
     els.stage.querySelectorAll('.image-layer').forEach(node=>node.remove());
 
@@ -281,18 +380,19 @@
 
     state.layers.forEach((layer,index)=>{
       CombinerEffects.ensure(layer);
-
       if(layer.visible===false) return;
 
       const node=document.createElement('div');
       const isSelected=ids.has(layer.id);
       const isPrimary=layer.id===state.selection.primaryId;
+      const cropActive=Boolean(isPrimary && onlyOne && state.cropUi.enabled);
 
       node.className=[
         'image-layer',
         isSelected?'selected':'',
         isPrimary?'primary':'',
-        layer.locked?'is-locked':''
+        layer.locked?'is-locked':'',
+        cropActive?'crop-active':''
       ].filter(Boolean).join(' ');
 
       node.dataset.id=layer.id;
@@ -325,7 +425,9 @@
       cropFrame.appendChild(img);
       node.appendChild(cropFrame);
 
-      if(isPrimary && onlyOne && !layer.locked){
+      if(cropActive && !layer.locked){
+        renderCropEditor(node,layer);
+      }else if(isPrimary && onlyOne && !layer.locked){
         const resize=document.createElement('button');
         resize.type='button';
         resize.className='resize-handle';
@@ -354,23 +456,23 @@
     const one=chosen.length===1?chosen[0]:null;
     const any=chosen.length>0;
 
-    els.controls.classList.toggle('disabled',!any);
-
     [
       els.duplicate,els.remove,els.flipX,els.flipY,
       els.forward,els.backward,els.opacity
     ].forEach(element=>element.disabled=!any);
 
     [els.x,els.y,els.w,els.h,els.rotation].forEach(element=>{
-      element.disabled=!one || one.locked;
+      element.disabled=!one || one.locked || state.cropUi.enabled;
     });
 
     document.querySelectorAll('[data-align]').forEach(button=>{
-      button.disabled=!selectedLayers(true).length;
+      button.disabled=!selectedLayers(true).length || state.cropUi.enabled;
     });
 
-    els.distributeH.disabled=selectedLayers(true).length<3;
-    els.distributeV.disabled=selectedLayers(true).length<3;
+    els.distributeH.disabled=selectedLayers(true).length<3 || state.cropUi.enabled;
+    els.distributeV.disabled=selectedLayers(true).length<3 || state.cropUi.enabled;
+    els.toggleCropUi.disabled=!one || one.locked;
+    els.exitCropUi.disabled=!state.cropUi.enabled;
 
     if(!any){
       els.selectedName.textContent='Ninguna imagen seleccionada';
@@ -397,7 +499,6 @@
     }
 
     const opacity=chosen[0]?.opacity ?? 1;
-
     if(document.activeElement!==els.opacity){
       els.opacity.value=Math.round(opacity*100);
     }
@@ -405,6 +506,7 @@
     els.opacityOut.textContent=`${Math.round(opacity*100)}%`;
     els.aspect.checked=state.aspectLock;
     els.alignTarget.value=state.alignTarget||'canvas';
+    els.toggleCropUi.textContent=state.cropUi.enabled?'Recorte visual activo':'Activar recorte visual';
   }
 
   function renderCanvasControls(){
@@ -431,7 +533,6 @@
       CombinerEffects.ensure(layer);
 
       const row=document.createElement('div');
-
       row.className=[
         'layer-row',
         selectedSet.has(layer.id)?'selected':'',
@@ -455,7 +556,6 @@
       thumb.alt='';
 
       const middle=document.createElement('div');
-
       const name=document.createElement('input');
       name.className='layer-name-input';
       name.type='text';
@@ -468,10 +568,11 @@
       const effectCount=
         layer.borders.length+
         (layer.shadow.enabled?1:0)+
-        (layer.glow.enabled?1:0);
+        (layer.glow.enabled?1:0)+
+        ((layer.crop.width<1 || layer.crop.height<1 || layer.crop.x>0 || layer.crop.y>0)?1:0);
 
       meta.textContent=
-        `${Math.round(layer.width)} x ${Math.round(layer.height)} · ${effectCount} efecto${effectCount===1?'':'s'} · capa ${state.layers.length-index}`;
+        `${Math.round(layer.width)} x ${Math.round(layer.height)} · ${effectCount} ajuste${effectCount===1?'':'s'} · capa ${state.layers.length-index}`;
 
       middle.append(name,meta);
 
@@ -554,23 +655,19 @@
 
     els.singleOnlyNote.hidden=enabled;
     els.singleVisualControls.hidden=!enabled;
-
     if(!layer) return;
 
     CombinerEffects.ensure(layer);
 
     const crop=layer.crop;
-
     setControlValue(els.cropX,Math.round(crop.x*100));
     setControlValue(els.cropY,Math.round(crop.y*100));
     setControlValue(els.cropW,Math.round(crop.width*100));
     setControlValue(els.cropH,Math.round(crop.height*100));
-
     els.cropXOut.textContent=`${Math.round(crop.x*100)}%`;
     els.cropYOut.textContent=`${Math.round(crop.y*100)}%`;
     els.cropWOut.textContent=`${Math.round(crop.width*100)}%`;
     els.cropHOut.textContent=`${Math.round(crop.height*100)}%`;
-
     renderBorders(layer);
 
     els.shadowEnabled.checked=layer.shadow.enabled;
@@ -580,7 +677,6 @@
     setControlValue(els.shadowDistance,layer.shadow.distance);
     setControlValue(els.shadowBlur,layer.shadow.blur);
     setControlValue(els.shadowOpacity,Math.round(layer.shadow.opacity*100));
-
     els.shadowAngleOut.textContent=`${Math.round(layer.shadow.angle)}°`;
     els.shadowDistanceOut.textContent=`${Math.round(layer.shadow.distance)}`;
     els.shadowBlurOut.textContent=`${Math.round(layer.shadow.blur)}`;
@@ -591,7 +687,6 @@
     setControlValue(els.glowHex,layer.glow.color);
     setControlValue(els.glowBlur,layer.glow.blur);
     setControlValue(els.glowOpacity,Math.round(layer.glow.opacity*100));
-
     els.glowBlurOut.textContent=`${Math.round(layer.glow.blur)}`;
     els.glowOpacityOut.textContent=`${Math.round(layer.glow.opacity*100)}%`;
 
@@ -600,7 +695,6 @@
     setControlValue(els.saturation,layer.effects.saturation);
     setControlValue(els.layerBlur,layer.effects.blur);
     setControlValue(els.grayscale,layer.effects.grayscale);
-
     els.brightnessOut.textContent=`${Math.round(layer.effects.brightness)}%`;
     els.contrastOut.textContent=`${Math.round(layer.effects.contrast)}%`;
     els.saturationOut.textContent=`${Math.round(layer.effects.saturation)}%`;
@@ -626,29 +720,20 @@
 
   function updateSelectedLayers(patch,commit=false){
     const ids=new Set(selectionIds());
-
     state.layers=state.layers.map(layer=>{
       if(!ids.has(layer.id) || layer.locked) return layer;
-
-      return {
-        ...layer,
-        ...(typeof patch==='function'?patch(layer):patch)
-      };
+      return {...layer,...(typeof patch==='function'?patch(layer):patch)};
     });
-
     render();
-
     if(commit) snapshot();
   }
 
   function updateVisual(mutator,commit=false,label=null){
     const layer=singleSelected();
     if(!layer || layer.locked) return;
-
     CombinerEffects.ensure(layer);
     mutator(layer);
     render();
-
     if(commit) snapshot(label);
   }
 
@@ -666,7 +751,6 @@
       image.onload=()=>{
         const maxW=state.canvas.width*.66;
         const maxH=state.canvas.height*.66;
-
         const ratio=Math.min(
           1,
           maxW/Math.max(1,image.naturalWidth),
@@ -675,7 +759,6 @@
 
         const width=Math.max(20,image.naturalWidth*ratio);
         const height=Math.max(20,image.naturalHeight*ratio);
-
         const visual=CombinerEffects.styleDefaults();
 
         const layer={
@@ -724,7 +807,6 @@
 
     state.layers.forEach(layer=>{
       next.push(layer);
-
       if(ids.has(layer.id)){
         const copy={
           ...clone(layer),
@@ -734,12 +816,10 @@
           y:layer.y+offset,
           locked:false
         };
-
         copy.borders=(copy.borders||[]).map((border,index)=>({
           ...border,
           id:`border-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2,6)}`
         }));
-
         next.push(copy);
         newIds.push(copy.id);
       }
@@ -749,14 +829,12 @@
     setSelection(newIds,newIds.at(-1)||null);
     render();
     snapshot(showToast?'Selección duplicada':null);
-
     return newIds;
   }
 
   function deleteSelected(){
     const ids=new Set(selectionIds());
     if(!ids.size) return;
-
     state.layers=state.layers.filter(layer=>!ids.has(layer.id));
     setSelection([],null);
     render();
@@ -768,6 +846,14 @@
       render();
       snapshot();
     }
+  }
+
+  function stagePoint(event){
+    const rect=els.stage.getBoundingClientRect();
+    return {
+      x:clamp((event.clientX-rect.left)/scale,0,state.canvas.width),
+      y:clamp((event.clientY-rect.top)/scale,0,state.canvas.height)
+    };
   }
 
   function beginInteraction(event,node,type){
@@ -788,16 +874,10 @@
     if(type==='rotate'){
       const layer=primary();
       if(!layer) return;
-
       const rect=node.getBoundingClientRect();
-
       start.centerX=rect.left+rect.width/2;
       start.centerY=rect.top+rect.height/2;
-      start.startAngle=Math.atan2(
-        event.clientY-start.centerY,
-        event.clientX-start.centerX
-      );
-
+      start.startAngle=Math.atan2(event.clientY-start.centerY,event.clientX-start.centerX);
       start.layer=clone(layer);
     }
 
@@ -805,8 +885,78 @@
     node.setPointerCapture(event.pointerId);
   }
 
+  function beginCropInteraction(event,node,role,handle){
+    const layer=singleSelected();
+    if(!layer || layer.locked) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const fit=getCropEditorRect(layer);
+    const crop=clone(layer.crop);
+
+    interaction={
+      pointerId:event.pointerId,
+      type:role==='move'?'crop-move':'crop-handle',
+      clientX:event.clientX,
+      clientY:event.clientY,
+      layerId:layer.id,
+      cropStart:crop,
+      fit,
+      handle
+    };
+
+    node.setPointerCapture(event.pointerId);
+  }
+
+  function updateCropByInteraction(event){
+    const layer=singleSelected();
+    if(!layer) return;
+
+    const fit=interaction.fit;
+    const dx=(event.clientX-interaction.clientX)/scale;
+    const dy=(event.clientY-interaction.clientY)/scale;
+    const nx=dx/fit.width;
+    const ny=dy/fit.height;
+    const minSize=.05;
+
+    let {x,y,width,height}=interaction.cropStart;
+
+    if(interaction.type==='crop-move'){
+      x=clamp(x+nx,0,1-width);
+      y=clamp(y+ny,0,1-height);
+    }else{
+      const h=interaction.handle;
+
+      if(h.includes('w')){
+        const right=x+width;
+        x=clamp(interaction.cropStart.x+nx,0,right-minSize);
+        width=right-x;
+      }
+      if(h.includes('e')){
+        width=clamp(interaction.cropStart.width+nx,minSize,1-x);
+      }
+      if(h.includes('n')){
+        const bottom=y+height;
+        y=clamp(interaction.cropStart.y+ny,0,bottom-minSize);
+        height=bottom-y;
+      }
+      if(h.includes('s')){
+        height=clamp(interaction.cropStart.height+ny,minSize,1-y);
+      }
+    }
+
+    layer.crop={x,y,width,height};
+    render();
+  }
+
   function interactionMove(event){
     if(!interaction || event.pointerId!==interaction.pointerId) return;
+
+    if(interaction.type==='crop-move' || interaction.type==='crop-handle'){
+      updateCropByInteraction(event);
+      return;
+    }
 
     const dx=(event.clientX-interaction.clientX)/scale;
     const dy=(event.clientY-interaction.clientY)/scale;
@@ -824,17 +974,15 @@
           ? {...layer,...patches.get(layer.id)}
           : layer
       );
-
       render();
+
     }else if(interaction.type==='resize'){
       const base=interaction.layers[0];
-
       let width=Math.max(20,base.width+dx);
       let height=Math.max(20,base.height+dy);
 
       if(state.aspectLock){
         const ratio=base.width/Math.max(1,base.height);
-
         if(Math.abs(dx)>Math.abs(dy)){
           height=width/ratio;
         }else{
@@ -844,18 +992,14 @@
 
       updateSingleLayer(base.id,{width,height});
       render();
+
     }else if(interaction.type==='rotate'){
       const base=interaction.layer;
-
-      const angle=Math.atan2(
-        event.clientY-interaction.centerY,
-        event.clientX-interaction.centerX
-      );
-
+      const angle=Math.atan2(event.clientY-interaction.centerY,event.clientX-interaction.centerX);
       const delta=(angle-interaction.startAngle)*180/Math.PI;
-
       updateSingleLayer(base.id,{rotation:base.rotation+delta});
       render();
+
     }else if(interaction.type==='marquee'){
       updateMarquee(event);
     }
@@ -873,16 +1017,12 @@
       return;
     }
 
+    if(type==='crop-move' || type==='crop-handle'){
+      snapshot('Recorte visual actualizado');
+      return;
+    }
+
     snapshot();
-  }
-
-  function stagePoint(event){
-    const rect=els.stage.getBoundingClientRect();
-
-    return {
-      x:clamp((event.clientX-rect.left)/scale,0,state.canvas.width),
-      y:clamp((event.clientY-rect.top)/scale,0,state.canvas.height)
-    };
   }
 
   function startMarquee(event){
@@ -910,7 +1050,6 @@
 
   function updateMarquee(event){
     const point=stagePoint(event);
-
     const minX=Math.min(interaction.startX,point.x);
     const minY=Math.min(interaction.startY,point.y);
     const maxX=Math.max(interaction.startX,point.x);
@@ -959,7 +1098,6 @@
 
   function saveCustomPreset(){
     const name=(prompt('Nombre del preset:','Mi formato')||'').trim();
-
     if(!name) return;
 
     CombinerPresets.saveCustom({
@@ -974,7 +1112,6 @@
 
   function applyAlignment(mode){
     state.alignTarget=els.alignTarget.value;
-
     if(CombinerLayers.align(state,mode,state.alignTarget)){
       render();
       snapshot();
@@ -998,7 +1135,6 @@
       const y=clamp(Number(els.cropY.value)/100,0,.95);
       const width=clamp(Number(els.cropW.value)/100,.05,1-x);
       const height=clamp(Number(els.cropH.value)/100,.05,1-y);
-
       layer.crop={x,y,width,height};
     });
   }
@@ -1011,10 +1147,7 @@
       if(ratio){
         layer.height=layer.width/ratio;
       }else{
-        const aspect=
-          Math.max(1,layer.naturalWidth)/
-          Math.max(1,layer.naturalHeight);
-
+        const aspect=Math.max(1,layer.naturalWidth)/Math.max(1,layer.naturalHeight);
         layer.height=layer.width/aspect;
       }
     },true,value==='original'?'Recorte restablecido':'Preset de recorte aplicado');
@@ -1033,10 +1166,7 @@
         toast('Máximo 6 bordes por imagen.');
         return;
       }
-
-      layer.borders.push(
-        CombinerEffects.borderDefaults(layer.borders.length)
-      );
+      layer.borders.push(CombinerEffects.borderDefaults(layer.borders.length));
     },true,'Borde añadido');
   }
 
@@ -1066,23 +1196,19 @@
 
     for(const layer of state.layers){
       if(layer.visible===false) continue;
-
       const image=await CombinerEffects.imageFromSource(layer.src);
       CombinerEffects.drawLayer(ctx,layer,image);
     }
 
     canvas.toBlob(blob=>{
       if(!blob) return;
-
       const url=URL.createObjectURL(blob);
       const anchor=document.createElement('a');
-
       anchor.href=url;
       anchor.download=`CMB-${Date.now().toString(36).toUpperCase()}.png`;
       anchor.click();
-
       setTimeout(()=>URL.revokeObjectURL(url),1500);
-      toast('PNG exportado con efectos');
+      toast('PNG exportado con crop y efectos');
     },'image/png');
   }
 
@@ -1100,7 +1226,6 @@
     els.preset.addEventListener('change',()=>{
       const match=/^(\d+)x(\d+)$/.exec(els.preset.value);
       if(!match) return;
-
       els.width.value=match[1];
       els.height.value=match[2];
     });
@@ -1111,23 +1236,19 @@
     els.bgColor.addEventListener('input',()=>{
       const value=normalizeHex(els.bgColor.value);
       if(!value) return;
-
       state.canvas.backgroundColor=value;
       state.canvas.backgroundMode='color';
       render();
     });
-
     els.bgColor.addEventListener('change',()=>snapshot());
 
     els.bgHex.addEventListener('change',()=>{
       const value=normalizeHex(els.bgHex.value);
-
       if(!value){
         els.bgHex.value=state.canvas.backgroundColor;
         toast('HEX inválido');
         return;
       }
-
       state.canvas.backgroundColor=value;
       state.canvas.backgroundMode='color';
       render();
@@ -1143,7 +1264,6 @@
     });
 
     els.importBtn.addEventListener('click',()=>els.fileInput.click());
-
     els.fileInput.addEventListener('change',event=>{
       addFiles(event.target.files);
       event.target.value='';
@@ -1170,7 +1290,6 @@
     document.addEventListener('paste',event=>{
       const files=Array.from(event.clipboardData?.files||[]);
       const images=files.filter(file=>file.type.startsWith('image/'));
-
       if(images.length){
         event.preventDefault();
         addFiles(images);
@@ -1178,16 +1297,29 @@
     });
 
     els.stage.addEventListener('pointerdown',event=>{
+      const cropHandle=event.target.closest('.crop-handle');
+      const cropBox=event.target.closest('.crop-box');
+
+      if(cropHandle && state.cropUi.enabled){
+        const node=event.target.closest('.image-layer');
+        beginCropInteraction(event,node,'handle',cropHandle.dataset.cropHandle);
+        return;
+      }
+
+      if(cropBox && state.cropUi.enabled){
+        const node=event.target.closest('.image-layer');
+        beginCropInteraction(event,node,'move',null);
+        return;
+      }
+
       const node=event.target.closest('.image-layer');
 
       if(!node){
         if(event.button!==0) return;
-
         if(!(event.shiftKey||event.ctrlKey||event.metaKey)){
           selectOnly(null);
           render();
         }
-
         startMarquee(event);
         return;
       }
@@ -1209,7 +1341,7 @@
         renderVisualControls();
       }
 
-      if(layer.locked) return;
+      if(layer.locked || state.cropUi.enabled) return;
 
       const handle=event.target.dataset.handle;
       const chosen=selectedLayers(true);
@@ -1238,20 +1370,16 @@
     numeric.forEach(([input,key])=>{
       input.addEventListener('input',()=>{
         const layer=primary();
-
-        if(!layer || layer.locked) return;
-
+        if(!layer || layer.locked || state.cropUi.enabled) return;
         updateSingleLayer(layer.id,{[key]:Number(input.value)||0});
         render();
       });
-
       input.addEventListener('change',()=>snapshot());
     });
 
     els.w.addEventListener('input',()=>{
       const layer=primary();
-      if(!layer || layer.locked) return;
-
+      if(!layer || layer.locked || state.cropUi.enabled) return;
       const width=Math.max(20,Number(els.w.value)||20);
 
       if(state.aspectLock){
@@ -1262,16 +1390,13 @@
       }else{
         updateSingleLayer(layer.id,{width});
       }
-
       render();
     });
-
     els.w.addEventListener('change',()=>snapshot());
 
     els.h.addEventListener('input',()=>{
       const layer=primary();
-      if(!layer || layer.locked) return;
-
+      if(!layer || layer.locked || state.cropUi.enabled) return;
       const height=Math.max(20,Number(els.h.value)||20);
 
       if(state.aspectLock){
@@ -1282,17 +1407,14 @@
       }else{
         updateSingleLayer(layer.id,{height});
       }
-
       render();
     });
-
     els.h.addEventListener('change',()=>snapshot());
 
     els.opacity.addEventListener('input',()=>{
       const value=clamp(Number(els.opacity.value)/100,0,1);
       updateSelectedLayers({opacity:value});
     });
-
     els.opacity.addEventListener('change',()=>snapshot());
 
     els.aspect.addEventListener('change',()=>{
@@ -1335,7 +1457,6 @@
 
       if(action==='visibility'){
         event.stopPropagation();
-
         const layer=state.layers.find(item=>item.id===id);
         updateSingleLayer(id,{visible:layer.visible===false});
         render();
@@ -1345,7 +1466,6 @@
 
       if(action==='lock'){
         event.stopPropagation();
-
         const layer=state.layers.find(item=>item.id===id);
         updateSingleLayer(id,{locked:!layer.locked});
         render();
@@ -1360,7 +1480,6 @@
       }else{
         selectOnly(id);
       }
-
       render();
     });
 
@@ -1381,7 +1500,6 @@
     els.layersList.addEventListener('dragstart',event=>{
       const row=event.target.closest('.layer-row');
       if(!row) return;
-
       draggedLayerId=row.dataset.layerId;
       event.dataTransfer.effectAllowed='move';
       event.dataTransfer.setData('text/plain',draggedLayerId);
@@ -1396,16 +1514,13 @@
 
     els.layersList.addEventListener('drop',event=>{
       const row=event.target.closest('.layer-row');
-
       if(!row || !draggedLayerId) return;
 
       event.preventDefault();
-
       if(CombinerLayers.reorder(state,draggedLayerId,row.dataset.layerId)){
         render();
         snapshot('Capas reordenadas');
       }
-
       draggedLayerId=null;
     });
 
@@ -1425,6 +1540,20 @@
       snapshot('Todas las capas desbloqueadas');
     });
 
+    els.toggleCropUi.addEventListener('click',()=>{
+      const layer=singleSelected();
+      if(!layer || layer.locked) return;
+      state.cropUi.enabled=!state.cropUi.enabled;
+      render();
+      toast(state.cropUi.enabled?'Recorte visual activado':'Recorte visual desactivado');
+    });
+
+    els.exitCropUi.addEventListener('click',()=>{
+      state.cropUi.enabled=false;
+      render();
+      toast('Recorte visual cerrado');
+    });
+
     document.querySelectorAll('[data-crop-preset]').forEach(button=>{
       button.addEventListener('click',()=>applyCropPreset(button.dataset.cropPreset));
     });
@@ -1435,28 +1564,21 @@
     });
 
     els.fitFrameCrop.addEventListener('click',fitFrameToCrop);
-
-    els.resetCrop.addEventListener('click',()=>{
-      applyCropPreset('original');
-    });
-
+    els.resetCrop.addEventListener('click',()=>applyCropPreset('original'));
     els.addBorder.addEventListener('click',addBorder);
 
     els.bordersList.addEventListener('input',event=>{
       const row=event.target.closest('.border-row');
       if(!row) return;
-
       const id=row.dataset.borderId;
       const action=event.target.dataset.borderAction;
 
       if(action==='color'){
         updateBorder(id,{color:event.target.value});
       }
-
       if(action==='width'){
         updateBorder(id,{width:clamp(event.target.value,0,80)});
       }
-
       if(action==='opacity'){
         updateBorder(id,{opacity:clamp(event.target.value,0,100)/100});
       }
@@ -1465,19 +1587,16 @@
     els.bordersList.addEventListener('change',event=>{
       const row=event.target.closest('.border-row');
       if(!row) return;
-
       const id=row.dataset.borderId;
       const action=event.target.dataset.borderAction;
 
       if(action==='hex'){
         const value=normalizeHex(event.target.value);
-
         if(!value){
           renderVisualControls();
           toast('HEX inválido');
           return;
         }
-
         updateBorder(id,{color:value},true);
         return;
       }
@@ -1489,10 +1608,8 @@
 
     els.bordersList.addEventListener('click',event=>{
       if(event.target.dataset.borderAction!=='delete') return;
-
       const row=event.target.closest('.border-row');
       const id=row?.dataset.borderId;
-
       if(!id) return;
 
       updateVisual(layer=>{
@@ -1511,18 +1628,15 @@
         layer.shadow.color=els.shadowColor.value;
       });
     });
-
     els.shadowColor.addEventListener('change',()=>snapshot());
 
     els.shadowHex.addEventListener('change',()=>{
       const value=normalizeHex(els.shadowHex.value);
-
       if(!value){
         renderVisualControls();
         toast('HEX inválido');
         return;
       }
-
       updateVisual(layer=>{
         layer.shadow.color=value;
       },true);
@@ -1559,18 +1673,15 @@
         layer.glow.color=els.glowColor.value;
       });
     });
-
     els.glowColor.addEventListener('change',()=>snapshot());
 
     els.glowHex.addEventListener('change',()=>{
       const value=normalizeHex(els.glowHex.value);
-
       if(!value){
         renderVisualControls();
         toast('HEX inválido');
         return;
       }
-
       updateVisual(layer=>{
         layer.glow.color=value;
       },true);
@@ -1602,7 +1713,6 @@
           layer.effects[key]=clamp(input.value,min,max);
         });
       });
-
       input.addEventListener('change',()=>snapshot());
     });
 
@@ -1612,8 +1722,14 @@
       },true,'Ajustes visuales restablecidos');
     });
 
-    els.undo.addEventListener('click',()=>restore(history.undo()));
-    els.redo.addEventListener('click',()=>restore(history.redo()));
+    els.undo.addEventListener('click',()=>{
+      state.cropUi.enabled=false;
+      restore(history.undo());
+    });
+    els.redo.addEventListener('click',()=>{
+      state.cropUi.enabled=false;
+      restore(history.redo());
+    });
 
     els.zoom.addEventListener('change',()=>{
       state.zoom=els.zoom.value;
@@ -1647,17 +1763,23 @@
 
       if(mod && key==='z'){
         event.preventDefault();
+        state.cropUi.enabled=false;
         restore(event.shiftKey?history.redo():history.undo());
         return;
       }
 
       if(event.key==='Escape' && !editing){
+        if(state.cropUi.enabled){
+          state.cropUi.enabled=false;
+          render();
+          return;
+        }
         selectOnly(null);
         render();
         return;
       }
 
-      if(editing) return;
+      if(editing || state.cropUi.enabled) return;
 
       if((event.key==='Delete'||event.key==='Backspace') && selectionIds().length){
         event.preventDefault();
@@ -1666,7 +1788,6 @@
       }
 
       const chosen=selectedLayers(true);
-
       if(!chosen.length) return;
 
       const step=event.shiftKey?10:1;
@@ -1680,16 +1801,12 @@
 
       if(dx||dy){
         event.preventDefault();
-
-        updateSelectedLayers(layer=>({
-          x:layer.x+dx,
-          y:layer.y+dy
-        }));
+        updateSelectedLayers(layer=>({x:layer.x+dx,y:layer.y+dy}));
       }
     });
 
     document.addEventListener('keyup',event=>{
-      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key) && !state.cropUi.enabled){
         snapshot();
       }
     });
