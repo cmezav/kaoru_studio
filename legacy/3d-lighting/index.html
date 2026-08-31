@@ -5,10 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio - 3D Lighting Studio</title>
+  <title>Kaoru's Studio - 3D Lighting Studio Fase 2</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=1.0">
+  <link rel="stylesheet" href="./styles.css?v=2.0">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body class="studio-3d" data-studio="3d">
   <header class="three-topbar">
@@ -30,14 +38,15 @@
   <main class="three-shell">
     <aside class="three-panel three-controls">
       <section class="intro">
-        <span class="eyebrow">3D LIGHTING STUDIO - FASE 1 DE 6</span>
-        <h1>Estudia la luz sobre volumen real</h1>
-        <p>Modulo 3D independiente para cabeza por planos, anatomia humana y multiples luces.</p>
+        <span class="eyebrow">3D LIGHTING STUDIO - FASE 2 DE 6</span>
+        <h1>Escena 3D real</h1>
+        <p>Orbita, zoom, pan, piso, sombras y prototipos volumetricos antes de construir los modelos definitivos.</p>
       </section>
 
       <section class="control-section">
-        <div class="section-heading"><span>01</span><h2>Modelo</h2></div>
+        <div class="section-heading"><span>01</span><h2>Prototipo de modelo</h2></div>
         <div id="modelCards" class="model-cards"></div>
+        <p class="help">Estos son volumenes de prueba. La cabeza Asaro real se construye en Fase 3 y la anatomia realista en Fase 4.</p>
       </section>
 
       <section class="control-section">
@@ -46,16 +55,35 @@
           <input id="baseColor" type="color" value="#C98E78" aria-label="Color base">
           <input id="baseHex" type="text" maxlength="7" value="#C98E78" spellcheck="false" aria-label="HEX base">
         </div>
-        <p class="help">En fases posteriores este color podra venir directamente de Light Lab.</p>
+        <p class="help">El material 3D cambia al instante con cualquier HEX.</p>
       </section>
 
-      <section class="control-section">
-        <div class="section-heading"><span>03</span><h2>Preparado para luces 3D</h2></div>
-        <div class="future-list">
-          <span>Multiples luces movibles</span>
-          <span>HEX libre por luz</span>
-          <span>Intensidad / distancia / suavidad</span>
-          <span>Ambiente / rebote / rim</span>
+      <section class="control-section scene-controls">
+        <div class="section-heading"><span>03</span><h2>Escena y camara</h2></div>
+
+        <div id="cameraPresetButtons" class="camera-presets">
+          <button type="button" data-camera-preset="front">Frente</button>
+          <button type="button" data-camera-preset="three-quarter">3/4</button>
+          <button type="button" data-camera-preset="side">Perfil</button>
+          <button type="button" data-camera-preset="back">Espalda</button>
+        </div>
+
+        <button id="resetCameraBtn" class="wide-action" type="button">Restablecer camara</button>
+
+        <label class="scene-toggle">
+          <span><strong>Cuadricula</strong><small>Referencia espacial</small></span>
+          <input id="gridToggle" type="checkbox" checked>
+        </label>
+
+        <label class="scene-toggle">
+          <span><strong>Sombras</strong><small>Sombras proyectadas en piso</small></span>
+          <input id="shadowToggle" type="checkbox" checked>
+        </label>
+
+        <div class="mouse-guide">
+          <div><b>Arrastrar izq.</b><span>Orbitar</span></div>
+          <div><b>Rueda</b><span>Zoom</span></div>
+          <div><b>Arrastrar der.</b><span>Pan</span></div>
         </div>
       </section>
     </aside>
@@ -63,30 +91,31 @@
     <section class="three-stage-column">
       <div class="stage-toolbar">
         <div>
-          <span class="eyebrow">VIEWPORT 3D</span>
-          <h2 id="stageTitle">Cabeza por planos</h2>
+          <span class="eyebrow">VIEWPORT 3D REAL</span>
+          <h2 id="stageTitle">Asaro / Planos - prototipo</h2>
         </div>
         <div class="stage-badges">
           <span id="webglBadge">Comprobando WebGL...</span>
-          <span>Fase 1</span>
+          <span>Fase 2</span>
         </div>
       </div>
 
       <div class="viewport-card">
-        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport de 3D Lighting Studio"></canvas>
+        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de 3D Lighting Studio"></canvas>
         <div class="viewport-overlay">
-          <strong id="viewportMessage">Estructura 3D preparada</strong>
-          <span>El motor 3D real se activa en la Fase 2.</span>
+          <strong id="viewportMessage">Cargando motor 3D...</strong>
+          <span>Three.js + WebGL</span>
         </div>
         <div class="viewport-footer">
-          <span>Orbita: mouse</span>
-          <span>Zoom: rueda</span>
-          <span>Mover luz: Fase 5</span>
+          <span>Mouse: orbitar</span>
+          <span>Rueda: zoom</span>
+          <span>Click derecho: pan</span>
+          <span>Luces movibles: Fase 5</span>
         </div>
       </div>
 
       <section class="roadmap-card">
-        <div><b>F2</b><span>Motor 3D, camara y controles</span></div>
+        <div class="is-current"><b>F2</b><span>Motor 3D, camara y sombras</span></div>
         <div><b>F3</b><span>Cabeza propia tipo Asaro</span></div>
         <div><b>F4</b><span>Cabeza realista, busto y cuerpo</span></div>
         <div><b>F5</b><span>Multiples luces 3D movibles</span></div>
@@ -97,26 +126,27 @@
     <aside class="three-panel three-status">
       <section class="status-hero">
         <span class="status-orb">3D</span>
-        <div><span class="eyebrow">MODULO INDEPENDIENTE</span><h2>Estado</h2></div>
+        <div><span class="eyebrow">MOTOR 3D</span><h2>Estado</h2></div>
       </section>
 
       <dl class="status-list">
         <div><dt>Studio</dt><dd>3D Lighting</dd></div>
-        <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos</dd></div>
+        <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos (proto)</dd></div>
         <div><dt>Base</dt><dd id="stateColor">#C98E78</dd></div>
-        <div><dt>Motor</dt><dd id="stateEngine">Pendiente F2</dd></div>
+        <div><dt>Motor</dt><dd id="stateEngine">Cargando</dd></div>
+        <div><dt>Camara</dt><dd id="stateCamera">Cargando</dd></div>
       </dl>
 
       <section class="architecture-card">
-        <span class="eyebrow">ARQUITECTURA</span>
-        <h3>Separado de Light Lab</h3>
-        <p>Este Studio tendra su propio renderer, camara, modelos, luces y almacenamiento.</p>
+        <span class="eyebrow">RENDER</span>
+        <h3>Three.js + WebGL</h3>
+        <p>Renderer independiente con antialiasing, tone mapping, luces base, piso y shadow mapping.</p>
       </section>
 
       <section class="next-card">
         <span class="eyebrow">SIGUIENTE</span>
-        <h3>Fase 2 - Motor 3D</h3>
-        <p>Escena WebGL real, camara orbital, zoom, piso, sombras y primer modelo de prueba.</p>
+        <h3>Fase 3 - Cabeza Asaro propia</h3>
+        <p>Reemplazaremos el prototipo por una cabeza construida especificamente alrededor de planos anatomicos de luz.</p>
       </section>
     </aside>
   </main>
@@ -125,6 +155,6 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">&#9788;</button>
 
   <script src="../shared/studioBridge.js?v=18.0"></script>
-  <script type="module" src="./js/main.js?v=1.0"></script>
+  <script type="module" src="./js/main.js?v=2.0"></script>
 </body>
 </html>

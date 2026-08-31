@@ -1,19 +1,26 @@
-export const THREE_STUDIO_STATE_VERSION = 1;
+export const THREE_STUDIO_STATE_VERSION = 2;
 
 export function createInitial3dState() {
   return {
     version: THREE_STUDIO_STATE_VERSION,
-    phase: 1,
+    phase: 2,
     selectedModel: 'asaro',
     baseColor: '#C98E78',
     engine: {
-      status: 'pending',
+      status: 'loading',
       webgl: false,
-      renderer: null
+      renderer: 'three-webgl',
+      version: '0.185.1'
     },
     camera: {
-      orbitEnabled: false,
-      zoomEnabled: false
+      orbitEnabled: true,
+      zoomEnabled: true,
+      panEnabled: true,
+      preset: 'three-quarter'
+    },
+    scene: {
+      gridVisible: true,
+      shadowsEnabled: true
     },
     lighting: {
       enabled: true,
