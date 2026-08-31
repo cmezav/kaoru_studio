@@ -8,6 +8,14 @@ export const MODEL_REGISTRY = [
     source: 'head-planes-reference'
   },
   {
+    id: 'sphere',
+    name: 'Esfera 3D',
+    description: 'Esfera de estudio para probar paletas, sombras, rebotes y luces sin anatomia.',
+    phase: 6,
+    ready: true,
+    source: 'study-sphere'
+  },
+  {
     id: 'realistic-head',
     name: 'Cabeza realista',
     description: 'Encuadre de cabeza sobre la base humana anatomica CC0 de MakeHuman.',

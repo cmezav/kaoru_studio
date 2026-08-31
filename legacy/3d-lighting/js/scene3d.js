@@ -106,6 +106,48 @@ async function createAsaroFromGlb(THREE, color) {
   };
 }
 
+function createStudySphere(
+  THREE,
+  color = '#C98E78'
+) {
+  const root = new THREE.Group();
+  root.name = 'kaoru-study-sphere';
+
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.78,
+    metalness: 0.0,
+    side: THREE.FrontSide
+  });
+
+  material.userData.subjectColor = true;
+
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(
+      1.62,
+      128,
+      96
+    ),
+    material
+  );
+
+  sphere.name = 'kaoru-palette-study-sphere';
+  sphere.position.y = 0.20;
+  sphere.castShadow = true;
+  sphere.receiveShadow = true;
+  root.add(sphere);
+  root.updateMatrixWorld(true);
+
+  return {
+    root,
+    materials: [material],
+    colorMaterials: [material],
+    bounds: new THREE.Box3().setFromObject(root),
+    source: 'study-sphere',
+    morphCount: 0,
+    setEdgesVisible() {}
+  };
+}
 export async function create3dScene(
   canvas,
   options = {}
@@ -483,7 +525,22 @@ export async function create3dScene(
     clearSubject();
     currentModel = kind;
 
-    if (kind === 'asaro') {
+    if (kind === 'sphere') {
+      const sphere = createStudySphere(
+        THREE,
+        color
+      );
+
+      if (
+        disposed ||
+        version !== loadVersion
+      ) {
+        return;
+      }
+
+      registerAsset(sphere);
+      currentLoadError = null;
+    } else if (kind === 'asaro') {
       try {
         const asaro =
           await createAsaroFromGlb(

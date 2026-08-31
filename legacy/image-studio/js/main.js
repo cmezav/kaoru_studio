@@ -4,12 +4,27 @@
   const history=new ImageHistory.History(90);
   const preview=new ImagePreviewPipeline.PreviewPipeline($('#previewCanvas'),busy=>{$('#renderBadge').hidden=!busy},text=>{$('#statusText').textContent=text});
 
+  window.ImageStudioLensBridge={
+    getState:()=>state,
+    getCanvas:()=>$('#previewCanvas'),
+    getLiveLensPreview:()=>liveLensPreview,
+    getFocusMode:()=>focusMode,
+    setFocusMode(value){focusMode=!!value;syncAll()},
+    notify:null,
+    sync(){syncAll()},
+    updateFocusRing(){updateFocusRing()},
+    renderFast(){preview.setState(state);preview.schedule('fast',0);updateFocusRing()},
+    renderFull(){preview.setState(state);preview.schedule('full',0);scheduleRecovery();updateFocusRing()},
+    commit(label){history.push(state);preview.setState(state);preview.schedule('full',0);scheduleRecovery();updateFocusRing();$('#statusText').textContent=label||'Lens Blur actualizado'},
+    toast(text){toast(text)}
+  };
+
   function toast(text){clearTimeout(toastTimer);const el=$('#toast');el.textContent=text;el.classList.add('show');toastTimer=setTimeout(()=>el.classList.remove('show'),2300)}
   function setEnabled(enabled){$('#editorControls').classList.toggle('disabled',!enabled);['#saveProjectBtn','#saveTemplateBtn','#exportTopBtn','#repairPreviewBtn'].forEach(s=>$(s).disabled=!enabled)}
   function dimensionsLabel(){return source?`${sourceWidth.toLocaleString('es-ES')} × ${sourceHeight.toLocaleString('es-ES')} px`:''}
   function setSourceMeta(){if(!source)return;$('#fileName').textContent=sourceName||'Imagen';$('#imageMeta').textContent=dimensionsLabel();$('#emptyState').hidden=true;$('#canvasWrap').hidden=false;setEnabled(true)}
   function getExportConfig(){return{format:$('#exportFormat').value,scale:Number($('#exportScale').value)||1,width:Number($('#exportWidth').value)||1,height:Number($('#exportHeight').value)||1,quality:Number($('#exportQuality').value)||92,transparent:$('#transparentBg').checked,background:$('#backgroundColor').value}}
-  function projectPayload(){return{schema:'kaoru-image-studio-project',version:14.3,state:clone(state),zoom,focusMode:false,liveLensPreview,export:getExportConfig(),fileName:sourceName}}
+  function projectPayload(){return{schema:'kaoru-image-studio-project',version:14.4,state:clone(state),zoom,focusMode:false,liveLensPreview,export:getExportConfig(),fileName:sourceName}}
   function scheduleRecovery(){if(!sourceBlob)return;clearTimeout(recoveryTimer);recoveryTimer=setTimeout(()=>ImageStorage.save({payload:projectPayload(),source:sourceBlob,fileName:sourceName}).catch(console.warn),180)}
 
   function updateFocusRing(){const ring=$('#focusRing'),canvas=$('#previewCanvas');if(!source||!focusMode||!state.lens.enabled){ring.hidden=true;return}ring.hidden=false;const w=canvas.offsetWidth,h=canvas.offsetHeight,r=state.lens.focusRadius*Math.min(w,h);ring.style.width=`${r*2}px`;ring.style.height=`${r*2}px`;ring.style.left=`${state.lens.focusX*w-r}px`;ring.style.top=`${state.lens.focusY*h-r}px`}
@@ -23,7 +38,7 @@
   history.onChange=({canUndo,canRedo})=>{$('#undoBtn').disabled=!canUndo;$('#redoBtn').disabled=!canRedo};
 
   function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterControls','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const el=$(selector);el.dataset.group=group;ImageUI.build(el,state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
-  function syncAll(){ImageUI.sync(state);$('#monochromeColor').value=state.filters.monochromeColor;$('#lensEnabled').checked=state.lens.enabled;$('#lensShape').value=state.lens.shape;$('#liveLensPreview').checked=!!liveLensPreview;$('#transformX').value=Math.round(state.transform.x);$('#transformY').value=Math.round(state.transform.y);$('#scaleX').value=Math.round(state.transform.scaleX*100);$('#scaleY').value=Math.round(state.transform.scaleY*100);$('#rotation').value=state.transform.rotation;$('#imageOpacity').value=Math.round(state.adjustments.opacity*100);$('#aspectLock').checked=state.transform.aspectLock;$('#cropX').value=Math.round(state.crop.x);$('#cropY').value=Math.round(state.crop.y);$('#cropWidth').value=Math.round(state.crop.width);$('#cropHeight').value=Math.round(state.crop.height);$('#focusModeBtn').classList.toggle('active',focusMode);updateFocusRing();updateExportInfo()}
+  function syncAll(){ImageUI.sync(state);$('#monochromeColor').value=state.filters.monochromeColor;$('#lensEnabled').checked=state.lens.enabled;$('#lensShape').value=state.lens.shape;$('#liveLensPreview').checked=!!liveLensPreview;$('#transformX').value=Math.round(state.transform.x);$('#transformY').value=Math.round(state.transform.y);$('#scaleX').value=Math.round(state.transform.scaleX*100);$('#scaleY').value=Math.round(state.transform.scaleY*100);$('#rotation').value=state.transform.rotation;$('#imageOpacity').value=Math.round(state.adjustments.opacity*100);$('#aspectLock').checked=state.transform.aspectLock;$('#cropX').value=Math.round(state.crop.x);$('#cropY').value=Math.round(state.crop.y);$('#cropWidth').value=Math.round(state.crop.width);$('#cropHeight').value=Math.round(state.crop.height);$('#focusModeBtn').classList.toggle('active',focusMode);updateFocusRing();updateExportInfo();window.ImageStudioLensBridge?.notify?.(state)}
 
   async function blobToSource(blob,name){if(source&&typeof source.close==='function')try{source.close()}catch(_){};let drawable;try{drawable=await createImageBitmap(blob,{imageOrientation:'from-image'})}catch(_){drawable=await new Promise((resolve,reject)=>{const url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('No se pudo decodificar la imagen.'))};img.src=url})}source=drawable;sourceBlob=blob;sourceName=name||blob.name||'imagen';sourceWidth=drawable.width||drawable.naturalWidth;sourceHeight=drawable.height||drawable.naturalHeight}
   function clampCrop(){state.crop.x=Math.max(0,Math.min(sourceWidth-1,Number(state.crop.x)||0));state.crop.y=Math.max(0,Math.min(sourceHeight-1,Number(state.crop.y)||0));state.crop.width=Math.max(1,Math.min(sourceWidth-state.crop.x,Number(state.crop.width)||sourceWidth));state.crop.height=Math.max(1,Math.min(sourceHeight-state.crop.y,Number(state.crop.height)||sourceHeight))}

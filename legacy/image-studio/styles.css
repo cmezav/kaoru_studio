@@ -16,3 +16,18 @@ html.kaoru-embedded .image-app{grid-template-rows:minmax(0,1fr)}html.kaoru-embed
 .repair-preview{border-color:color-mix(in srgb,var(--accent) 30%,var(--line))!important;color:var(--accent)!important}
 .repair-preview:hover{background:color-mix(in srgb,var(--accent) 9%,var(--surface))!important}
 #previewCanvas{backface-visibility:hidden;transform:translateZ(0)}
+
+/* Lens Blur V3 - foco redimensionable + pinceles */
+.lens-manual-tools{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.lens-manual-tools>.compact{margin-bottom:8px}
+.lens-brush-buttons{grid-template-columns:1fr 1fr!important}
+.lens-brush-buttons .active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent)}
+.lens-tool-range{grid-template-columns:86px minmax(0,1fr) 46px}
+.lens-clear-brush{margin-top:8px}
+.focus-ring{pointer-events:none}
+.focus-radius-handle{position:absolute;right:-9px;top:50%;width:18px;height:18px;padding:0;transform:translateY(-50%);border:2px solid #fff;border-radius:50%;background:var(--accent);box-shadow:0 1px 5px rgba(0,0,0,.4);pointer-events:auto;cursor:ew-resize}
+.focus-radius-handle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.lens-brush-cursor{position:absolute;z-index:8;border:1.5px solid rgba(255,255,255,.95);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.42),inset 0 0 0 1px rgba(0,0,0,.18)}
+.lens-brush-cursor[data-mode=blur]{background:rgba(108,92,231,.08)}
+.lens-brush-cursor[data-mode=restore]{background:rgba(255,255,255,.08);border-style:dashed}
+#previewCanvas.lens-brush-active{cursor:crosshair}

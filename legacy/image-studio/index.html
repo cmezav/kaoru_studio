@@ -7,7 +7,7 @@
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
   <title>Kaoru's Studio — Image Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=14.3">
+  <link rel="stylesheet" href="./styles.css?v=14.4">
 </head>
 <body data-studio="image">
   <div class="image-app">
@@ -69,7 +69,19 @@
               <label class="select-row"><span>Forma de apertura</span><select id="lensShape"><option value="circle">Círculo</option><option value="octagon">Octágono</option><option value="diamond">Rombo</option><option value="triangle">Triángulo</option></select></label>
               <label class="switch-row"><span>Preview en vivo</span><input id="liveLensPreview" type="checkbox"><i></i></label>
               <p class="helper">Recomendado: déjalo apagado. Ajusta los sliders y pulsa “Aplicar preview”.</p>
-              <div class="button-grid"><button class="secondary" id="applyLensPreviewBtn" type="button">Aplicar preview</button><button class="secondary" id="focusModeBtn" type="button">◎ Elegir foco</button></div>
+              <div class="button-grid"><button class="secondary" id="applyLensPreviewBtn" type="button">Aplicar preview</button><button class="secondary" id="focusModeBtn" type="button">&#9678; Elegir foco</button></div>
+              <div class="lens-manual-tools">
+                <label class="compact"><span>Radio del foco %</span><input id="lensFocusRadiusNumber" type="number" min="3" max="70" step="1" value="24"></label>
+                <div class="button-grid lens-brush-buttons">
+                  <button class="secondary" id="lensBrushBlurBtn" type="button">Pincel desenfoque</button>
+                  <button class="secondary" id="lensBrushRestoreBtn" type="button">Pincel restaurador</button>
+                </div>
+                <label class="range-row lens-tool-range"><span>Radio pincel</span><input id="lensBrushRadius" type="range" min="1" max="40" step="1" value="8"><output id="lensBrushRadiusOut">8%</output></label>
+                <label class="range-row lens-tool-range"><span>Dureza</span><input id="lensBrushHardness" type="range" min="0" max="100" step="1" value="65"><output id="lensBrushHardnessOut">65%</output></label>
+                <label class="range-row lens-tool-range"><span>Fuerza</span><input id="lensBrushStrength" type="range" min="1" max="100" step="1" value="100"><output id="lensBrushStrengthOut">100%</output></label>
+                <button class="secondary full lens-clear-brush" id="clearLensBrushBtn" type="button">Limpiar pinceladas Lens Blur</button>
+                <p class="helper">Desenfoque pinta blur dentro o fuera del foco. Restaurador devuelve nitidez y evita bokeh en la zona pintada. El tirador del circulo permite cambiar su radio directamente.</p>
+              </div>
             </div>
           </details>
 
@@ -138,7 +150,7 @@
           <div class="empty-state" id="emptyState"><div class="empty-icon">◫</div><h2>Tu imagen aparecerá aquí</h2><p>Arrastra una imagen o impórtala desde el panel.</p></div>
           <div class="canvas-wrap" id="canvasWrap" hidden>
             <canvas id="previewCanvas"></canvas>
-            <div class="focus-ring" id="focusRing" hidden></div>
+            <div class="focus-ring" id="focusRing" hidden><button class="focus-radius-handle" id="focusRadiusHandle" type="button" aria-label="Cambiar radio del foco" title="Arrastra para cambiar el radio"></button></div><div class="lens-brush-cursor" id="lensBrushCursor" hidden></div>
           </div>
           <div class="render-badge" id="renderBadge" hidden><span></span><b>Renderizando preview…</b></div>
         </div>
@@ -159,15 +171,16 @@
   <script src="../shared/studioGallery.js?v=14.3.3"></script>
   <script src="../shared/namingSystem.js?v=14.3.3"></script>
   <script src="../shared/studioBridge.js?v=15.0"></script>
-  <script src="./js/state.js?v=14.3.3"></script>
+  <script src="./js/state.js?v=14.4"></script>
   <script src="./js/history.js?v=14.3.3"></script>
   <script src="./js/filters.js?v=14.3.3"></script>
-  <script src="./js/lensBlur.js?v=14.3.3"></script>
+  <script src="./js/lensBlur.js?v=14.4"></script>
   <script src="./js/renderer.js?v=14.3.3"></script>
   <script src="./js/previewPipeline.js?v=14.3.3"></script>
   <script src="./js/exportPipeline.js?v=14.3.3"></script>
   <script src="./js/storage.js?v=14.3.3"></script>
   <script src="./js/ui.js?v=14.3.3"></script>
-  <script src="./js/main.js?v=14.3.3"></script>
+  <script src="./js/main.js?v=14.4"></script>
+  <script src="./js/lensBrushTools.js?v=14.4"></script>
 </body>
 </html>

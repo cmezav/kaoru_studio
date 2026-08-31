@@ -198,3 +198,14 @@ button,input{font:inherit;color:inherit}
   .bridge-actions{grid-template-columns:1fr}
   .bridge-palette-preview{grid-template-columns:repeat(8,1fr)}
 }
+.model-card[data-model="sphere"] strong:before{
+  content:"";
+  display:inline-block;
+  width:8px;
+  height:8px;
+  margin-right:5px;
+  border-radius:50%;
+  vertical-align:0;
+  background:linear-gradient(135deg,var(--three-surface),var(--three-accent));
+  box-shadow:inset -2px -2px 4px rgba(0,0,0,.18);
+}

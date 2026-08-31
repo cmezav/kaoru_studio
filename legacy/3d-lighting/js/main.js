@@ -2,11 +2,11 @@ import { create3dStore } from './state.js?v=6.0';
 import {
   MODEL_REGISTRY,
   modelById
-} from './modelRegistry.js?v=4.0';
+} from './modelRegistry.js?v=6.1';
 import {
   detectWebGL,
   create3dScene
-} from './scene3d.js?v=6.0';
+} from './scene3d.js?v=6.1';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,
@@ -326,9 +326,11 @@ function renderCards(state) {
           <em>${
             entry.id === 'asaro'
               ? 'PLANOS GLB'
-              : entry.id === 'custom'
-                ? 'MODELO LOCAL'
-                : 'ANATOMIA CC0'
+              : entry.id === 'sphere'
+                ? 'PRUEBA DE PALETA'
+                : entry.id === 'custom'
+                  ? 'MODELO LOCAL'
+                  : 'ANATOMIA CC0'
           }</em>
         `;
 
@@ -355,6 +357,10 @@ function sourceDescription(
     return state.selectedModel === 'asaro'
       ? 'Head Planes Reference'
       : 'MakeHuman CC0';
+  }
+
+  if (info.source === 'study-sphere') {
+    return 'Esfera 3D de estudio';
   }
 
   if (info.source === 'glb') {
