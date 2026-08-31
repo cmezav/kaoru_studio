@@ -120,6 +120,117 @@ function removeExcludedNodes(
   return remove.length;
 }
 
+function retainIncludedNodes(
+  root,
+  patterns = []
+) {
+  if (!patterns.length) return 0;
+
+  const tests =
+    patterns.map(
+      (pattern) =>
+        new RegExp(
+          String(pattern),
+          'i'
+        )
+    );
+
+  function matches(object) {
+    const name =
+      String(
+        object?.name || ''
+      );
+
+    return Boolean(
+      name &&
+      tests.some(
+        (test) =>
+          test.test(name)
+      )
+    );
+  }
+
+  const memo =
+    new WeakMap();
+
+  function containsMatch(object) {
+    if (memo.has(object)) {
+      return memo.get(object);
+    }
+
+    let result =
+      matches(object);
+
+    if (!result) {
+      result =
+        (object.children || [])
+          .some(
+            (child) =>
+              containsMatch(child)
+          );
+    }
+
+    memo.set(
+      object,
+      result
+    );
+
+    return result;
+  }
+
+  if (!containsMatch(root)) {
+    throw new Error(
+      'No se encontro el objeto solicitado dentro del modelo 3D.'
+    );
+  }
+
+  function prune(
+    object,
+    insideIncluded = false
+  ) {
+    const included =
+      insideIncluded ||
+      matches(object);
+
+    [
+      ...(object.children || [])
+    ].forEach((child) => {
+      const childIncluded =
+        included ||
+        matches(child);
+
+      const keep =
+        included ||
+        containsMatch(child);
+
+      if (!keep) {
+        object.remove(child);
+        return;
+      }
+
+      prune(
+        child,
+        childIncluded
+      );
+    });
+  }
+
+  prune(
+    root,
+    false
+  );
+
+  let meshes = 0;
+
+  root.traverse((object) => {
+    if (object.isMesh) {
+      meshes += 1;
+    }
+  });
+
+  return meshes;
+}
+
 function prepareMeshes(
   root,
   material
@@ -243,6 +354,23 @@ export async function createExternalSubject(
   }
 
   if (
+    Array.isArray(
+      config.includeNames
+    ) &&
+    config.includeNames.length
+  ) {
+    const keptMeshes =
+      retainIncludedNodes(
+        source,
+        config.includeNames
+      );
+
+    if (!keptMeshes) {
+      throw new Error(
+        'La seleccion del modelo no contiene ninguna malla utilizable.'
+      );
+    }
+  } else if (
     Array.isArray(
       config.excludeNames
     ) &&
