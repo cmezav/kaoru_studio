@@ -7,7 +7,7 @@
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
   <title>Kaoru's Studio - Image Combiner Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=2.0">
+  <link rel="stylesheet" href="./styles.css?v=3.0">
 </head>
 
 <body data-studio="combiner">
@@ -33,12 +33,12 @@
     <main class="workspace">
       <aside class="panel settings-panel">
         <section class="intro">
-          <span class="eyebrow">IMAGE COMBINER - FASE 2 DE 6</span>
-          <h1>Capas y selección</h1>
-          <p>Trabaja con varias imágenes a la vez, alínea, distribuye y organiza tu composición.</p>
+          <span class="eyebrow">IMAGE COMBINER - FASE 3 DE 6</span>
+          <h1>Recorte y efectos</h1>
+          <p>Recorta cada imagen sin destruirla y añade bordes, sombras, brillo y ajustes visuales.</p>
         </section>
 
-        <section class="panel-section">
+        <section class="panel-section compact-section">
           <div class="section-title"><span>01</span><h2>Lienzo</h2></div>
 
           <label class="field">
@@ -57,39 +57,30 @@
           </div>
         </section>
 
-        <section class="panel-section">
-          <div class="section-title"><span>02</span><h2>Fondo</h2></div>
+        <section class="panel-section compact-section">
+          <div class="section-title"><span>02</span><h2>Fondo e imágenes</h2></div>
 
-          <label class="radio-row">
-            <input id="colorBg" type="radio" name="backgroundMode" checked>
-            <span>Color</span>
-          </label>
+          <div class="background-inline">
+            <label class="radio-row"><input id="colorBg" type="radio" name="backgroundMode" checked><span>Color</span></label>
+            <label class="radio-row"><input id="transparentBg" type="radio" name="backgroundMode"><span>Transparente</span></label>
+          </div>
 
           <div class="color-row">
             <input id="backgroundColor" type="color" value="#FFFFFF">
             <input id="backgroundHex" type="text" maxlength="7" value="#FFFFFF" spellcheck="false">
           </div>
 
-          <label class="radio-row">
-            <input id="transparentBg" type="radio" name="backgroundMode">
-            <span>Transparente</span>
-          </label>
-        </section>
-
-        <section class="panel-section">
-          <div class="section-title"><span>03</span><h2>Imágenes</h2></div>
-
           <button class="primary full" id="importImagesBtn" type="button">+ Agregar imágenes</button>
           <input id="imageFiles" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
 
           <div class="drop-zone" id="dropZone">
-            <strong>Arrastra imágenes al lienzo</strong>
-            <small>o pega una imagen con Ctrl+V</small>
+            <strong>Arrastra imágenes</strong>
+            <small>o pega con Ctrl+V</small>
           </div>
         </section>
 
         <section class="panel-section" id="layerControls">
-          <div class="section-title"><span>04</span><h2>Selección</h2></div>
+          <div class="section-title"><span>03</span><h2>Transformación</h2></div>
           <strong class="selected-name" id="selectedName">Ninguna imagen seleccionada</strong>
 
           <div class="grid2 transform-grid">
@@ -105,10 +96,7 @@
             <input id="layerOpacity" type="range" min="0" max="100" value="100" disabled>
           </label>
 
-          <label class="check-row">
-            <input id="aspectLock" type="checkbox" checked>
-            <span>Mantener proporción</span>
-          </label>
+          <label class="check-row"><input id="aspectLock" type="checkbox" checked><span>Mantener proporción</span></label>
 
           <div class="button-grid two">
             <button class="secondary" id="duplicateBtn" type="button" disabled>Duplicar</button>
@@ -121,10 +109,10 @@
         </section>
 
         <section class="panel-section align-section">
-          <div class="section-title"><span>05</span><h2>Alinear y distribuir</h2></div>
+          <div class="section-title"><span>04</span><h2>Alinear</h2></div>
 
           <label class="field">
-            <span>Alinear con respecto a</span>
+            <span>Respecto a</span>
             <select id="alignTarget">
               <option value="canvas">Lienzo</option>
               <option value="selection">Selección</option>
@@ -132,20 +120,107 @@
           </label>
 
           <div class="align-grid">
-            <button type="button" data-align="left" title="Alinear izquierda">Izq</button>
-            <button type="button" data-align="center-x" title="Centrar horizontal">Centro H</button>
-            <button type="button" data-align="right" title="Alinear derecha">Der</button>
-            <button type="button" data-align="top" title="Alinear arriba">Arriba</button>
-            <button type="button" data-align="center-y" title="Centrar vertical">Centro V</button>
-            <button type="button" data-align="bottom" title="Alinear abajo">Abajo</button>
+            <button type="button" data-align="left">Izq</button>
+            <button type="button" data-align="center-x">Centro H</button>
+            <button type="button" data-align="right">Der</button>
+            <button type="button" data-align="top">Arriba</button>
+            <button type="button" data-align="center-y">Centro V</button>
+            <button type="button" data-align="bottom">Abajo</button>
           </div>
 
           <div class="button-grid">
             <button class="secondary" id="distributeHBtn" type="button">Distribuir H</button>
             <button class="secondary" id="distributeVBtn" type="button">Distribuir V</button>
           </div>
+        </section>
 
-          <p class="helper">Con “Lienzo”, la selección se mueve como grupo. Con “Selección”, las imágenes se alinean entre sí. Distribuir requiere 3 o más.</p>
+        <section class="panel-section visual-section" id="visualControls">
+          <div class="section-title"><span>05</span><h2>Recorte</h2></div>
+
+          <div class="single-only-note" id="singleOnlyNote">Selecciona una sola imagen para editar su recorte y efectos.</div>
+
+          <div id="singleVisualControls">
+            <div class="crop-presets">
+              <button type="button" data-crop-preset="original">Original</button>
+              <button type="button" data-crop-preset="1">1:1</button>
+              <button type="button" data-crop-preset="0.8">4:5</button>
+              <button type="button" data-crop-preset="1.25">5:4</button>
+              <button type="button" data-crop-preset="1.7777778">16:9</button>
+              <button type="button" data-crop-preset="0.5625">9:16</button>
+            </div>
+
+            <label class="range-field slim">
+              <span>Inicio X <output id="cropXOut">0%</output></span>
+              <input id="cropX" type="range" min="0" max="95" value="0">
+            </label>
+
+            <label class="range-field slim">
+              <span>Inicio Y <output id="cropYOut">0%</output></span>
+              <input id="cropY" type="range" min="0" max="95" value="0">
+            </label>
+
+            <label class="range-field slim">
+              <span>Ancho visible <output id="cropWOut">100%</output></span>
+              <input id="cropW" type="range" min="5" max="100" value="100">
+            </label>
+
+            <label class="range-field slim">
+              <span>Alto visible <output id="cropHOut">100%</output></span>
+              <input id="cropH" type="range" min="5" max="100" value="100">
+            </label>
+
+            <div class="button-grid">
+              <button class="secondary" id="fitFrameCropBtn" type="button">Ajustar marco</button>
+              <button class="secondary" id="resetCropBtn" type="button">Restablecer crop</button>
+            </div>
+
+            <div class="subsection-heading">
+              <strong>Bordes múltiples</strong>
+              <button id="addBorderBtn" type="button">+ Borde</button>
+            </div>
+
+            <div id="bordersList" class="borders-list"></div>
+
+            <div class="effect-card">
+              <label class="check-row effect-title">
+                <input id="shadowEnabled" type="checkbox">
+                <span>Sombra</span>
+              </label>
+
+              <div class="color-row">
+                <input id="shadowColor" type="color" value="#000000">
+                <input id="shadowHex" type="text" maxlength="7" value="#000000">
+              </div>
+
+              <label class="range-field slim"><span>Dirección <output id="shadowAngleOut">45°</output></span><input id="shadowAngle" type="range" min="-180" max="180" value="45"></label>
+              <label class="range-field slim"><span>Distancia <output id="shadowDistanceOut">24</output></span><input id="shadowDistance" type="range" min="0" max="200" value="24"></label>
+              <label class="range-field slim"><span>Desenfoque <output id="shadowBlurOut">24</output></span><input id="shadowBlur" type="range" min="0" max="120" value="24"></label>
+              <label class="range-field slim"><span>Opacidad <output id="shadowOpacityOut">38%</output></span><input id="shadowOpacity" type="range" min="0" max="100" value="38"></label>
+            </div>
+
+            <div class="effect-card">
+              <label class="check-row effect-title">
+                <input id="glowEnabled" type="checkbox">
+                <span>Resplandor</span>
+              </label>
+
+              <div class="color-row">
+                <input id="glowColor" type="color" value="#FFFFFF">
+                <input id="glowHex" type="text" maxlength="7" value="#FFFFFF">
+              </div>
+
+              <label class="range-field slim"><span>Desenfoque <output id="glowBlurOut">28</output></span><input id="glowBlur" type="range" min="0" max="120" value="28"></label>
+              <label class="range-field slim"><span>Opacidad <output id="glowOpacityOut">42%</output></span><input id="glowOpacity" type="range" min="0" max="100" value="42"></label>
+            </div>
+
+            <div class="subsection-heading"><strong>Ajustes visuales</strong><button id="resetEffectsBtn" type="button">Reset</button></div>
+
+            <label class="range-field slim"><span>Brillo <output id="brightnessOut">100%</output></span><input id="brightness" type="range" min="0" max="200" value="100"></label>
+            <label class="range-field slim"><span>Contraste <output id="contrastOut">100%</output></span><input id="contrast" type="range" min="0" max="200" value="100"></label>
+            <label class="range-field slim"><span>Saturación <output id="saturationOut">100%</output></span><input id="saturation" type="range" min="0" max="200" value="100"></label>
+            <label class="range-field slim"><span>Blur <output id="layerBlurOut">0</output></span><input id="layerBlur" type="range" min="0" max="50" value="0"></label>
+            <label class="range-field slim"><span>Escala de grises <output id="grayscaleOut">0%</output></span><input id="grayscale" type="range" min="0" max="100" value="0"></label>
+          </div>
         </section>
       </aside>
 
@@ -218,8 +293,9 @@
 
   <script src="../shared/studioBridge.js?v=19.0"></script>
   <script src="./js/presets.js?v=1.0"></script>
-  <script src="./js/state.js?v=2.0"></script>
+  <script src="./js/state.js?v=3.0"></script>
   <script src="./js/layers.js?v=2.0"></script>
-  <script src="./js/main.js?v=2.0"></script>
+  <script src="./js/effects.js?v=3.0"></script>
+  <script src="./js/main.js?v=3.0"></script>
 </body>
 </html>

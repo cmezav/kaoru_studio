@@ -7,8 +7,8 @@
 
   function initial(){
     return {
-      version:2,
-      phase:2,
+      version:3,
+      phase:3,
       canvas:{
         width:1080,
         height:1080,
