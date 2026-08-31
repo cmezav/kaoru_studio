@@ -10,6 +10,9 @@
   let interaction=null;
   let toastTimer=0;
   let draggedLayerId=null;
+  let internalClipboard=[];
+  let clipboardPasteCount=0;
+  let clipboardMode='copy';
 
   const els={
     preset:$('#canvasPreset'),
@@ -833,6 +836,126 @@
     return newIds;
   }
 
+  function copySelectedToInternalClipboard(showToast=true,mode='copy'){
+    const ids=new Set(selectionIds());
+    if(!ids.size) return false;
+
+    internalClipboard=state.layers
+      .filter(layer=>ids.has(layer.id))
+      .map(layer=>clone(layer));
+
+    clipboardPasteCount=0;
+    clipboardMode=mode;
+
+    if(showToast){
+      toast(
+        internalClipboard.length===1
+          ? '1 capa copiada'
+          : `${internalClipboard.length} capas copiadas`
+      );
+    }
+
+    return true;
+  }
+
+  function pasteInternalClipboard(){
+    if(!internalClipboard.length){
+      toast('No hay capas copiadas');
+      return [];
+    }
+
+    const wasCut=clipboardMode==='cut';
+    const baseOffset=Math.max(12,state.canvas.width*.018);
+    const distance=
+      wasCut && clipboardPasteCount===0
+        ? 0
+        : baseOffset*(clipboardPasteCount+1);
+
+    const groupMap=new Map();
+    const copies=internalClipboard.map((source,index)=>{
+      const copy=clone(source);
+
+      copy.id=uid();
+      copy.name=wasCut && clipboardPasteCount===0
+        ? source.name
+        : `${source.name} copia`;
+      copy.x=source.x+distance;
+      copy.y=source.y+distance;
+      copy.locked=false;
+      copy.visible=true;
+
+      if(copy.groupId){
+        if(!groupMap.has(copy.groupId)){
+          groupMap.set(
+            copy.groupId,
+            `group-${Date.now().toString(36)}-${index}-${Math.random().toString(36).slice(2,7)}`
+          );
+        }
+        copy.groupId=groupMap.get(copy.groupId);
+      }
+
+      copy.borders=(copy.borders||[]).map((border,borderIndex)=>({
+        ...border,
+        id:`border-${Date.now().toString(36)}-${index}-${borderIndex}-${Math.random().toString(36).slice(2,6)}`
+      }));
+
+      CombinerEffects.ensure(copy);
+      return copy;
+    });
+
+    state.layers.push(...copies);
+    state.cropUi.enabled=false;
+
+    const newIds=copies.map(layer=>layer.id);
+    setSelection(newIds,newIds.at(-1)||null);
+
+    clipboardPasteCount+=1;
+    clipboardMode='copy';
+
+    render();
+    snapshot(
+      copies.length===1
+        ? 'Capa pegada'
+        : `${copies.length} capas pegadas`
+    );
+
+    return newIds;
+  }
+
+  function cutSelectedToInternalClipboard(){
+    const ids=new Set(selectionIds());
+    if(!ids.size) return false;
+
+    if(!copySelectedToInternalClipboard(false,'cut')){
+      return false;
+    }
+
+    state.layers=state.layers.filter(layer=>!ids.has(layer.id));
+    state.cropUi.enabled=false;
+    setSelection([],null);
+    render();
+    snapshot('Selección cortada');
+    return true;
+  }
+
+  function activateCropForLayer(id){
+    const layer=state.layers.find(item=>item.id===id);
+    if(!layer || layer.visible===false) return false;
+
+    selectOnly(id);
+
+    if(layer.locked){
+      state.cropUi.enabled=false;
+      render();
+      toast('Desbloquea la capa para recortarla');
+      return false;
+    }
+
+    state.cropUi.enabled=true;
+    render();
+    toast('Recorte visual activado · Esc para salir');
+    return true;
+  }
   function deleteSelected(){
     const ids=new Set(selectionIds());
     if(!ids.size) return;
@@ -1291,12 +1414,37 @@
     document.addEventListener('paste',event=>{
       const files=Array.from(event.clipboardData?.files||[]);
       const images=files.filter(file=>file.type.startsWith('image/'));
+
       if(images.length){
         event.preventDefault();
         addFiles(images);
+        return;
+      }
+
+      if(!isEditingTarget(event.target) && internalClipboard.length){
+        event.preventDefault();
+        pasteInternalClipboard();
       }
     });
 
+    els.stage.addEventListener('dblclick',event=>{
+      if(event.button!==0) return;
+
+      const node=event.target.closest('.image-layer');
+      if(!node) return;
+
+      if(
+        event.target.closest(
+          '.crop-handle,.crop-box,.resize-handle,.rotate-handle,button,input,select,textarea'
+        )
+      ){
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      activateCropForLayer(node.dataset.id);
+    });
     els.stage.addEventListener('pointerdown',event=>{
       const cropHandle=event.target.closest('.crop-handle');
       const cropBox=event.target.closest('.crop-box');
@@ -1484,6 +1632,15 @@
       render();
     });
 
+    els.layersList.addEventListener('dblclick',event=>{
+      if(event.target.closest('button,input,select,textarea')) return;
+
+      const row=event.target.closest('.layer-row');
+      if(!row) return;
+
+      event.preventDefault();
+      activateCropForLayer(row.dataset.layerId);
+    });
     els.layersList.addEventListener('change',event=>{
       if(event.target.dataset.action!=='rename') return;
 
@@ -1750,6 +1907,26 @@
       const mod=event.ctrlKey||event.metaKey;
       const key=event.key.toLowerCase();
 
+      if(mod && key==='c' && !editing){
+        event.preventDefault();
+        copySelectedToInternalClipboard();
+        return;
+      }
+
+      if(mod && key==='x' && !editing){
+        event.preventDefault();
+        cutSelectedToInternalClipboard();
+        return;
+      }
+
+      if(mod && key==='0' && !editing){
+        event.preventDefault();
+        state.zoom='fit';
+        els.zoom.value='fit';
+        render();
+        toast('Lienzo ajustado a la vista');
+        return;
+      }
       if(mod && key==='a' && !editing){
         event.preventDefault();
         selectAll();

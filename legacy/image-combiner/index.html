@@ -100,7 +100,7 @@
           <label class="check-row"><input id="aspectLock" type="checkbox" checked><span>Mantener proporción</span></label>
 
           <div class="button-grid two">
-            <button class="secondary" id="duplicateBtn" type="button" disabled>Duplicar</button>
+            <button class="secondary" id="duplicateBtn" type="button" disabled title="Ctrl+D">Duplicar</button>
             <button class="secondary danger" id="deleteBtn" type="button" disabled>Eliminar</button>
             <button class="secondary" id="flipXBtn" type="button" disabled>Voltear X</button>
             <button class="secondary" id="flipYBtn" type="button" disabled>Voltear Y</button>
@@ -196,7 +196,7 @@
             <div class="subsection-heading first-subheading">
               <strong>Recorte clásico</strong>
               <div class="button-inline">
-                <button id="toggleCropUiBtn" type="button">Activar recorte visual</button>
+                <button id="toggleCropUiBtn" type="button" title="También puedes hacer doble clic sobre la imagen">Activar recorte visual</button>
                 <button id="exitCropUiBtn" type="button">Salir</button>
               </div>
             </div>
@@ -325,7 +325,7 @@
 
         <footer class="stage-footer">
           <span id="layerCount">0 imágenes</span>
-          <span>Shift/Ctrl + clic: selección múltiple · arrastra en vacío: selección por cuadro</span>
+          <span>Doble clic: recorte · Ctrl+C/V: copiar/pegar · Ctrl+D: duplicar · Supr: eliminar · Shift+flechas: mover 10 px</span>
         </footer>
       </section>
 
@@ -338,7 +338,7 @@
           <span id="selectionCount" class="selection-count">0 seleccionadas</span>
         </header>
 
-        <div class="layers-help">Arriba = delante. Arrastra una capa para reordenarla.</div>
+        <div class="layers-help">Arriba = delante. Arrastra para reordenar · doble clic = recorte visual.</div>
 
         <div id="layersList" class="layers-list">
           <div class="layers-empty">Agrega imágenes para ver sus capas aquí.</div>
@@ -360,7 +360,7 @@
   <script src="./js/layers.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
   <script src="./js/effects.js?cache=current"></script>
-  <script src="./js/main.js?cache=current"></script>
+  <script src="./js/main.js?cache=interactions"></script>
   <script src="./js/project.js?cache=current"></script>
   <script src="./js/proTools.js?cache=current"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
