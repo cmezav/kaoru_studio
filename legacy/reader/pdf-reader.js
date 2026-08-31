@@ -46,15 +46,10 @@ let pdfDocument = null;
 let currentBook = null;
 let currentPage = 1;
 let pageRecords = new Map();
-let textIndexes = new Map();
 let renderObserver = null;
 let saveTimer = 0;
 let scrollFrame = 0;
 let controlsTimer = 0;
-let searchGeneration = 0;
-let searchQuery = '';
-let searchResults = [];
-let activeSearchIndex = -1;
 let sessionWriter = null;
 let passwordRequest = null;
 const passwordCache = new Map();
@@ -600,8 +595,6 @@ async function renderPage(pageNumber) {
     record.rendering = false;
     record.element.classList.remove('is-rendering');
 
-    buildPageTextIndex(pageNumber, textContent, textLayer);
-    applyPageHighlights(pageNumber);
 
     try {
       page.cleanup();
@@ -615,361 +608,8 @@ async function renderPage(pageNumber) {
   }
 }
 
-function buildPageTextIndex(pageNumber, textContent, textLayer = null) {
-  const existing = textIndexes.get(pageNumber);
-
-  if (existing && (!textLayer || existing.textLayer === textLayer)) {
-    return existing;
-  }
-
-  const sourceItems = Array.from(textContent?.items || [])
-    .filter((item) => typeof item?.str === 'string');
-  const itemRanges = [];
-  let text = '';
-
-  sourceItems.forEach((item, itemIndex) => {
-    const str = String(item.str || '');
-
-    if (text.length && !/\s$/.test(text)) {
-      text += ' ';
-    }
-
-    const start = text.length;
-    text += str;
-    const end = text.length;
-
-    itemRanges.push({
-      itemIndex,
-      start,
-      end,
-      text: str
-    });
-  });
-
-  const spans = textLayer
-    ? Array.from(textLayer.querySelectorAll('span'))
-    : [];
-  let spanCursor = 0;
-
-  itemRanges.forEach((range) => {
-    while (
-      spanCursor < spans.length &&
-      spans[spanCursor].textContent === ''
-    ) {
-      spanCursor += 1;
-    }
-
-    range.span = spans[spanCursor] || null;
-    spanCursor += 1;
-  });
-
-  const index = {
-    text,
-    lower: text.toLocaleLowerCase(),
-    itemRanges,
-    textLayer
-  };
-
-  textIndexes.set(pageNumber, index);
-  return index;
-}
-
-async function getPageTextIndex(pageNumber) {
-  const cached = textIndexes.get(pageNumber);
-  if (cached) return cached;
-
-  if (!pdfDocument) {
-    return {
-      text: '',
-      lower: '',
-      itemRanges: [],
-      textLayer: null
-    };
-  }
-
-  const page = await pdfDocument.getPage(pageNumber);
-  const textContent = await page.getTextContent();
-  const result = buildPageTextIndex(pageNumber, textContent, null);
-
-  try {
-    page.cleanup();
-  } catch (_) {}
-
-  return result;
-}
-
-function pageResults(pageNumber) {
-  return searchResults.filter((result) => result.pageNumber === pageNumber);
-}
-
-function restoreItemSpan(range) {
-  if (!range.span) return;
-  range.span.replaceChildren(document.createTextNode(range.text));
-}
-
-function applyPageHighlights(pageNumber) {
-  const index = textIndexes.get(pageNumber);
-
-  if (!index?.itemRanges?.length || !index.textLayer) return;
-
-  const results = pageResults(pageNumber);
-
-  for (const range of index.itemRanges) {
-    restoreItemSpan(range);
-
-    if (!range.span || !results.length || range.start === range.end) {
-      continue;
-    }
-
-    const overlaps = [];
-
-    results.forEach((result) => {
-      const start = Math.max(range.start, result.start);
-      const end = Math.min(range.end, result.end);
-
-      if (start < end) {
-        overlaps.push({
-          start: start - range.start,
-          end: end - range.start,
-          resultIndex: result.resultIndex
-        });
-      }
-    });
-
-    if (!overlaps.length) continue;
-
-    overlaps.sort((a, b) => a.start - b.start);
-    range.span.replaceChildren();
-
-    let cursor = 0;
-
-    overlaps.forEach((hit) => {
-      if (hit.start > cursor) {
-        range.span.append(
-          document.createTextNode(range.text.slice(cursor, hit.start))
-        );
-      }
-
-      const mark = document.createElement('mark');
-      mark.className = 'pdf-search-hit';
-      mark.dataset.searchResult = String(hit.resultIndex);
-      mark.textContent = range.text.slice(hit.start, hit.end);
-
-      if (hit.resultIndex === activeSearchIndex) {
-        mark.classList.add('is-active');
-      }
-
-      range.span.append(mark);
-      cursor = Math.max(cursor, hit.end);
-    });
-
-    if (cursor < range.text.length) {
-      range.span.append(
-        document.createTextNode(range.text.slice(cursor))
-      );
-    }
-  }
-}
-
-function applyAllRenderedHighlights() {
-  for (const pageNumber of pageRecords.keys()) {
-    if (pageRecords.get(pageNumber)?.rendered) {
-      applyPageHighlights(pageNumber);
-    }
-  }
-}
-
-function updateSearchControls() {
-  const count = searchResults.length;
-  const current = count && activeSearchIndex >= 0
-    ? activeSearchIndex + 1
-    : 0;
-
-  if (elements.searchCount) {
-    elements.searchCount.textContent = `${current} / ${count}`;
-  }
-
-  if (elements.searchPrev) {
-    elements.searchPrev.disabled = count === 0;
-  }
-
-  if (elements.searchNext) {
-    elements.searchNext.disabled = count === 0;
-  }
-
-  if (elements.searchClear) {
-    elements.searchClear.disabled = !searchQuery;
-  }
-}
-
-async function jumpToPage(pageNumber, ratio = 0) {
-  if (!currentBook) return;
-
-  const page = clamp(
-    Math.round(Number(pageNumber) || 1),
-    1,
-    Math.max(1, Number(currentBook.pageCount) || 1)
-  );
-
-  await renderPage(page);
-
-  const element = pageElement(page);
-  if (!element) return;
-
-  setControlsPage(page);
-
-  requestAnimationFrame(() => {
-    const target = Math.max(
-      0,
-      element.offsetTop +
-      clamp(ratio, 0, 1) * element.offsetHeight -
-      window.innerHeight * 0.22
-    );
-
-    window.scrollTo({
-      top: target,
-      behavior: 'auto'
-    });
-  });
-}
-
-async function goToSearchResult(index) {
-  if (!searchResults.length) return;
-
-  const previous = activeSearchIndex;
-  activeSearchIndex = (
-    (Number(index) || 0) % searchResults.length +
-    searchResults.length
-  ) % searchResults.length;
-
-  const result = searchResults[activeSearchIndex];
-
-  if (previous >= 0 && searchResults[previous]) {
-    applyPageHighlights(searchResults[previous].pageNumber);
-  }
-
-  await renderPage(result.pageNumber);
-  applyPageHighlights(result.pageNumber);
-  updateSearchControls();
-
-  const record = pageRecords.get(result.pageNumber);
-  const mark = record?.textLayer?.querySelector(
-    `[data-search-result="${activeSearchIndex}"]`
-  );
-
-  if (mark) {
-    mark.scrollIntoView({
-      block: 'center',
-      inline: 'nearest',
-      behavior: 'smooth'
-    });
-  } else {
-    await jumpToPage(result.pageNumber, 0.25);
-  }
-
-  setControlsPage(result.pageNumber);
-  showControls();
-}
-
-async function searchPdf(query) {
-  if (!pdfDocument || !currentBook) return;
-
-  const normalized = String(query || '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  const generation = ++searchGeneration;
-
-  searchQuery = normalized;
-  searchResults = [];
-  activeSearchIndex = -1;
-  updateSearchControls();
-  applyAllRenderedHighlights();
-
-  if (!normalized) {
-    if (elements.searchStatus) {
-      elements.searchStatus.textContent = '';
-    }
-    return;
-  }
-
-  if (elements.searchStatus) {
-    elements.searchStatus.textContent = 'Buscando en el PDF…';
-  }
-
-  const needle = normalized.toLocaleLowerCase();
-  let searchableCharacters = 0;
-
-  for (let pageNumber = 1; pageNumber <= currentBook.pageCount; pageNumber += 1) {
-    if (generation !== searchGeneration) return;
-
-    const index = await getPageTextIndex(pageNumber);
-    searchableCharacters += index.text.trim().length;
-    let cursor = 0;
-
-    while (cursor <= index.lower.length - needle.length) {
-      const found = index.lower.indexOf(needle, cursor);
-      if (found < 0) break;
-
-      searchResults.push({
-        pageNumber,
-        start: found,
-        end: found + needle.length,
-        resultIndex: searchResults.length
-      });
-
-      cursor = found + Math.max(1, needle.length);
-    }
-
-    if (pageNumber % 12 === 0) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-  }
-
-  if (generation !== searchGeneration) return;
-
-  applyAllRenderedHighlights();
-
-  if (!searchResults.length) {
-    if (elements.searchStatus) {
-      elements.searchStatus.textContent = searchableCharacters
-        ? 'No se encontraron coincidencias.'
-        : 'Este PDF no tiene texto buscable. Puede ser un escaneo o estar compuesto por imágenes.';
-    }
-
-    updateSearchControls();
-    return;
-  }
-
-  if (elements.searchStatus) {
-    elements.searchStatus.textContent =
-      `${searchResults.length} coincidencia(s) resaltada(s).`;
-  }
-
-  await goToSearchResult(0);
-}
-
-function clearSearch() {
-  searchGeneration += 1;
-  searchQuery = '';
-  searchResults = [];
-  activeSearchIndex = -1;
-
-  if (elements.searchInput) {
-    elements.searchInput.value = '';
-  }
-
-  if (elements.searchStatus) {
-    elements.searchStatus.textContent = '';
-  }
-
-  applyAllRenderedHighlights();
-  updateSearchControls();
-  showControls();
-}
-
 function createPlaceholders(pageCount, firstViewport) {
   pageRecords.clear();
-  textIndexes.clear();
   elements.pages?.replaceChildren();
 
   const fragment = document.createDocumentFragment();
@@ -1032,6 +672,8 @@ function setupRenderObserver() {
 export async function openPdfDocument(book, options = {}) {
   if (!isPdfBook(book)) return false;
 
+  document.documentElement.classList.add('pdf-gesture-mode');
+
   await closePdfDocument({ preserveView: true });
 
   const asset = await getAsset(`${PDF_ASSET_PREFIX}${book.id}`);
@@ -1090,7 +732,6 @@ export async function openPdfDocument(book, options = {}) {
     elements.pageInput.max = String(currentBook.pageCount);
   }
 
-  clearSearch();
   hideControls(true);
 
   window.addEventListener('scroll', onScroll, { passive: true });
@@ -1122,9 +763,10 @@ export async function openPdfDocument(book, options = {}) {
 }
 
 export async function closePdfDocument(options = {}) {
+  document.documentElement.classList.remove('pdf-gesture-mode');
+
   clearTimeout(saveTimer);
   clearTimeout(controlsTimer);
-  searchGeneration += 1;
 
   window.removeEventListener('scroll', onScroll);
   renderObserver?.disconnect();
@@ -1145,10 +787,6 @@ export async function closePdfDocument(options = {}) {
   currentBook = null;
   currentPage = 1;
   pageRecords.clear();
-  textIndexes.clear();
-  searchQuery = '';
-  searchResults = [];
-  activeSearchIndex = -1;
   sessionWriter = null;
 
   if (!options.preserveView) {
@@ -1270,4 +908,3 @@ function initializeEvents() {
 }
 
 initializeEvents();
-updateSearchControls();

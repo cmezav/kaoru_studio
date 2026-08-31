@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=pdf-reader-1">
-  <link rel="stylesheet" href="./reader.css?cache=reader-mobile-manual-cloud-1">
+  <link rel="stylesheet" href="./reader.css?cache=reader-mobile-fixes-2">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -18,6 +18,13 @@
       </div>
       <div class="library-actions">
         <button id="importBtn" type="button">Importar EPUB / PDF</button>
+        <a
+          id="pdfExternalConverter"
+          class="external-pdf-tool"
+          href="https://pdfresizer.com/es/black-and-white"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Convertir colores PDF ↗</a>
         <button id="leaveReaderBtn" class="secondary-action" type="button">Kaoru's Studio</button>
       </div>
       <input id="epubInput" type="file" hidden>
@@ -198,20 +205,6 @@
         <input id="pdfPageInput" type="number" min="1" step="1" inputmode="numeric" value="1">
         <span id="pdfPageTotal" class="pdf-page-total">/ 1</span>
       </div>
-
-      <form id="pdfSearchForm" class="pdf-search-form" role="search">
-        <input id="pdfSearchInput" type="search" placeholder="Buscar texto…" autocomplete="off" enterkeyhint="search">
-        <button type="submit">Buscar</button>
-      </form>
-
-      <div class="pdf-search-nav">
-        <button id="pdfSearchPrev" type="button" aria-label="Coincidencia anterior">‹</button>
-        <span id="pdfSearchCount" class="pdf-search-count">0 / 0</span>
-        <button id="pdfSearchNext" type="button" aria-label="Coincidencia siguiente">›</button>
-        <button id="pdfSearchClear" type="button" aria-label="Quitar búsqueda" title="Quitar resaltados">×</button>
-      </div>
-
-      <p id="pdfSearchStatus" class="pdf-search-status" role="status"></p>
       <button id="pdfLibraryBtn" class="pdf-library-action" type="button">Biblioteca</button>
     </aside>
   </main>
@@ -252,6 +245,6 @@
   </form>
 </div>
 
-  <script type="module" src="./reader.js?cache=reader-mobile-manual-cloud-1"></script>
+  <script type="module" src="./reader.js?cache=reader-mobile-fixes-2"></script>
 </body>
 </html>
