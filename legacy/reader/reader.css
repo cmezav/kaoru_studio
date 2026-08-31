@@ -470,3 +470,11 @@ body:not(.is-reading) .reader-view{display:none}
   .chapter-content{}
   .chapter-actions button{font-size:13px}
 }
+/* Uniformidad entre Continuar leyendo y Mis obras */
+.continue-section h2{
+  padding-bottom:10px;
+  border-bottom:1px solid #555;
+}
+.continue-card{
+  margin-top:14px;
+}

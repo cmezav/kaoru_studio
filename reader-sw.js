@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-6';
+const CACHE_NAME = 'kaoru-archive-reader-shell-7';
 
 const CORE = [
   './',

@@ -380,7 +380,11 @@ async function renderLibrary() {
   for (const book of books) {
     const progress = await getProgress(book.id);
 
-    if (progress && (!bestContinue || progress.updatedAt > bestContinue.progress.updatedAt)) {
+    if (
+      progress &&
+      progressPercent(book, progress) < 99 &&
+      (!bestContinue || progress.updatedAt > bestContinue.progress.updatedAt)
+    ) {
       bestContinue = { book, progress };
     }
 
@@ -394,8 +398,8 @@ async function renderLibrary() {
     main.addEventListener('click', () => {
       openBookFromUserGesture(
         book.id,
-        progress?.chapterIndex || 0,
-        true
+        0,
+        false
       );
     });
 
