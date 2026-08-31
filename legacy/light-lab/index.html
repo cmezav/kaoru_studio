@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio — Light Lab Fase 4</title>
+  <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="../shared/studioBridge.css?v=15.0">
-  <link rel="stylesheet" href="./styles.css?v=4.0">
+  <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
+  <link rel="stylesheet" href="./styles.css?cache=current">
+  <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
   <header class="light-topbar">
@@ -26,7 +27,7 @@
   <main class="lab-shell">
     <aside class="panel controls-panel" aria-label="Configuración de Light Lab">
       <section class="lab-intro">
-        <div class="eyebrow">LIGHT LAB · FASE 4 DE 8</div>
+        <div class="eyebrow">LIGHT LAB</div>
         <h1>Tu color bajo cualquier luz</h1>
         <p>Elige la base y decide exactamente qué luces y sombras la afectan.</p>
       </section>
@@ -162,11 +163,12 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
-  <script src="../shared/studioBridge.js?v=15.0"></script>
-  <script src="../shared/studioGallery.js?v=16.0"></script>
-  <script type="module" src="./js/main.js?v=6.0"></script>
-  <script type="module" src="./js/phase6.js?v=6.0"></script>
-  <script type="module" src="./js/phase7.js?v=7.0"></script>
-  <script type="module" src="./js/bridge3d.js?v=1.0"></script>
+  <script src="../shared/studioBridge.js?cache=current"></script>
+  <script src="../shared/studioGallery.js?cache=current"></script>
+  <script type="module" src="./js/main.js?cache=current"></script>
+  <script type="module" src="./js/advancedTools.js?cache=current"></script>
+  <script type="module" src="./js/phase7.js?cache=current"></script>
+  <script type="module" src="./js/bridge3d.js?cache=current"></script>
+  <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

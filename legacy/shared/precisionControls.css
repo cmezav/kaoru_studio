@@ -1,0 +1,43 @@
+.kaoru-range-pair{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 72px;
+  gap:7px;
+  align-items:center;
+  width:100%;
+  min-width:0;
+}
+
+.kaoru-range-pair>input[type="range"]{
+  width:100%!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+
+.kaoru-exact-number{
+  width:72px!important;
+  min-width:72px!important;
+  max-width:72px!important;
+  height:30px!important;
+  padding:0 6px!important;
+  box-sizing:border-box!important;
+  border:1px solid var(--line,rgba(120,120,130,.3))!important;
+  border-radius:7px!important;
+  background:var(--surface,var(--panel,#fff))!important;
+  color:var(--text,inherit)!important;
+  font:inherit!important;
+  font-size:11px!important;
+  line-height:1!important;
+  text-align:right!important;
+  outline:none!important;
+}
+
+.kaoru-exact-number:focus{
+  border-color:var(--accent,currentColor)!important;
+  box-shadow:0 0 0 2px rgba(127,90,240,.12)!important;
+}
+
+.kaoru-exact-number:disabled{
+  opacity:.48!important;
+  cursor:not-allowed!important;
+}

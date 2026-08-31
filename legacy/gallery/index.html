@@ -6,10 +6,11 @@
 <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}</script>
 <title>Kaoru's Studio — Galería</title>
 <link rel="icon" href="../../logo.png" type="image/png" />
-<link rel="stylesheet" href="../shared/studioBridge.css?v=11.0">
-<link rel="stylesheet" href="./styles.css?v=11.1">
+<link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
+<link rel="stylesheet" href="./styles.css?cache=current">
 <script>if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-<link rel="stylesheet" href="../shared/kaoruLegacy.css?v=12.0">
+<link rel="stylesheet" href="../shared/kaoruLegacy.css?cache=current">
+  <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-gallery" data-studio="gallery">
 <header class="topbar">
@@ -32,7 +33,7 @@
 <main class="gallery-shell">
   <section class="hero">
     <div>
-      <span class="eyebrow">FASE 11 · GUARDADO LOCAL</span>
+      <span class="eyebrow"> · GUARDADO LOCAL</span>
       <h1>Galería de diseños</h1>
       <p>Proyectos editables y plantillas de Kaoru’s Studio, guardados únicamente en este navegador.</p>
     </div>
@@ -65,8 +66,9 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <button id="themeFab" class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"></circle><line x1="12" y1="2.5" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="21.5" y2="12"></line><line x1="5.1" y1="5.1" x2="6.8" y2="6.8"></line><line x1="17.2" y1="17.2" x2="18.9" y2="18.9"></line><line x1="5.1" y1="18.9" x2="6.8" y2="17.2"></line><line x1="17.2" y1="6.8" x2="18.9" y2="5.1"></line></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
-<script src="../shared/studioBridge.js?v=19.0"></script>
-<script src="../shared/studioGallery.js?v=19.1"></script>
-<script src="./js/main.js?v=19.1"></script>
+<script src="../shared/studioBridge.js?cache=current"></script>
+<script src="../shared/studioGallery.js?cache=current"></script>
+<script src="./js/main.js?cache=current"></script>
+  <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>
