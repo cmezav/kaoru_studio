@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio Fase 2</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=2.0">
+  <link rel="stylesheet" href="./styles.css?v=2.1">
   <script type="importmap">
   {
     "imports": {
@@ -155,6 +155,50 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">&#9788;</button>
 
   <script src="../shared/studioBridge.js?v=18.0"></script>
-  <script type="module" src="./js/main.js?v=2.0"></script>
+    <script>
+  (function () {
+    var finished = false;
+
+    function showStartupProblem(message) {
+      if (finished || window.ThreeLightingStore) return;
+      finished = true;
+
+      var badge = document.getElementById('webglBadge');
+      var engine = document.getElementById('stateEngine');
+      var camera = document.getElementById('stateCamera');
+      var title = document.getElementById('viewportMessage');
+      var overlay = document.querySelector('.viewport-overlay');
+      var detail = overlay && overlay.querySelector('span');
+
+      if (badge) badge.textContent = 'Error de inicio';
+      if (engine) engine.textContent = 'Modulo JS no iniciado';
+      if (camera) camera.textContent = 'No disponible';
+      if (title) title.textContent = 'El motor 3D no pudo iniciar';
+      if (detail) detail.textContent = message || 'Recarga la pagina para volver a intentarlo.';
+      if (overlay) overlay.classList.remove('is-hidden');
+    }
+
+    window.addEventListener('error', function (event) {
+      var text = String(event && (event.message || event.error) || '');
+      if (/module|script|import|three|scene3d|state\.js/i.test(text)) {
+        showStartupProblem('Fallo al cargar un modulo JavaScript. Recarga sin cache.');
+      }
+    });
+
+    window.addEventListener('unhandledrejection', function (event) {
+      var text = String(event && event.reason || '');
+      if (/module|script|import|three|scene3d|state\.js/i.test(text)) {
+        showStartupProblem('Fallo al cargar el motor 3D. Revisa la conexion y recarga.');
+      }
+    });
+
+    setTimeout(function () {
+      if (!window.ThreeLightingStore) {
+        showStartupProblem('Los modulos no iniciaron. Usa Ctrl+F5 una vez y vuelve a abrir 3D.');
+      }
+    }, 5000);
+  }());
+  </script>
+  <script type="module" src="./js/main.js?v=2.1"></script>
 </body>
 </html>

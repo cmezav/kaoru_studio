@@ -1,6 +1,6 @@
-import { create3dStore } from './state.js';
-import { MODEL_REGISTRY, modelById } from './modelRegistry.js';
-import { detectWebGL, create3dScene } from './scene3d.js';
+import { create3dStore } from './state.js?v=2.1';
+import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=2.1';
+import { detectWebGL, create3dScene } from './scene3d.js?v=2.1';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;

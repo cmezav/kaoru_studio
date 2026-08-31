@@ -31,7 +31,7 @@ const studios:Studio[]=[
   {id:'text',name:'Text Studio',short:'Texto',subtitle:'Tipografía y efectos avanzados',src:'./legacy/text-studio/index.html?embed=1',accent:'rose',icon:h(Icon,{name:'text'}),hotkey:'Alt+2'},
   {id:'image',name:'Image Studio',short:'Imagen',subtitle:'Ajustes, filtros y exportación',src:'./legacy/image-studio/index.html?embed=1',accent:'blue',icon:h(Icon,{name:'image'}),hotkey:'Alt+3'},
   {id:'light',name:'Light Lab',short:'Light Lab',subtitle:'Paletas, luces, pieles y materiales',src:'./legacy/light-lab/index.html?embed=1&phase=7',accent:'teal',icon:h(Icon,{name:'light'}),hotkey:'Alt+4'},
-  {id:'3d',name:'3D Lighting Studio',short:'3D',subtitle:'Modelos, anatomia y luces 3D',src:'./legacy/3d-lighting/index.html?embed=1&phase=2',accent:'indigo',icon:h(Icon,{name:'three'}),hotkey:'Alt+5'},
+  {id:'3d',name:'3D Lighting Studio',short:'3D',subtitle:'Modelos, anatomia y luces 3D',src:'./legacy/3d-lighting/index.html?embed=1&phase=2&fix=1',accent:'indigo',icon:h(Icon,{name:'three'}),hotkey:'Alt+5'},
   {id:'gallery',name:'Galería',short:'Galería',subtitle:'Diseños, proyectos y plantillas',src:'./legacy/gallery/index.html?embed=1',accent:'amber',icon:h(Icon,{name:'gallery'}),hotkey:'Alt+5'}
 ];
 
