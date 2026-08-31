@@ -9,6 +9,63 @@ import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalett
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
+const ADVANCED_PREVIEW_MODES = [
+  ['sphere', 'Esfera'],
+  ['cylinder', 'Cilindro'],
+  ['plane', 'Plano'],
+  ['skin', 'Piel'],
+  ['metal', 'Metal'],
+  ['gold', 'Oro'],
+  ['silver', 'Plata'],
+  ['steel', 'Acero'],
+  ['head', 'Cabeza'],
+  ['planes', 'Planos'],
+  ['asaro', 'Asaro 2D'],
+  ['reference', 'Imagen / Cuentagotas']
+];
+
+function setupAdvancedPreviewUI() {
+  Object.assign(VIEW_LABELS, {
+    cylinder: 'Estudio de volumen - cilindro',
+    skin: 'Muestra organica - piel',
+    metal: 'Estudio de reflejo - metal',
+    gold: 'Material - oro',
+    silver: 'Material - plata',
+    steel: 'Material - acero',
+    head: 'Cabeza simplificada',
+    planes: 'Cabeza por planos',
+    asaro: 'Estudio tipo Asaro 2D'
+  });
+
+  document.title = "Kaoru's Studio - Light Lab Fase 5";
+  const phaseBadge = document.querySelector('.lab-intro .eyebrow');
+  if (phaseBadge) phaseBadge.textContent = 'LIGHT LAB - FASE 5 DE 8';
+
+  elements.previewTabs.replaceChildren(...ADVANCED_PREVIEW_MODES.map(([id, label], index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.view = id;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(index === 0));
+    button.className = index === 0 ? 'is-active' : '';
+    button.textContent = label;
+    return button;
+  }));
+
+  if (!document.getElementById('lightLabPhase5Styles')) {
+    const style = document.createElement('style');
+    style.id = 'lightLabPhase5Styles';
+    style.textContent = `
+      .preview-toolbar{align-items:flex-start;gap:12px}
+      .view-tabs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:4px;max-width:min(720px,72%)}
+      .view-tabs button{white-space:nowrap}
+      @media(max-width:1500px){.view-tabs{max-width:66%}.view-tabs button{padding-inline:8px}}
+      @media(max-width:1180px){.preview-toolbar{flex-direction:column}.view-tabs{max-width:100%;justify-content:flex-start}}
+    `;
+    document.head.appendChild(style);
+  }
+}
+
 const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
@@ -27,6 +84,7 @@ const elements = {
   copyAll: byId('copyAllBtn'), download: byId('downloadStructureBtn'), toast: byId('toast')
 };
 let toastTimer = 0; let editingIndex = null; let lightsRenderSignature = '';
+setupAdvancedPreviewUI();
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
