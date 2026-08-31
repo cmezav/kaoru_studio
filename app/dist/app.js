@@ -8,6 +8,7 @@ function Icon(props) {
         text: [h('path', { d: 'M5 6V4h14v2' }), h('path', { d: 'M12 4v16' }), h('path', { d: 'M8 20h8' })],
         image: [h('rect', { x: 3, y: 4, width: 18, height: 16, rx: 2 }), h('circle', { cx: 8.5, cy: 9.2, r: 1.5 }), h('path', { d: 'm5 17 4.2-4.2 3.1 3.1 2-2 4.7 3.1' })],
         light: [h('circle', { cx: 12, cy: 12, r: 3.2 }), h('path', { d: 'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9 7 7M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1' }), h('path', { d: 'M9.8 14.7h4.4M10.4 17h3.2' })],
+        three: [h('path', { d: 'M12 2 20 6.5v9L12 20l-8-4.5v-9L12 2Z' }), h('path', { d: 'm4 6.5 8 4.5 8-4.5M12 11v9' }), h('path', { d: 'M8.5 8.7 12 6.8l3.5 1.9' })],
         gallery: [h('rect', { x: 4, y: 4, width: 6, height: 6, rx: 1 }), h('rect', { x: 14, y: 4, width: 6, height: 6, rx: 1 }), h('rect', { x: 4, y: 14, width: 6, height: 6, rx: 1 }), h('rect', { x: 14, y: 14, width: 6, height: 6, rx: 1 })],
         moon: [h('path', { d: 'M20.2 14.2A8 8 0 0 1 9.8 3.8 8.5 8.5 0 1 0 20.2 14.2Z' })],
         sun: [h('circle', { cx: 12, cy: 12, r: 4 }), h('path', { d: 'M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41' })],
@@ -21,6 +22,7 @@ const studios = [
     { id: 'text', name: 'Text Studio', short: 'Texto', subtitle: 'Tipografía y efectos avanzados', src: './legacy/text-studio/index.html?embed=1', accent: 'rose', icon: h(Icon, { name: 'text' }), hotkey: 'Alt+2' },
     { id: 'image', name: 'Image Studio', short: 'Imagen', subtitle: 'Ajustes, filtros y exportación', src: './legacy/image-studio/index.html?embed=1', accent: 'blue', icon: h(Icon, { name: 'image' }), hotkey: 'Alt+3' },
     { id: 'light', name: 'Light Lab', short: 'Light Lab', subtitle: 'Paletas, luces, pieles y materiales', src: './legacy/light-lab/index.html?embed=1&phase=7', accent: 'teal', icon: h(Icon, { name: 'light' }), hotkey: 'Alt+4' },
+    { id: '3d', name: '3D Lighting Studio', short: '3D', subtitle: 'Modelos, anatomia y luces 3D', src: './legacy/3d-lighting/index.html?embed=1&phase=1', accent: 'indigo', icon: h(Icon, { name: 'three' }), hotkey: 'Alt+5' },
     { id: 'gallery', name: 'Galería', short: 'Galería', subtitle: 'Diseños, proyectos y plantillas', src: './legacy/gallery/index.html?embed=1', accent: 'amber', icon: h(Icon, { name: 'gallery' }), hotkey: 'Alt+5' }
 ];
 function readTheme() { try {
@@ -63,7 +65,7 @@ class App extends React.Component {
     onKey(e) {
         if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey)
             return;
-        const map = { '1': 'silhouette', '2': 'text', '3': 'image', '4': 'light', '5': 'gallery' };
+        const map = { '1': 'silhouette', '2': 'text', '3': 'image', '4': 'light', '5': '3d', '6': 'gallery' };
         if (!map[e.key])
             return;
         e.preventDefault();

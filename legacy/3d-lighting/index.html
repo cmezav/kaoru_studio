@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
+  <title>Kaoru's Studio - 3D Lighting Studio</title>
+  <link rel="icon" href="../../logo.png" type="image/png">
+  <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
+  <link rel="stylesheet" href="./styles.css?v=1.0">
+</head>
+<body class="studio-3d" data-studio="3d">
+  <header class="three-topbar">
+    <a class="three-brand" href="../../index.html#3d">
+      <img src="../../logo.png" alt="" onerror="this.hidden=true">
+      <span>Kaoru's Studio</span>
+      <b>3D Lighting Studio</b>
+    </a>
+    <nav class="studio-switcher" aria-label="Cambiar de Studio">
+      <a class="studio-link" data-studio-link="silhouette" href="../index.html" title="Silueta Studio - Alt+1">&#9670; <span class="studio-link-label">Silueta</span><kbd>Alt+1</kbd></a>
+      <a class="studio-link" data-studio-link="text" href="../text-studio/index.html" title="Text Studio - Alt+2">Tt <span class="studio-link-label">Texto</span><kbd>Alt+2</kbd></a>
+      <a class="studio-link" data-studio-link="image" href="../image-studio/index.html" title="Image Studio - Alt+3">&#9714; <span class="studio-link-label">Imagen</span><kbd>Alt+3</kbd></a>
+      <a class="studio-link" data-studio-link="light" href="../light-lab/index.html" title="Light Lab - Alt+4">&#10022; <span class="studio-link-label">Light Lab</span><kbd>Alt+4</kbd></a>
+      <a class="studio-link" data-studio-link="3d" href="./index.html" title="3D Lighting Studio - Alt+5">3D <span class="studio-link-label">3D</span><kbd>Alt+5</kbd></a>
+      <a class="studio-link" data-studio-link="gallery" href="../gallery/index.html" title="Galeria - Alt+6">&#9638; <span class="studio-link-label">Galeria</span><kbd>Alt+6</kbd></a>
+    </nav>
+  </header>
+
+  <main class="three-shell">
+    <aside class="three-panel three-controls">
+      <section class="intro">
+        <span class="eyebrow">3D LIGHTING STUDIO - FASE 1 DE 6</span>
+        <h1>Estudia la luz sobre volumen real</h1>
+        <p>Modulo 3D independiente para cabeza por planos, anatomia humana y multiples luces.</p>
+      </section>
+
+      <section class="control-section">
+        <div class="section-heading"><span>01</span><h2>Modelo</h2></div>
+        <div id="modelCards" class="model-cards"></div>
+      </section>
+
+      <section class="control-section">
+        <div class="section-heading"><span>02</span><h2>Color base</h2></div>
+        <div class="color-row">
+          <input id="baseColor" type="color" value="#C98E78" aria-label="Color base">
+          <input id="baseHex" type="text" maxlength="7" value="#C98E78" spellcheck="false" aria-label="HEX base">
+        </div>
+        <p class="help">En fases posteriores este color podra venir directamente de Light Lab.</p>
+      </section>
+
+      <section class="control-section">
+        <div class="section-heading"><span>03</span><h2>Preparado para luces 3D</h2></div>
+        <div class="future-list">
+          <span>Multiples luces movibles</span>
+          <span>HEX libre por luz</span>
+          <span>Intensidad / distancia / suavidad</span>
+          <span>Ambiente / rebote / rim</span>
+        </div>
+      </section>
+    </aside>
+
+    <section class="three-stage-column">
+      <div class="stage-toolbar">
+        <div>
+          <span class="eyebrow">VIEWPORT 3D</span>
+          <h2 id="stageTitle">Cabeza por planos</h2>
+        </div>
+        <div class="stage-badges">
+          <span id="webglBadge">Comprobando WebGL...</span>
+          <span>Fase 1</span>
+        </div>
+      </div>
+
+      <div class="viewport-card">
+        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport de 3D Lighting Studio"></canvas>
+        <div class="viewport-overlay">
+          <strong id="viewportMessage">Estructura 3D preparada</strong>
+          <span>El motor 3D real se activa en la Fase 2.</span>
+        </div>
+        <div class="viewport-footer">
+          <span>Orbita: mouse</span>
+          <span>Zoom: rueda</span>
+          <span>Mover luz: Fase 5</span>
+        </div>
+      </div>
+
+      <section class="roadmap-card">
+        <div><b>F2</b><span>Motor 3D, camara y controles</span></div>
+        <div><b>F3</b><span>Cabeza propia tipo Asaro</span></div>
+        <div><b>F4</b><span>Cabeza realista, busto y cuerpo</span></div>
+        <div><b>F5</b><span>Multiples luces 3D movibles</span></div>
+        <div><b>F6</b><span>Light Lab, Galeria y exportacion</span></div>
+      </section>
+    </section>
+
+    <aside class="three-panel three-status">
+      <section class="status-hero">
+        <span class="status-orb">3D</span>
+        <div><span class="eyebrow">MODULO INDEPENDIENTE</span><h2>Estado</h2></div>
+      </section>
+
+      <dl class="status-list">
+        <div><dt>Studio</dt><dd>3D Lighting</dd></div>
+        <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos</dd></div>
+        <div><dt>Base</dt><dd id="stateColor">#C98E78</dd></div>
+        <div><dt>Motor</dt><dd id="stateEngine">Pendiente F2</dd></div>
+      </dl>
+
+      <section class="architecture-card">
+        <span class="eyebrow">ARQUITECTURA</span>
+        <h3>Separado de Light Lab</h3>
+        <p>Este Studio tendra su propio renderer, camara, modelos, luces y almacenamiento.</p>
+      </section>
+
+      <section class="next-card">
+        <span class="eyebrow">SIGUIENTE</span>
+        <h3>Fase 2 - Motor 3D</h3>
+        <p>Escena WebGL real, camara orbital, zoom, piso, sombras y primer modelo de prueba.</p>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">&#9788;</button>
+
+  <script src="../shared/studioBridge.js?v=18.0"></script>
+  <script type="module" src="./js/main.js?v=1.0"></script>
+</body>
+</html>
