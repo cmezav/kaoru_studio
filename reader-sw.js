@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-4';
+const CACHE_NAME = 'kaoru-archive-reader-shell-6';
 
 const CORE = [
   './',
@@ -113,6 +113,13 @@ self.addEventListener('fetch', (event) => {
           if (path && path.startsWith('legacy/reader/')) {
             return cache.match(
               './legacy/reader/index.html',
+              { ignoreSearch: true }
+            );
+          }
+
+          if (path && path.startsWith('legacy/home/')) {
+            return cache.match(
+              './legacy/home/index.html',
               { ignoreSearch: true }
             );
           }

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
-  <link rel="stylesheet" href="./reader.css?cache=mobile-file-fix-2">
+  <link rel="stylesheet" href="./reader.css?cache=reading-controls-nav-2">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -28,6 +28,42 @@
     </div>
 
     <section class="reader-settings" aria-label="Reader settings">
+      <details class="settings-block reading-preferences" open>
+        <summary>
+          <span>
+            <strong>Lectura</strong>
+            <small id="readingSummary">16 px · inmersiva en móvil</small>
+          </span>
+          <span class="status-badge">Aa</span>
+        </summary>
+
+        <div class="settings-body">
+          <div class="reading-size-control">
+            <div class="reading-setting-head">
+              <label for="readingSize">Tamaño de letra</label>
+              <output id="readingSizeValue" for="readingSize">16 px</output>
+            </div>
+            <input id="readingSize" type="range" min="12" max="23" step="0.5" value="16">
+            <p id="readingPreview" class="reading-preview">
+              Así se verá el texto de tus historias antes de entrar a leer.
+            </p>
+          </div>
+
+          <label class="immersive-toggle" for="immersiveReading">
+            <input id="immersiveReading" type="checkbox">
+            <span>
+              <strong>Lectura inmersiva</strong>
+              <small>
+                Al tocar una historia intenta ocultar las barras del navegador y del sistema
+                usando pantalla completa. Puedes salir con Atrás o volviendo a Biblioteca.
+              </small>
+            </span>
+          </label>
+
+          <p id="immersiveStatus" class="settings-status"></p>
+        </div>
+      </details>
+
       <details id="cloudDetails" class="settings-block">
         <summary>
           <span>
@@ -139,6 +175,6 @@
     </article>
   </main>
 
-  <script type="module" src="./reader.js?cache=mobile-file-fix-2"></script>
+  <script type="module" src="./reader.js?cache=reading-controls-nav-2"></script>
 </body>
 </html>

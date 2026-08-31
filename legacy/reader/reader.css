@@ -11,6 +11,8 @@
   --reader-action:#888;
   --reader-action-dark:#666;
   --reader-accent:#5998D6;
+  --reading-font-size:16px;
+  --reading-line-height:1.68;
   --reading-font:"Lucida Sans Unicode","Lucida Sans","Lucida Grande",Arial,Helvetica,sans-serif;
   font-family:Arial,Helvetica,sans-serif;
 }
@@ -292,6 +294,61 @@ a:hover,a:focus{background:#5998D6;color:#111}
   font-size:13px;
 }
 
+
+.reading-preferences .settings-body{display:grid;gap:18px}
+.reading-size-control{display:grid;gap:10px}
+.reading-setting-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.reading-setting-head label{
+  color:#eee;
+  font-size:13px;
+  font-weight:700;
+}
+.reading-setting-head output{
+  min-width:52px;
+  color:#5998D6;
+  font-size:12px;
+  text-align:right;
+}
+#readingSize{
+  width:100%;
+  min-height:34px;
+  accent-color:#5998D6;
+}
+.reading-preview{
+  margin:2px 0 0;
+  padding:15px 16px;
+  border:1px solid #222;
+  background:#080808;
+  color:#ccc;
+  font-family:var(--reading-font);
+  font-size:var(--reading-font-size);
+  line-height:var(--reading-line-height);
+}
+.immersive-toggle{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:14px;
+  border:1px solid #222;
+  background:#050505;
+  cursor:pointer;
+}
+.immersive-toggle input{
+  flex:0 0 auto;
+  width:20px;
+  height:20px;
+  margin:1px 0 0;
+  accent-color:#5998D6;
+}
+.immersive-toggle span{display:grid;gap:4px}
+.immersive-toggle strong{color:#eee;font-size:13px}
+.immersive-toggle small{color:#777;font-size:12px;line-height:1.45}
+
 .reader-view{
   min-height:100vh;
   background:#000;
@@ -323,7 +380,10 @@ a:hover,a:focus{background:#5998D6;color:#111}
   color:#ccc!important;
 }
 .chapter-content{
-  font:400 18px/1.68 var(--reading-font);
+  font-family:var(--reading-font);
+  font-size:var(--reading-font-size);
+  font-weight:400;
+  line-height:var(--reading-line-height);
   overflow-wrap:anywhere;
 }
 .chapter-content p{margin:0 0 1.15em}
@@ -401,12 +461,12 @@ body:not(.is-reading) .reader-view{display:none}
   .sync-wide{grid-column:auto}
   .text-link{margin-left:0}
   .reading-column{padding-left:20px;padding-right:20px}
-  .chapter-content{font-size:18px;line-height:1.72}
+  .chapter-content{line-height:1.72}
   .chapter-actions{grid-template-columns:1fr 1fr}
   .chapter-actions #libraryBtn{grid-column:1/-1;grid-row:2}
 }
 @media(max-width:390px){
   .reading-column{padding-left:17px;padding-right:17px}
-  .chapter-content{font-size:17.5px}
+  .chapter-content{}
   .chapter-actions button{font-size:13px}
 }

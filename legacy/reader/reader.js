@@ -29,6 +29,10 @@ import {
 } from './reader-cloud.js?cache=cloud-sync-1';
 
 const SESSION_KEY = 'kaoru.archive-reader.session';
+const READING_PREFS_KEY = 'kaoru.archive-reader.reading-prefs';
+const DEFAULT_READING_SIZE = 16;
+const ENTRY_MODE = new URLSearchParams(location.search).get('entry');
+const READER_HISTORY_KEY = 'kaoruReaderView';
 
 const elements = {
   libraryView: document.getElementById('libraryView'),
@@ -64,13 +68,233 @@ const elements = {
   fontImportBtn: document.getElementById('fontImportBtn'),
   fontInput: document.getElementById('fontInput'),
   fontSummary: document.getElementById('fontSummary'),
-  fontStatus: document.getElementById('fontStatus')
+  fontStatus: document.getElementById('fontStatus'),
+  readingSummary: document.getElementById('readingSummary'),
+  readingSize: document.getElementById('readingSize'),
+  readingSizeValue: document.getElementById('readingSizeValue'),
+  readingPreview: document.getElementById('readingPreview'),
+  immersiveReading: document.getElementById('immersiveReading'),
+  immersiveStatus: document.getElementById('immersiveStatus')
 };
 
 let currentBook = null;
 let currentChapterIndex = 0;
 let saveTimer = 0;
 let restoreToken = 0;
+
+function clampReadingSize(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return DEFAULT_READING_SIZE;
+  return Math.max(12, Math.min(23, Math.round(numeric * 2) / 2));
+}
+
+function defaultImmersivePreference() {
+  try {
+    return window.matchMedia('(max-width: 800px)').matches;
+  } catch (_) {
+    return false;
+  }
+}
+
+function readReadingPreferences() {
+  try {
+    const parsed = JSON.parse(
+      localStorage.getItem(READING_PREFS_KEY) || 'null'
+    );
+
+    return {
+      fontSize: clampReadingSize(parsed?.fontSize ?? DEFAULT_READING_SIZE),
+      immersive:
+        typeof parsed?.immersive === 'boolean'
+          ? parsed.immersive
+          : defaultImmersivePreference()
+    };
+  } catch (_) {
+    return {
+      fontSize: DEFAULT_READING_SIZE,
+      immersive: defaultImmersivePreference()
+    };
+  }
+}
+
+function writeReadingPreferences(preferences) {
+  try {
+    localStorage.setItem(
+      READING_PREFS_KEY,
+      JSON.stringify(preferences)
+    );
+  } catch (_) {}
+}
+
+let readingPreferences = readReadingPreferences();
+
+function refreshReadingPreferencesUi() {
+  const size = clampReadingSize(readingPreferences.fontSize);
+  readingPreferences.fontSize = size;
+
+  document.documentElement.style.setProperty(
+    '--reading-font-size',
+    `${size}px`
+  );
+
+  if (elements.readingSize) {
+    elements.readingSize.value = String(size);
+  }
+
+  if (elements.readingSizeValue) {
+    elements.readingSizeValue.textContent = `${size}px`;
+  }
+
+  if (elements.immersiveReading) {
+    elements.immersiveReading.checked = Boolean(
+      readingPreferences.immersive
+    );
+  }
+
+  if (elements.readingSummary) {
+    elements.readingSummary.textContent =
+      `${size}px · ${readingPreferences.immersive ? 'inmersiva' : 'normal'}`;
+  }
+}
+
+function saveReadingPreferences() {
+  readingPreferences = {
+    fontSize: clampReadingSize(readingPreferences.fontSize),
+    immersive: Boolean(readingPreferences.immersive)
+  };
+
+  writeReadingPreferences(readingPreferences);
+  refreshReadingPreferencesUi();
+}
+
+function fullscreenDocument() {
+  try {
+    if (
+      window.top &&
+      window.top !== window &&
+      window.top.document
+    ) {
+      return window.top.document;
+    }
+  } catch (_) {}
+
+  return document;
+}
+
+function isFullscreenActive() {
+  const doc = fullscreenDocument();
+
+  return Boolean(
+    doc.fullscreenElement ||
+    doc.webkitFullscreenElement
+  );
+}
+
+async function enterImmersiveMode() {
+  if (!readingPreferences.immersive || isFullscreenActive()) {
+    return;
+  }
+
+  const doc = fullscreenDocument();
+  const target = doc.documentElement;
+  const request =
+    target.requestFullscreen ||
+    target.webkitRequestFullscreen;
+
+  if (typeof request !== 'function') {
+    if (elements.immersiveStatus) {
+      elements.immersiveStatus.textContent =
+        'Este navegador no permite pantalla completa desde Kaoru Reader. Al deslizar, el navegador todavía puede ocultar parte de sus barras.';
+    }
+    return;
+  }
+
+  try {
+    await request.call(
+      target,
+      { navigationUI: 'hide' }
+    );
+
+    if (elements.immersiveStatus) {
+      elements.immersiveStatus.textContent =
+        'Lectura inmersiva activa.';
+    }
+  } catch (error) {
+    console.warn('Fullscreen no disponible', error);
+
+    if (elements.immersiveStatus) {
+      elements.immersiveStatus.textContent =
+        'El teléfono no permitió ocultar todas las barras. La lectura seguirá funcionando normalmente.';
+    }
+  }
+}
+
+async function exitImmersiveMode() {
+  const doc = fullscreenDocument();
+
+  if (!(
+    doc.fullscreenElement ||
+    doc.webkitFullscreenElement
+  )) {
+    return;
+  }
+
+  try {
+    if (typeof doc.exitFullscreen === 'function') {
+      await doc.exitFullscreen();
+    } else if (typeof doc.webkitExitFullscreen === 'function') {
+      doc.webkitExitFullscreen();
+    }
+  } catch (_) {}
+}
+
+function libraryHistoryUrl() {
+  return `${location.pathname}${location.search}`;
+}
+
+function readingHistoryUrl() {
+  return `${libraryHistoryUrl()}#reading`;
+}
+
+function ensureLibraryHistoryState() {
+  if (history.state?.[READER_HISTORY_KEY] === 'library') {
+    return;
+  }
+
+  try {
+    history.replaceState(
+      { [READER_HISTORY_KEY]: 'library' },
+      '',
+      libraryHistoryUrl()
+    );
+  } catch (_) {}
+}
+
+function pushReadingHistoryState() {
+  ensureLibraryHistoryState();
+
+  if (history.state?.[READER_HISTORY_KEY] === 'reader') {
+    return;
+  }
+
+  try {
+    history.pushState(
+      { [READER_HISTORY_KEY]: 'reader' },
+      '',
+      readingHistoryUrl()
+    );
+  } catch (_) {}
+}
+
+function openBookFromUserGesture(bookId, chapterIndex = 0, restore = true) {
+  pushReadingHistoryState();
+
+  if (readingPreferences.immersive) {
+    enterImmersiveMode();
+  }
+
+  openBook(bookId, chapterIndex, restore);
+}
 
 function setStatus(message) {
   elements.libraryStatus.textContent = message || '';
@@ -168,7 +392,11 @@ async function renderLibrary() {
     main.className = 'book-card-main';
     main.innerHTML = cardMarkup(book, progress);
     main.addEventListener('click', () => {
-      openBook(book.id, progress?.chapterIndex || 0, true);
+      openBookFromUserGesture(
+        book.id,
+        progress?.chapterIndex || 0,
+        true
+      );
     });
 
     const footer = document.createElement('div');
@@ -232,7 +460,7 @@ async function renderLibrary() {
     `;
 
     button.addEventListener('click', () => {
-      openBook(
+      openBookFromUserGesture(
         bestContinue.book.id,
         bestContinue.progress.chapterIndex || 0,
         true
@@ -246,19 +474,40 @@ async function renderLibrary() {
   }
 }
 
-async function showLibrary() {
+async function showLibrary(fromHistory = false) {
   await saveCurrentPosition(true);
+  await exitImmersiveMode();
   currentBook = null;
   document.body.classList.remove('is-reading');
   elements.readerView.hidden = true;
   elements.libraryView.hidden = false;
   writeSession({ view: 'library' });
+
+  if (!fromHistory) {
+    ensureLibraryHistoryState();
+  }
+
   window.scrollTo(0, 0);
   await renderLibrary();
 
   if (isCloudUnlocked()) {
     scheduleCloudSync(1500);
   }
+}
+
+async function returnToLibrary() {
+  await saveCurrentPosition(true);
+  await exitImmersiveMode();
+
+  if (
+    document.body.classList.contains('is-reading') &&
+    history.state?.[READER_HISTORY_KEY] === 'reader'
+  ) {
+    history.back();
+    return;
+  }
+
+  await showLibrary();
 }
 
 function readingAnchors() {
@@ -659,6 +908,32 @@ elements.fontInput.addEventListener('change', async () => {
   }
 });
 
+elements.readingSize?.addEventListener('input', () => {
+  readingPreferences.fontSize = clampReadingSize(
+    elements.readingSize.value
+  );
+
+  refreshReadingPreferencesUi();
+});
+
+elements.readingSize?.addEventListener('change', () => {
+  saveReadingPreferences();
+});
+
+elements.immersiveReading?.addEventListener('change', () => {
+  readingPreferences.immersive =
+    Boolean(elements.immersiveReading.checked);
+
+  saveReadingPreferences();
+
+  if (elements.immersiveStatus) {
+    elements.immersiveStatus.textContent =
+      readingPreferences.immersive
+        ? 'Se intentará activar pantalla completa cuando toques una historia.'
+        : 'Lectura inmersiva desactivada.';
+  }
+});
+
 elements.importBtn.addEventListener('click', () => {
   elements.epubInput.click();
 });
@@ -667,7 +942,7 @@ elements.epubInput.addEventListener('change', () => {
   importEpub(elements.epubInput.files?.[0]);
 });
 
-elements.libraryBtn.addEventListener('click', showLibrary);
+elements.libraryBtn.addEventListener('click', returnToLibrary);
 elements.prevChapterBtn.addEventListener('click', () => changeChapter(-1));
 elements.nextChapterBtn.addEventListener('click', () => changeChapter(1));
 
@@ -682,6 +957,12 @@ elements.leaveReaderBtn.addEventListener('click', () => {
     );
   } else {
     location.href = '../../index.html';
+  }
+});
+
+window.addEventListener('popstate', () => {
+  if (document.body.classList.contains('is-reading')) {
+    showLibrary(true);
   }
 });
 
@@ -731,6 +1012,16 @@ window.parent?.postMessage(
 );
 
 async function boot() {
+  refreshReadingPreferencesUi();
+  ensureLibraryHistoryState();
+
+  if (elements.immersiveStatus) {
+    elements.immersiveStatus.textContent =
+      readingPreferences.immersive
+        ? 'Se intentará activar pantalla completa cuando toques una historia.'
+        : 'Lectura inmersiva desactivada.';
+  }
+
   applySavedCloudUi();
 
   try {
@@ -747,6 +1038,11 @@ async function boot() {
 
   await renderLibrary();
 
+  if (ENTRY_MODE === 'library') {
+    writeSession({ view: 'library' });
+    return;
+  }
+
   const session = readSession();
 
   if (
@@ -754,6 +1050,8 @@ async function boot() {
     session.bookId
   ) {
     const progress = await getProgress(session.bookId);
+
+    pushReadingHistoryState();
 
     await openBook(
       session.bookId,

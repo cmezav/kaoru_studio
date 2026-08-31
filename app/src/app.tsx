@@ -96,7 +96,10 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   }
   navigate(id:StudioId,updateHash=true){
     const target=studios.find(s=>s.id===id);if(!target)return;
-    this.setState({active:id,frameSrc:target.src});
+    const nextSrc=id==='reader'
+      ? target.src+'&entry=library&visit='+Date.now()
+      : target.src;
+    this.setState({active:id,frameSrc:nextSrc});
     if(updateHash&&location.hash!==('#'+id))location.hash=id;
 
   }
@@ -153,7 +156,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
             h('div',{className:'shortcut-hint'},h('span',null,'Cambiar de Studio'),h('kbd',null,activeStudio.hotkey)),
             h('button',{className:'appbar-icon',title:'Opciones de Kaoru’s Studio'},h(Icon,{name:'dots'})))
         ),
-        h('div',{className:'frame-shell'},h('iframe',{ref:(el:any)=>this.frame=el,className:'studio-frame',src:this.state.frameSrc,title:activeStudio.name,onLoad:()=>this.onFrameLoad()}))
+        h('div',{className:'frame-shell'},h('iframe',{ref:(el:any)=>this.frame=el,className:'studio-frame',allowFullScreen:true,allow:'fullscreen',src:this.state.frameSrc,title:activeStudio.name,onLoad:()=>this.onFrameLoad()}))
       )
     );
   }
