@@ -34,13 +34,13 @@ function writeLibrary(records) {
 
 function envelopeForState(state, name) {
   const next = clone(state);
-  next.version = 6;
+  next.version = 7;
   next.project = {
     ...(next.project || {}),
     name: safeName(name || next.project?.name),
     updatedAt: new Date().toISOString()
   };
-  next.ui = { ...(next.ui || {}), phase: 6 };
+  next.ui = { ...(next.ui || {}), phase: 7 };
   return buildExportEnvelope(next);
 }
 
@@ -67,7 +67,7 @@ export function restoreProjectState(input) {
 
   if (payload?.schema === LIGHT_LAB_PROJECT_SCHEMA) {
     state = {
-      version: 6,
+      version: 7,
       project: clone(payload.project) || { id: null, name: 'Proyecto Light Lab', createdAt: null, updatedAt: null },
       selection: clone(payload.selection),
       description: payload.description || '',
@@ -78,7 +78,7 @@ export function restoreProjectState(input) {
       reference: clone(payload.reference) || { image: null, extractedColors: [], recentColors: [] },
       ui: {
         activePanel: 'category',
-        phase: 6,
+        phase: 7,
         selectedSwatchIndex: null,
         lastSamplePosition: null,
         paletteView: 'illuminated',
@@ -87,10 +87,10 @@ export function restoreProjectState(input) {
     };
   } else if (payload?.palette && payload?.lighting && payload?.selection) {
     state = clone(payload);
-    state.version = 6;
+    state.version = 7;
     state.ui = {
       activePanel: 'category',
-      phase: 6,
+      phase: 7,
       selectedSwatchIndex: null,
       lastSamplePosition: null,
       paletteView: 'illuminated',
@@ -120,7 +120,7 @@ export function restoreProjectState(input) {
     state.selection.previewMode = 'sphere';
   }
 
-  state.ui.phase = 6;
+  state.ui.phase = 7;
   state.ui.lastSamplePosition = null;
   return state;
 }
@@ -143,7 +143,7 @@ export function saveLocalPalette(state, name, id = null) {
   const now = Date.now();
   const record = {
     schema: LIBRARY_SCHEMA,
-    version: 6,
+    version: 7,
     id: previous?.id || uid(),
     name: safeName(name || previous?.name || state?.project?.name),
     favorite: Boolean(previous?.favorite),

@@ -93,8 +93,8 @@ function boot() {
     currentLocalId = localId;
     store.setState({
       ...state,
-      version: 6,
-      ui: { ...(state.ui || {}), phase: 6 }
+      version: 7,
+      ui: { ...(state.ui || {}), phase: 7 }
     });
     setProjectName(state.project?.name);
     renderLibrary();
