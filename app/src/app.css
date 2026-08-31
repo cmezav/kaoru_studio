@@ -24,3 +24,11 @@ html[data-theme=night]{--bg:#0e0c12;--surface:rgba(23,20,29,.92);--surface-solid
 .accent-indigo.is-active{color:#7657df}
 
 .accent-coral.is-active{color:#d94d7b}
+.accent-reader.is-active{color:#5998D6}
+@media(max-width:800px){
+  .kaoru-app.is-reader{display:block;background:#000}
+  .kaoru-app.is-reader .rail,.kaoru-app.is-reader .appbar{display:none}
+  .kaoru-app.is-reader .main-shell{display:block;height:100%;min-height:0}
+  .kaoru-app.is-reader .frame-shell{height:100%;padding:0;background:#000}
+  .kaoru-app.is-reader .studio-frame{height:100%;border:0;border-radius:0;box-shadow:none;background:#000}
+}

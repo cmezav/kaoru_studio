@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <title>Archive Reader</title>
+  <link rel="stylesheet" href="./reader.css?cache=archive-reader">
+</head>
+<body data-studio="reader">
+  <main id="libraryView" class="library-view">
+    <header class="library-header">
+      <div>
+        <p class="eyebrow">ARCHIVE READER</p>
+        <h1>Biblioteca</h1>
+        <p class="library-subtitle">EPUB de AO3 guardados solo en este dispositivo.</p>
+      </div>
+      <div class="library-actions">
+        <button id="importBtn" type="button">Importar EPUB</button>
+        <button id="leaveReaderBtn" class="secondary-action" type="button">Kaoru's Studio</button>
+      </div>
+      <input id="epubInput" type="file" accept=".epub,application/epub+zip" hidden>
+    </header>
+
+    <div id="storageNotice" class="notice">
+      El libro y tu progreso se guardan localmente. No se suben a GitHub.
+    </div>
+
+    <section id="continueSection" class="continue-section" hidden>
+      <h2>Continuar leyendo</h2>
+      <div id="continueCard"></div>
+    </section>
+
+    <section class="books-section">
+      <div class="section-heading">
+        <h2>Mis obras</h2>
+        <span id="bookCount">0</span>
+      </div>
+      <div id="libraryList" class="library-list"></div>
+      <div id="emptyLibrary" class="empty-library">
+        <strong>Aún no hay obras guardadas.</strong>
+        <span>Descarga un EPUB desde AO3 e impórtalo aquí.</span>
+      </div>
+    </section>
+
+    <p id="libraryStatus" class="library-status" role="status"></p>
+  </main>
+
+  <main id="readerView" class="reader-view" hidden>
+    <article id="readingColumn" class="reading-column">
+      <header class="chapter-heading">
+        <p id="workLine" class="work-line"></p>
+        <h1 id="chapterTitle"></h1>
+      </header>
+
+      <section id="chapterContent" class="chapter-content userstuff"></section>
+
+      <footer class="chapter-footer">
+        <p id="chapterPosition" class="chapter-position"></p>
+        <div class="chapter-actions">
+          <button id="prevChapterBtn" type="button">← Previous Chapter</button>
+          <button id="libraryBtn" type="button">Library</button>
+          <button id="nextChapterBtn" type="button">Next Chapter →</button>
+        </div>
+      </footer>
+    </article>
+  </main>
+
+  <script type="module" src="./reader.js?cache=archive-reader"></script>
+</body>
+</html>
