@@ -1,7 +1,8 @@
 const DB_NAME = 'kaoru.archive-reader';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const BOOK_STORE = 'books';
 const PROGRESS_STORE = 'progress';
+const ASSET_STORE = 'assets';
 
 function requestPromise(request) {
   return new Promise((resolve, reject) => {
@@ -36,6 +37,10 @@ export function openReaderDb() {
 
       if (!db.objectStoreNames.contains(PROGRESS_STORE)) {
         db.createObjectStore(PROGRESS_STORE, { keyPath: 'bookId' });
+      }
+
+      if (!db.objectStoreNames.contains(ASSET_STORE)) {
+        db.createObjectStore(ASSET_STORE, { keyPath: 'id' });
       }
     };
 
@@ -91,4 +96,37 @@ export async function putProgress(progress) {
   tx.objectStore(PROGRESS_STORE).put(progress);
   await txPromise(tx);
   return progress;
+}
+
+export async function listProgress() {
+  const db = await openReaderDb();
+  const tx = db.transaction(PROGRESS_STORE, 'readonly');
+  return (await requestPromise(tx.objectStore(PROGRESS_STORE).getAll())) || [];
+}
+
+export async function putAsset(asset) {
+  const db = await openReaderDb();
+  const tx = db.transaction(ASSET_STORE, 'readwrite');
+  tx.objectStore(ASSET_STORE).put(asset);
+  await txPromise(tx);
+  return asset;
+}
+
+export async function getAsset(id) {
+  const db = await openReaderDb();
+  const tx = db.transaction(ASSET_STORE, 'readonly');
+  return requestPromise(tx.objectStore(ASSET_STORE).get(id));
+}
+
+export async function listAssets() {
+  const db = await openReaderDb();
+  const tx = db.transaction(ASSET_STORE, 'readonly');
+  return (await requestPromise(tx.objectStore(ASSET_STORE).getAll())) || [];
+}
+
+export async function deleteAsset(id) {
+  const db = await openReaderDb();
+  const tx = db.transaction(ASSET_STORE, 'readwrite');
+  tx.objectStore(ASSET_STORE).delete(id);
+  await txPromise(tx);
 }

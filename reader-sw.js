@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-2';
+const CACHE_NAME = 'kaoru-archive-reader-shell-3';
 
 const CORE = [
   './',
@@ -12,7 +12,9 @@ const CORE = [
   './legacy/reader/reader.css',
   './legacy/reader/reader.js',
   './legacy/reader/reader-db.js',
-  './legacy/reader/epub-parser.js'
+  './legacy/reader/epub-parser.js',
+  './legacy/reader/reader-cloud.js',
+  './legacy/reader/reader-font.js'
 ];
 
 self.addEventListener('install', (event) => {

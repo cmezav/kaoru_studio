@@ -5,11 +5,28 @@ import {
   deleteBook,
   getProgress,
   putProgress
-} from './reader-db.js?cache=archive-reader';
+} from './reader-db.js?cache=cloud-sync-1';
 
 import {
   parseEpub
 } from './epub-parser.js?cache=archive-reader';
+
+import {
+  importReadingFont,
+  loadSavedReadingFont
+} from './reader-font.js?cache=cloud-sync-1';
+
+import {
+  setCloudStatusListener,
+  getSavedCloudConfig,
+  isCloudUnlocked,
+  connectCloud,
+  unlockSavedCloud,
+  lockCloud,
+  syncCloud,
+  scheduleCloudSync,
+  deleteBookEverywhere
+} from './reader-cloud.js?cache=cloud-sync-1';
 
 const SESSION_KEY = 'kaoru.archive-reader.session';
 
@@ -32,7 +49,22 @@ const elements = {
   chapterPosition: document.getElementById('chapterPosition'),
   prevChapterBtn: document.getElementById('prevChapterBtn'),
   nextChapterBtn: document.getElementById('nextChapterBtn'),
-  libraryBtn: document.getElementById('libraryBtn')
+  libraryBtn: document.getElementById('libraryBtn'),
+  cloudDetails: document.getElementById('cloudDetails'),
+  cloudSummary: document.getElementById('cloudSummary'),
+  cloudBadge: document.getElementById('cloudBadge'),
+  cloudOwner: document.getElementById('cloudOwner'),
+  cloudRepo: document.getElementById('cloudRepo'),
+  cloudToken: document.getElementById('cloudToken'),
+  cloudPassword: document.getElementById('cloudPassword'),
+  cloudConnectBtn: document.getElementById('cloudConnectBtn'),
+  cloudSyncBtn: document.getElementById('cloudSyncBtn'),
+  cloudLockBtn: document.getElementById('cloudLockBtn'),
+  cloudStatus: document.getElementById('cloudStatus'),
+  fontImportBtn: document.getElementById('fontImportBtn'),
+  fontInput: document.getElementById('fontInput'),
+  fontSummary: document.getElementById('fontSummary'),
+  fontStatus: document.getElementById('fontStatus')
 };
 
 let currentBook = null;
@@ -149,8 +181,28 @@ async function renderLibrary() {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'delete-book';
-    remove.textContent = 'Eliminar';
+    remove.textContent = isCloudUnlocked()
+      ? 'Eliminar de todos'
+      : 'Eliminar';
+
     remove.addEventListener('click', async () => {
+      if (isCloudUnlocked()) {
+        if (!confirm(`¿Eliminar "${book.title}" de la nube y de todos tus dispositivos?`)) {
+          return;
+        }
+
+        try {
+          elements.cloudStatus.textContent = 'Eliminando de la nube…';
+          await deleteBookEverywhere(book.id);
+          await renderLibrary();
+          return;
+        } catch (error) {
+          elements.cloudStatus.textContent =
+            error?.message || 'No se pudo eliminar de la nube.';
+          return;
+        }
+      }
+
       if (!confirm(`¿Eliminar "${book.title}" de este dispositivo?`)) return;
 
       await deleteBook(book.id);
@@ -194,15 +246,19 @@ async function renderLibrary() {
   }
 }
 
-function showLibrary() {
-  saveCurrentPosition(true);
+async function showLibrary() {
+  await saveCurrentPosition(true);
   currentBook = null;
   document.body.classList.remove('is-reading');
   elements.readerView.hidden = true;
   elements.libraryView.hidden = false;
   writeSession({ view: 'library' });
   window.scrollTo(0, 0);
-  renderLibrary();
+  await renderLibrary();
+
+  if (isCloudUnlocked()) {
+    scheduleCloudSync(1500);
+  }
 }
 
 function readingAnchors() {
@@ -264,6 +320,10 @@ async function saveCurrentPosition(immediate = false) {
         ratio: currentRatio(),
         updatedAt: Date.now()
       });
+
+      if (isCloudUnlocked()) {
+        scheduleCloudSync(120000);
+      }
     } catch (_) {}
   };
 
@@ -375,7 +435,7 @@ async function openBook(bookId, chapterIndex = 0, restore = true) {
   const book = await getBook(bookId);
 
   if (!book) {
-    showLibrary();
+    await showLibrary();
     return;
   }
 
@@ -406,6 +466,10 @@ async function changeChapter(delta) {
 
   currentChapterIndex = next;
   await renderChapter(false);
+
+  if (isCloudUnlocked()) {
+    scheduleCloudSync(1500);
+  }
 }
 
 async function importEpub(file) {
@@ -423,9 +487,15 @@ async function importEpub(file) {
       book.lastOpenedAt = previous.lastOpenedAt || 0;
     }
 
+    book.contentUpdatedAt = Date.now();
+
     await putBook(book);
     setStatus(`${book.title} guardado en este dispositivo.`);
     await renderLibrary();
+
+    if (isCloudUnlocked()) {
+      scheduleCloudSync(1000);
+    }
   } catch (error) {
     console.error(error);
     setStatus(
@@ -437,6 +507,157 @@ async function importEpub(file) {
     elements.epubInput.value = '';
   }
 }
+
+function applySavedCloudUi() {
+  const saved = getSavedCloudConfig();
+
+  if (!saved) return;
+
+  elements.cloudOwner.value = saved.owner || 'cmezav';
+  elements.cloudRepo.value = saved.repo || 'kaoru-reader-library';
+  elements.cloudSummary.textContent =
+    `${saved.owner}/${saved.repo} · bloqueado`;
+  elements.cloudBadge.textContent = 'Bloqueado';
+  elements.cloudStatus.textContent =
+    'Conexión guardada. Escribe tu clave de biblioteca para desbloquear; el token está cifrado localmente.';
+}
+
+async function doCloudSync() {
+  if (!isCloudUnlocked()) return;
+
+  elements.cloudSyncBtn.disabled = true;
+
+  try {
+    const result = await syncCloud();
+
+    if (result?.font?.changed) {
+      const asset = await loadSavedReadingFont();
+      if (asset) {
+        elements.fontSummary.textContent = asset.name || 'Lucida Sans';
+      }
+    }
+
+    await renderLibrary();
+  } catch (error) {
+    elements.cloudStatus.textContent =
+      error?.message || 'No se pudo sincronizar.';
+  } finally {
+    elements.cloudSyncBtn.disabled = !isCloudUnlocked();
+  }
+}
+
+setCloudStatusListener(async (event) => {
+  elements.cloudStatus.textContent = event.message || '';
+
+  if (event.connected) {
+    elements.cloudBadge.textContent = navigator.onLine ? 'Nube' : 'Offline';
+    elements.cloudBadge.classList.toggle('is-online', navigator.onLine);
+    elements.cloudSummary.textContent =
+      `${event.owner || elements.cloudOwner.value}/${event.repo || elements.cloudRepo.value}`;
+    elements.cloudSyncBtn.disabled = false;
+    elements.cloudLockBtn.disabled = false;
+    elements.cloudConnectBtn.textContent = 'Reconectar';
+  } else {
+    elements.cloudBadge.textContent =
+      event.type === 'offline' ? 'Offline' : 'Local';
+    elements.cloudBadge.classList.remove('is-online');
+    elements.cloudSyncBtn.disabled = true;
+    elements.cloudLockBtn.disabled = true;
+  }
+
+  if (event.fontChanged) {
+    try {
+      const asset = await loadSavedReadingFont();
+
+      if (asset) {
+        elements.fontSummary.textContent = asset.name || 'Lucida Sans';
+      }
+    } catch (_) {}
+  }
+});
+
+elements.cloudConnectBtn.addEventListener('click', async () => {
+  const owner = elements.cloudOwner.value.trim();
+  const repo = elements.cloudRepo.value.trim();
+  const token = elements.cloudToken.value.trim();
+  const password = elements.cloudPassword.value;
+  const saved = getSavedCloudConfig();
+
+  elements.cloudConnectBtn.disabled = true;
+  elements.cloudStatus.textContent = 'Conectando…';
+
+  try {
+    if (
+      !token &&
+      saved &&
+      saved.owner === owner &&
+      saved.repo === repo
+    ) {
+      await unlockSavedCloud(password);
+    } else {
+      await connectCloud({
+        owner,
+        repo,
+        token,
+        password
+      });
+    }
+
+    elements.cloudToken.value = '';
+    await doCloudSync();
+  } catch (error) {
+    elements.cloudStatus.textContent =
+      error?.message || 'No se pudo conectar.';
+  } finally {
+    elements.cloudConnectBtn.disabled = false;
+  }
+});
+
+elements.cloudSyncBtn.addEventListener('click', doCloudSync);
+
+elements.cloudLockBtn.addEventListener('click', () => {
+  lockCloud();
+  elements.cloudPassword.value = '';
+  elements.cloudSummary.textContent =
+    `${elements.cloudOwner.value}/${elements.cloudRepo.value} · bloqueado`;
+  elements.cloudBadge.textContent = 'Bloqueado';
+  elements.cloudBadge.classList.remove('is-online');
+  elements.cloudConnectBtn.textContent = 'Desbloquear';
+  elements.cloudSyncBtn.disabled = true;
+  elements.cloudLockBtn.disabled = true;
+  renderLibrary();
+});
+
+elements.fontImportBtn.addEventListener('click', () => {
+  elements.fontInput.click();
+});
+
+elements.fontInput.addEventListener('change', async () => {
+  const file = elements.fontInput.files?.[0];
+
+  if (!file) return;
+
+  elements.fontImportBtn.disabled = true;
+  elements.fontStatus.textContent = 'Importando tipografía…';
+
+  try {
+    const asset = await importReadingFont(file);
+
+    elements.fontSummary.textContent = asset.name || 'Lucida Sans';
+    elements.fontStatus.textContent =
+      `${asset.name} lista para leer offline.`;
+
+    if (isCloudUnlocked()) {
+      scheduleCloudSync(1000);
+    }
+  } catch (error) {
+    elements.fontStatus.textContent =
+      error?.message || 'No se pudo importar la fuente.';
+  } finally {
+    elements.fontImportBtn.disabled = false;
+    elements.fontInput.value = '';
+  }
+});
 
 elements.importBtn.addEventListener('click', () => {
   elements.epubInput.click();
@@ -470,11 +691,34 @@ window.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
-window.addEventListener('pagehide', () => {
-  saveCurrentPosition(true);
+window.addEventListener('online', () => {
+  elements.cloudBadge.classList.toggle('is-online', isCloudUnlocked());
+
+  if (isCloudUnlocked()) {
+    elements.cloudBadge.textContent = 'Nube';
+    scheduleCloudSync(1000);
+  }
 });
 
-window.addEventListener('beforeunload', () => {
+window.addEventListener('offline', () => {
+  if (isCloudUnlocked()) {
+    elements.cloudBadge.textContent = 'Offline';
+    elements.cloudBadge.classList.remove('is-online');
+    elements.cloudStatus.textContent =
+      'Sin conexión. Puedes seguir leyendo; se sincronizará cuando vuelva Internet.';
+  }
+});
+
+window.addEventListener('visibilitychange', () => {
+  if (
+    document.visibilityState === 'hidden' &&
+    isCloudUnlocked()
+  ) {
+    scheduleCloudSync(1000);
+  }
+});
+
+window.addEventListener('pagehide', () => {
   saveCurrentPosition(true);
 });
 
@@ -487,6 +731,20 @@ window.parent?.postMessage(
 );
 
 async function boot() {
+  applySavedCloudUi();
+
+  try {
+    const asset = await loadSavedReadingFont();
+
+    if (asset) {
+      elements.fontSummary.textContent = asset.name || 'Lucida Sans';
+      elements.fontStatus.textContent =
+        'Tipografía cargada desde este dispositivo.';
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
   await renderLibrary();
 
   const session = readSession();
