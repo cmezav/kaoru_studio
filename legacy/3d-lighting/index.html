@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio Fase 3</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=3.2">
+  <link rel="stylesheet" href="./styles.css?v=3.3">
 
   <script type="importmap">
   {
@@ -88,10 +88,10 @@
 
         <label class="scene-toggle">
           <span>
-            <strong>Aristas de planos</strong>
-            <small>Marca las divisiones anatomicas del rostro</small>
+            <strong>Aristas tecnicas</strong>
+            <small>Solo disponibles para el fallback; el GLB se muestra limpio</small>
           </span>
-          <input id="edgeToggle" type="checkbox" checked>
+          <input id="edgeToggle" type="checkbox">
         </label>
 
         <label class="scene-toggle">
@@ -154,7 +154,7 @@
           <span>Mouse: orbitar</span>
           <span>Rueda: zoom</span>
           <span>Click derecho: pan</span>
-          <span>Aristas: configurables</span>
+          <span>GLB: superficie limpia</span>
         </div>
       </div>
 
@@ -252,6 +252,6 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?v=3.2"></script>
+  <script type="module" src="./js/main.js?v=3.3"></script>
 </body>
 </html>

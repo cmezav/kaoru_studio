@@ -1,6 +1,6 @@
-import { create3dStore } from './state.js?v=3.2';
-import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=3.2';
-import { detectWebGL, create3dScene } from './scene3d.js?v=3.2';
+import { create3dStore } from './state.js?v=3.3';
+import { MODEL_REGISTRY, modelById } from './modelRegistry.js?v=3.3';
+import { detectWebGL, create3dScene } from './scene3d.js?v=3.3';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -98,8 +98,11 @@ function renderState(state) {
 
   elements.gridToggle.checked = state.scene.gridVisible;
   elements.shadowToggle.checked = state.scene.shadowsEnabled;
-  elements.edgeToggle.checked = state.scene.edgesVisible;
-  elements.edgeToggle.disabled = state.selectedModel !== 'asaro';
+
+  const modelInfo = engine?.getModelInfo?.();
+  const cleanGlb = state.selectedModel === 'asaro' && modelInfo?.source === 'glb';
+  elements.edgeToggle.checked = cleanGlb ? false : state.scene.edgesVisible;
+  elements.edgeToggle.disabled = state.selectedModel !== 'asaro' || cleanGlb;
 
   renderCards(state);
 }

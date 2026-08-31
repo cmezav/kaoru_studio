@@ -3,7 +3,7 @@ import { createAsaroHead } from './asaroHead.js?v=3.1';
 
 export const SCENE3D_PHASE = 3;
 
-const ASARO_GLB_URL = new URL('../assets/models/head_planes_reference.glb?v=3.2', import.meta.url).href;
+const ASARO_GLB_URL = new URL('../assets/models/head_planes_reference.glb?v=3.3', import.meta.url).href;
 
 export function detectWebGL() {
   try {
@@ -67,12 +67,6 @@ async function createAsaroFromGlb(THREE, color) {
   });
   colorMaterial.userData.subjectColor = true;
 
-  const edgeMaterial = new THREE.LineBasicMaterial({
-    color: 0x261c22,
-    transparent: true,
-    opacity: 0.36,
-    depthTest: true
-  });
 
   let meshCount = 0;
 
@@ -84,13 +78,7 @@ async function createAsaroFromGlb(THREE, color) {
     object.receiveShadow = true;
     object.material = colorMaterial;
 
-    if (object.geometry) {
-      const edgeGeometry = new THREE.EdgesGeometry(object.geometry, 16);
-      const lines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-      lines.name = `${object.name || 'mesh'}-edge`;
-      lines.renderOrder = 4;
-      object.add(lines);
-    }
+
   });
 
   fitObjectToView(THREE, root, -1.05, 3.2);
@@ -103,15 +91,11 @@ async function createAsaroFromGlb(THREE, color) {
     root: container,
     planeCount: 0,
     edgeRoot,
-    materials: [colorMaterial, edgeMaterial],
+    materials: [colorMaterial],
     colorMaterials: [colorMaterial],
     source: 'glb',
-    setEdgesVisible(visible) {
-      root.traverse((object) => {
-        if (object.type === 'LineSegments') {
-          object.visible = Boolean(visible);
-        }
-      });
+    setEdgesVisible() {
+      // GLB de alta densidad: no dibujar triangulacion interna.
     }
   };
 }

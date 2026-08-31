@@ -21,7 +21,7 @@ export function createInitial3dState() {
     scene: {
       gridVisible: true,
       shadowsEnabled: true,
-      edgesVisible: true
+      edgesVisible: false
     },
     lighting: {
       enabled: true,
