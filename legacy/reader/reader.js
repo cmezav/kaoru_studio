@@ -1148,50 +1148,7 @@ elements.nextChapterBtn?.addEventListener('click', (event) => {
   });
 });
 
-/*
-  Respaldo táctil móvil. Algunos WebViews retrasan o pierden click,
-  por eso pointerup ejecuta la misma acción cuando el toque es real.
-*/
-function bindReaderPointerAction(element, action) {
-  if (!element) return;
 
-  let lastPointerAction = 0;
-
-  element.addEventListener('pointerup', (event) => {
-    if (
-      event.pointerType !== 'touch' &&
-      event.pointerType !== 'pen'
-    ) {
-      return;
-    }
-
-    const now = Date.now();
-
-    if (now - lastPointerAction < 500) {
-      return;
-    }
-
-    lastPointerAction = now;
-    event.preventDefault();
-    event.stopPropagation();
-    action();
-  });
-}
-
-bindReaderPointerAction(
-  elements.libraryBtn,
-  () => returnToLibrary()
-);
-
-bindReaderPointerAction(
-  elements.prevChapterBtn,
-  () => changeChapter(-1)
-);
-
-bindReaderPointerAction(
-  elements.nextChapterBtn,
-  () => changeChapter(1)
-);
 elements.leaveReaderBtn.addEventListener('click', () => {
   if (window.parent && window.parent !== window) {
     window.parent.postMessage(
@@ -1287,7 +1244,10 @@ async function boot() {
 
   await renderLibrary();
 
-  if (ENTRY_MODE === 'library') {
+  if (
+    ENTRY_MODE === 'library' &&
+    location.hash !== '#reading'
+  ) {
     writeSession({ view: 'library' });
     return;
   }

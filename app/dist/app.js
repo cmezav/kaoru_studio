@@ -37,7 +37,17 @@ catch (_) {
     return 'day';
 } }
 function hashStudio() { const v = location.hash.replace('#', ''); return studios.some(s => s.id === v) ? v : 'home'; }
-class Logo extends React.Component {
+function shouldOpenReaderStandalone() {
+    try {
+        return window.matchMedia('(max-width: 800px)').matches;
+    }
+    catch (_) {
+        return false;
+    }
+}
+function readerStandaloneUrl() {
+    return './legacy/reader/index.html?entry=library&standalone=1&visit=' + Date.now();
+}class Logo extends React.Component {
     constructor(props) { super(props); this.state = { failed: false }; }
     render() {
         return h('div', { className: 'brand-logo-wrap' }, !this.state.failed && h('img', { className: 'brand-logo', src: './logo.png', alt: "Kaoru's Studio", onError: () => this.setState({ failed: true }) }), this.state.failed && h('div', { className: 'brand-logo-fallback', 'aria-label': "Kaoru's Studio" }, 'K'));
@@ -55,6 +65,10 @@ class App extends React.Component {
         this.onHashBound = this.onHash.bind(this);
     }
     componentDidMount() {
+        if (this.state.active === 'reader' && shouldOpenReaderStandalone()) {
+            window.location.assign(readerStandaloneUrl());
+            return;
+        }
         window.addEventListener('keydown', this.onKeyBound);
         window.addEventListener('message', this.onMessageBound);
         window.addEventListener('hashchange', this.onHashBound);
@@ -104,10 +118,18 @@ class App extends React.Component {
         const target = studios.find(s => s.id === id);
         if (!target)
             return;
+
+        if (id === 'reader' && shouldOpenReaderStandalone()) {
+            window.location.assign(readerStandaloneUrl());
+            return;
+        }
+
         const nextSrc = id === 'reader'
             ? target.src + '&entry=library&visit=' + Date.now()
             : target.src;
+
         this.setState({ active: id, frameSrc: nextSrc });
+
         if (updateHash && location.hash !== ('#' + id))
             location.hash = id;
     }

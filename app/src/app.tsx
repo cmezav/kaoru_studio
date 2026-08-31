@@ -43,6 +43,17 @@ const studios:Studio[]=[
 function readTheme():Theme{try{return localStorage.getItem(THEME_KEY)==='night'?'night':'day'}catch(_){return'day'}}
 function hashStudio():StudioId{const v=location.hash.replace('#','') as StudioId;return studios.some(s=>s.id===v)?v:'home'}
 
+function shouldOpenReaderStandalone(){
+  try{
+    return window.matchMedia('(max-width: 800px)').matches;
+  }catch(_){
+    return false;
+  }
+}
+
+function readerStandaloneUrl(){
+  return './legacy/reader/index.html?entry=library&standalone=1&visit='+Date.now();
+}
 class Logo extends React.Component<any,{failed:boolean}>{
   constructor(props:any){super(props);this.state={failed:false}}
   render(){return h('div',{className:'brand-logo-wrap'},
@@ -66,6 +77,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
     this.onHashBound=this.onHash.bind(this);
   }
   componentDidMount(){
+    if(this.state.active==='reader'&&shouldOpenReaderStandalone()){window.location.assign(readerStandaloneUrl());return;}
     window.addEventListener('keydown',this.onKeyBound);
     window.addEventListener('message',this.onMessageBound);
     window.addEventListener('hashchange',this.onHashBound);
@@ -96,12 +108,21 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   }
   navigate(id:StudioId,updateHash=true){
     const target=studios.find(s=>s.id===id);if(!target)return;
+
+    if(id==='reader'&&shouldOpenReaderStandalone()){
+      window.location.assign(readerStandaloneUrl());
+      return;
+    }
+
     const nextSrc=id==='reader'
       ? target.src+'&entry=library&visit='+Date.now()
       : target.src;
-    this.setState({active:id,frameSrc:nextSrc});
-    if(updateHash&&location.hash!==('#'+id))location.hash=id;
 
+    this.setState({active:id,frameSrc:nextSrc});
+
+    if(updateHash&&location.hash!==('#'+id)){
+      location.hash=id;
+    }
   }
   onFrameLoad(){
     try{
