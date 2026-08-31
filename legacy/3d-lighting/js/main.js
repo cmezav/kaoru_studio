@@ -6,7 +6,7 @@ import {
 import {
   detectWebGL,
   create3dScene
-} from './scene3d.js?v=6.4';
+} from './scene3d.js?v=6.5';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,

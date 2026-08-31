@@ -5,7 +5,7 @@ import { createHumanModel } from './humanModel.js?v=4.1';
 import { createLightingRig } from './lighting3d.js?v=5.1';
 import { applyPaletteToMaterials } from './paletteBridge3d.js?v=6.0';
 import { createCustomModel } from './customModel.js?v=6.0';
-import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=male-body-only';
+import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=male-body-fbx';
 
 export const SCENE3D_PHASE = 6;
 
@@ -20,10 +20,10 @@ const ASARO_ALT_MODEL_URL = new URL(
 const ASARO_ALT_MODEL_FORMAT = 'glb';
 
 const MALE_BASE_MODEL_URL = new URL(
-  '../assets/models/male-base-mesh.obj?cache=models-extra',
+  '../assets/models/male-base-mesh.fbx?cache=male-body-fbx',
   import.meta.url
 ).href;
-const MALE_BASE_MODEL_FORMAT = 'obj';
+const MALE_BASE_MODEL_FORMAT = 'fbx';
 
 export function detectWebGL() {
   try {
