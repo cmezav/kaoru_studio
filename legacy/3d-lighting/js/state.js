@@ -1,10 +1,11 @@
-export const THREE_STUDIO_STATE_VERSION = 5;
+export const THREE_STUDIO_STATE_VERSION = 6;
 
 export function createInitial3dState() {
   return {
     version: THREE_STUDIO_STATE_VERSION,
-    phase: 5,
+    phase: 6,
     selectedModel: 'asaro',
+    customModel: null,
     baseColor: '#C98E78',
     engine: {
       status: 'loading',
@@ -27,7 +28,9 @@ export function createInitial3dState() {
       paletteBridgeReady: true,
       paletteSlots: 16,
       paletteMode: 'base-only',
-      palette: []
+      palette: [],
+      sourcePalette: null,
+      syncLighting: true
     },
     lighting: {
       enabled: true,
@@ -76,6 +79,7 @@ export function createInitial3dState() {
     },
     project: {
       id: null,
+      galleryId: null,
       name: 'Proyecto 3D Lighting',
       createdAt: null,
       updatedAt: null

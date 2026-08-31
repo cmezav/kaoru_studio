@@ -3,8 +3,10 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createAsaroHead } from './asaroHead.js?v=3.1';
 import { createHumanModel } from './humanModel.js?v=4.1';
 import { createLightingRig } from './lighting3d.js?v=5.1';
+import { applyPaletteToMaterials } from './paletteBridge3d.js?v=6.0';
+import { createCustomModel } from './customModel.js?v=6.0';
 
-export const SCENE3D_PHASE = 5;
+export const SCENE3D_PHASE = 6;
 
 const ASARO_GLB_URL = new URL(
   '../assets/models/head_planes_reference.glb?v=3.3',
@@ -14,6 +16,7 @@ const ASARO_GLB_URL = new URL(
 export function detectWebGL() {
   try {
     const canvas = document.createElement('canvas');
+
     return Boolean(
       canvas.getContext('webgl2') ||
       canvas.getContext('webgl') ||
@@ -30,11 +33,19 @@ function loadGltf(loader, url) {
   });
 }
 
-function fitObjectToView(THREE, object, floorY = -1.05, targetHeight = 3.2) {
+function fitObjectToView(
+  THREE,
+  object,
+  floorY = -1.05,
+  targetHeight = 3.2
+) {
   const box = new THREE.Box3().setFromObject(object);
   const size = box.getSize(new THREE.Vector3());
 
-  const scale = size.y > 0 ? targetHeight / size.y : 1;
+  const scale = size.y > 0
+    ? targetHeight / size.y
+    : 1;
+
   object.scale.setScalar(scale);
   object.updateMatrixWorld(true);
 
@@ -56,7 +67,9 @@ async function createAsaroFromGlb(THREE, color) {
   const source = gltf.scene || gltf.scenes?.[0];
 
   if (!source) {
-    throw new Error('El GLB no contiene una escena utilizable.');
+    throw new Error(
+      'El GLB no contiene una escena utilizable.'
+    );
   }
 
   const container = new THREE.Group();
@@ -69,10 +82,12 @@ async function createAsaroFromGlb(THREE, color) {
     metalness: 0.0,
     side: THREE.DoubleSide
   });
+
   colorMaterial.userData.subjectColor = true;
 
   source.traverse((object) => {
     if (!object.isMesh) return;
+
     object.castShadow = true;
     object.receiveShadow = true;
     object.material = colorMaterial;
@@ -91,20 +106,32 @@ async function createAsaroFromGlb(THREE, color) {
   };
 }
 
-export async function create3dScene(canvas, options = {}) {
-  if (!canvas) throw new Error('No se encontro el canvas 3D.');
+export async function create3dScene(
+  canvas,
+  options = {}
+) {
+  if (!canvas) {
+    throw new Error('No se encontro el canvas 3D.');
+  }
 
   const THREE = await import('three');
-  const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+  const {
+    OrbitControls
+  } = await import(
+    'three/addons/controls/OrbitControls.js'
+  );
 
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
     alpha: false,
-    powerPreference: 'high-performance'
+    powerPreference: 'high-performance',
+    preserveDrawingBuffer: true
   });
 
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio || 1, 2)
+  );
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
@@ -115,10 +142,20 @@ export async function create3dScene(canvas, options = {}) {
   scene.background = new THREE.Color(0x15121a);
   scene.fog = new THREE.Fog(0x15121a, 12, 30);
 
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100);
+  const camera = new THREE.PerspectiveCamera(
+    38,
+    1,
+    0.05,
+    100
+  );
+
   camera.position.set(4.3, 2.8, 6.5);
 
-  const controls = new OrbitControls(camera, canvas);
+  const controls = new OrbitControls(
+    camera,
+    canvas
+  );
+
   controls.enableDamping = true;
   controls.dampingFactor = 0.075;
   controls.rotateSpeed = 0.68;
@@ -149,12 +186,19 @@ export async function create3dScene(canvas, options = {}) {
     new THREE.PlaneGeometry(22, 22),
     floorMaterial
   );
+
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.45;
   floor.receiveShadow = true;
   scene.add(floor);
 
-  const grid = new THREE.GridHelper(22, 44, 0x746586, 0x3d3546);
+  const grid = new THREE.GridHelper(
+    22,
+    44,
+    0x746586,
+    0x3d3546
+  );
+
   grid.position.y = -1.437;
   grid.material.transparent = true;
   grid.material.opacity = 0.33;
@@ -172,19 +216,32 @@ export async function create3dScene(canvas, options = {}) {
   let currentLoadError = null;
   let currentMorphCount = 0;
   let currentBounds = null;
+  let currentMaterialState =
+    options.material || {
+      paletteMode: 'base-only',
+      palette: []
+    };
+
   let loadVersion = 0;
   let disposed = false;
 
   function clearSubject() {
     subjectRoot.traverse((object) => {
-      if (object.geometry) object.geometry.dispose?.();
+      if (object.geometry) {
+        object.geometry.dispose?.();
+      }
     });
 
     while (subjectRoot.children.length) {
-      subjectRoot.remove(subjectRoot.children[0]);
+      subjectRoot.remove(
+        subjectRoot.children[0]
+      );
     }
 
-    subjectMaterials.forEach((material) => material.dispose?.());
+    subjectMaterials.forEach((material) => {
+      material.dispose?.();
+    });
+
     subjectMaterials = [];
     currentAsset = null;
     currentSource = 'none';
@@ -199,11 +256,20 @@ export async function create3dScene(canvas, options = {}) {
     currentMorphCount = asset.morphCount || 0;
     currentBounds = asset.bounds || null;
 
-    (asset.materials || []).forEach((material) => {
-      subjectMaterials.push(material);
-    });
+    (asset.materials || []).forEach(
+      (material) => {
+        subjectMaterials.push(material);
+      }
+    );
 
     subjectRoot.add(asset.root);
+
+    applyPaletteToMaterials(
+      THREE,
+      asset.colorMaterials ||
+        subjectMaterials,
+      currentMaterialState
+    );
   }
 
   function setBaseColor(color) {
@@ -212,6 +278,20 @@ export async function create3dScene(canvas, options = {}) {
         material.color.set(color);
       }
     });
+  }
+
+  function applyMaterialState(materialState) {
+    currentMaterialState = {
+      ...currentMaterialState,
+      ...(materialState || {})
+    };
+
+    applyPaletteToMaterials(
+      THREE,
+      currentAsset?.colorMaterials ||
+        subjectMaterials,
+      currentMaterialState
+    );
   }
 
   function setGridVisible(visible) {
@@ -234,54 +314,117 @@ export async function create3dScene(canvas, options = {}) {
     });
   }
 
-  function humanFrame(kind, preset = 'three-quarter') {
-    const box = currentBounds || new THREE.Box3().setFromObject(subjectRoot);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
+  function genericFrame(
+    kind,
+    preset = 'three-quarter'
+  ) {
+    const box =
+      currentBounds ||
+      new THREE.Box3().setFromObject(
+        subjectRoot
+      );
+
+    const size = box.getSize(
+      new THREE.Vector3()
+    );
+    const center = box.getCenter(
+      new THREE.Vector3()
+    );
     const height = Math.max(size.y, 1);
 
     let targetY = center.y;
-    let distance = Math.max(height * 0.95, 4.8);
+    let distance = Math.max(
+      height * 0.95,
+      4.8
+    );
     let rise = height * 0.06;
 
     if (kind === 'realistic-head') {
-      targetY = box.max.y - height * 0.105;
-      distance = Math.max(height * 0.33, 1.9);
+      targetY =
+        box.max.y -
+        height * 0.105;
+
+      distance = Math.max(
+        height * 0.33,
+        1.9
+      );
+
       rise = height * 0.015;
     } else if (kind === 'bust') {
-      targetY = box.max.y - height * 0.235;
-      distance = Math.max(height * 0.52, 2.8);
+      targetY =
+        box.max.y -
+        height * 0.235;
+
+      distance = Math.max(
+        height * 0.52,
+        2.8
+      );
+
       rise = height * 0.035;
     }
 
     if (preset === 'front') {
       return {
-        position: [0, targetY + rise, distance],
-        target: [0, targetY, 0]
+        position: [
+          center.x,
+          targetY + rise,
+          center.z + distance
+        ],
+        target: [
+          center.x,
+          targetY,
+          center.z
+        ]
       };
     }
 
     if (preset === 'side') {
       return {
-        position: [distance, targetY + rise, 0.08],
-        target: [0, targetY, 0]
+        position: [
+          center.x + distance,
+          targetY + rise,
+          center.z
+        ],
+        target: [
+          center.x,
+          targetY,
+          center.z
+        ]
       };
     }
 
     if (preset === 'back') {
       return {
-        position: [0, targetY + rise, -distance],
-        target: [0, targetY, 0]
+        position: [
+          center.x,
+          targetY + rise,
+          center.z - distance
+        ],
+        target: [
+          center.x,
+          targetY,
+          center.z
+        ]
       };
     }
 
     return {
-      position: [distance * 0.66, targetY + rise * 2.1, distance * 0.88],
-      target: [0, targetY, 0]
+      position: [
+        center.x + distance * 0.66,
+        targetY + rise * 2.1,
+        center.z + distance * 0.88
+      ],
+      target: [
+        center.x,
+        targetY,
+        center.z
+      ]
     };
   }
 
-  function asaroFrame(preset = 'three-quarter') {
+  function asaroFrame(
+    preset = 'three-quarter'
+  ) {
     const presets = {
       front: {
         position: [0, 0.85, 6.6],
@@ -301,73 +444,169 @@ export async function create3dScene(canvas, options = {}) {
       }
     };
 
-    return presets[preset] || presets['three-quarter'];
+    return (
+      presets[preset] ||
+      presets['three-quarter']
+    );
   }
 
-  function setCameraPreset(name = 'three-quarter') {
-    const frame = currentModel === 'asaro'
-      ? asaroFrame(name)
-      : humanFrame(currentModel, name);
+  function setCameraPreset(
+    name = 'three-quarter'
+  ) {
+    const frame =
+      currentModel === 'asaro'
+        ? asaroFrame(name)
+        : genericFrame(
+            currentModel,
+            name
+          );
 
-    camera.position.set(...frame.position);
-    controls.target.set(...frame.target);
+    camera.position.set(
+      ...frame.position
+    );
+
+    controls.target.set(
+      ...frame.target
+    );
+
     controls.update();
-
-    lightingRig.setTarget(frame.target);
+    lightingRig.setTarget(
+      frame.target
+    );
   }
 
-  async function setModel(kind, color = '#C98E78') {
+  async function setModel(
+    kind,
+    color = '#C98E78'
+  ) {
     const version = ++loadVersion;
     clearSubject();
     currentModel = kind;
 
     if (kind === 'asaro') {
       try {
-        const asaro = await createAsaroFromGlb(THREE, color);
+        const asaro =
+          await createAsaroFromGlb(
+            THREE,
+            color
+          );
 
-        if (disposed || version !== loadVersion) return;
+        if (
+          disposed ||
+          version !== loadVersion
+        ) {
+          return;
+        }
 
         registerAsset(asaro);
         currentLoadError = null;
       } catch (error) {
-        console.warn('No se pudo cargar el GLB de planos. Usando fallback.', error);
+        console.warn(
+          'No se pudo cargar el GLB de planos. Usando fallback.',
+          error
+        );
 
-        const fallback = createAsaroHead(THREE, { color });
+        const fallback =
+          createAsaroHead(
+            THREE,
+            { color }
+          );
 
-        if (disposed || version !== loadVersion) return;
+        if (
+          disposed ||
+          version !== loadVersion
+        ) {
+          return;
+        }
 
         registerAsset({
           ...fallback,
-          bounds: new THREE.Box3().setFromObject(fallback.root),
+          bounds:
+            new THREE.Box3()
+              .setFromObject(
+                fallback.root
+              ),
           source: 'fallback',
           morphCount: 0
         });
 
         currentLoadError = String(
-          error?.message || error || 'GLB load error'
+          error?.message ||
+          error ||
+          'GLB load error'
         );
       }
-    } else {
-      try {
-        const human = await createHumanModel(THREE, { color });
-
-        if (disposed || version !== loadVersion) return;
-
-        registerAsset(human);
-        currentLoadError = null;
-      } catch (error) {
-        console.error('No se pudo cargar la base humana CC0.', error);
-        currentSource = 'human-load-error';
-        currentLoadError = String(
-          error?.message || error || 'Human GLB load error'
+    } else if (
+      kind === 'realistic-head' ||
+      kind === 'bust' ||
+      kind === 'body'
+    ) {
+      const human =
+        await createHumanModel(
+          THREE,
+          { color }
         );
-        throw error;
+
+      if (
+        disposed ||
+        version !== loadVersion
+      ) {
+        return;
       }
+
+      registerAsset(human);
+      currentLoadError = null;
+    } else if (kind !== 'custom') {
+      throw new Error(
+        'Modelo 3D desconocido.'
+      );
     }
 
-    setShadowsEnabled(options.shadowsEnabled !== false);
+    setShadowsEnabled(
+      options.shadowsEnabled !== false
+    );
+
     setEdgesVisible(false);
-    setCameraPreset(options.cameraPreset || 'three-quarter');
+    setCameraPreset(
+      options.cameraPreset ||
+      'three-quarter'
+    );
+  }
+
+  async function setCustomModel(
+    files,
+    color = '#C98E78'
+  ) {
+    const version = ++loadVersion;
+
+    clearSubject();
+    currentModel = 'custom';
+
+    const asset =
+      await createCustomModel(
+        THREE,
+        files,
+        { color }
+      );
+
+    if (
+      disposed ||
+      version !== loadVersion
+    ) {
+      return;
+    }
+
+    registerAsset(asset);
+    currentLoadError = null;
+
+    setShadowsEnabled(
+      options.shadowsEnabled !== false
+    );
+
+    setCameraPreset(
+      options.cameraPreset ||
+      'three-quarter'
+    );
   }
 
   function applyLightingState(lighting) {
@@ -386,52 +625,156 @@ export async function create3dScene(canvas, options = {}) {
     lightingRig.setOnTransform(callback);
   }
 
-  function pickLight(clientX, clientY, rect) {
-    return lightingRig.pickLight(clientX, clientY, rect);
+  function pickLight(
+    clientX,
+    clientY,
+    rect
+  ) {
+    return lightingRig.pickLight(
+      clientX,
+      clientY,
+      rect
+    );
   }
 
   function resize() {
-    const rect = canvas.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
+    const rect =
+      canvas.getBoundingClientRect();
 
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
-    renderer.setPixelRatio(pixelRatio);
-    renderer.setSize(rect.width, rect.height, false);
-    camera.aspect = rect.width / rect.height;
+    if (
+      !rect.width ||
+      !rect.height
+    ) {
+      return;
+    }
+
+    const pixelRatio = Math.min(
+      window.devicePixelRatio || 1,
+      2
+    );
+
+    renderer.setPixelRatio(
+      pixelRatio
+    );
+
+    renderer.setSize(
+      rect.width,
+      rect.height,
+      false
+    );
+
+    camera.aspect =
+      rect.width /
+      rect.height;
+
     camera.updateProjectionMatrix();
   }
 
   function applyTheme(theme) {
     const night = theme === 'night';
 
-    scene.background.set(night ? 0x100e14 : 0x25212b);
-    scene.fog.color.set(night ? 0x100e14 : 0x25212b);
-    floorMaterial.color.set(night ? 0x26212c : 0x413b48);
-    grid.material.opacity = night ? 0.30 : 0.38;
+    scene.background.set(
+      night
+        ? 0x100e14
+        : 0x25212b
+    );
+
+    scene.fog.color.set(
+      night
+        ? 0x100e14
+        : 0x25212b
+    );
+
+    floorMaterial.color.set(
+      night
+        ? 0x26212c
+        : 0x413b48
+    );
+
+    grid.material.opacity =
+      night ? 0.30 : 0.38;
   }
 
-  const resizeObserver = new ResizeObserver(resize);
+  function capturePngBlob() {
+    renderer.render(
+      scene,
+      camera
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob(
+        resolve,
+        'image/png'
+      );
+    });
+  }
+
+  const resizeObserver =
+    new ResizeObserver(resize);
+
   resizeObserver.observe(canvas);
 
   renderer.setAnimationLoop(() => {
     if (disposed) return;
 
     controls.update();
-    renderer.render(scene, camera);
+    renderer.render(
+      scene,
+      camera
+    );
   });
 
-  await setModel(
-    options.model || 'asaro',
-    options.color || '#C98E78'
+  if (
+    options.model &&
+    options.model !== 'custom'
+  ) {
+    await setModel(
+      options.model,
+      options.color || '#C98E78'
+    );
+  } else if (!options.model) {
+    await setModel(
+      'asaro',
+      options.color || '#C98E78'
+    );
+  }
+
+  setGridVisible(
+    options.gridVisible !== false
   );
 
-  setGridVisible(options.gridVisible !== false);
-  setShadowsEnabled(options.shadowsEnabled !== false);
-  applyLightingState(options.lighting || {});
-  setSelectedLight(options.lighting?.selectedLightId);
-  setLightHelpersVisible(options.lighting?.showHelpers !== false);
-  setCameraPreset(options.cameraPreset || 'three-quarter');
-  applyTheme(document.documentElement.dataset.theme || 'day');
+  setShadowsEnabled(
+    options.shadowsEnabled !== false
+  );
+
+  applyMaterialState(
+    options.material || {}
+  );
+
+  applyLightingState(
+    options.lighting || {}
+  );
+
+  setSelectedLight(
+    options.lighting?.selectedLightId
+  );
+
+  setLightHelpersVisible(
+    options.lighting?.showHelpers !== false
+  );
+
+  if (currentModel) {
+    setCameraPreset(
+      options.cameraPreset ||
+      'three-quarter'
+    );
+  }
+
+  applyTheme(
+    document.documentElement.dataset.theme ||
+    'day'
+  );
+
   resize();
 
   return {
@@ -441,7 +784,9 @@ export async function create3dScene(canvas, options = {}) {
     camera,
     controls,
     setModel,
+    setCustomModel,
     setBaseColor,
+    applyMaterialState,
     setGridVisible,
     setEdgesVisible,
     setShadowsEnabled,
@@ -451,23 +796,28 @@ export async function create3dScene(canvas, options = {}) {
     setLightHelpersVisible,
     setLightTransformCallback,
     pickLight,
+    capturePngBlob,
     resize,
     applyTheme,
-    getCurrentModel: () => currentModel,
-    getModelInfo: () => ({
-      id: currentModel,
-      source: currentSource,
-      loadError: currentLoadError,
-      morphCount: currentMorphCount,
-      paletteSlots: 16
-    }),
+    getCurrentModel:
+      () => currentModel,
+    getModelInfo:
+      () => ({
+        id: currentModel,
+        source: currentSource,
+        loadError: currentLoadError,
+        morphCount: currentMorphCount,
+        paletteSlots: 16
+      }),
     dispose() {
       disposed = true;
+
       resizeObserver.disconnect();
       renderer.setAnimationLoop(null);
       controls.dispose();
       lightingRig.dispose();
       clearSubject();
+
       floor.geometry.dispose();
       floorMaterial.dispose();
       renderer.dispose();

@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio - 3D Lighting Studio Fase 5</title>
+  <title>Kaoru's Studio - 3D Lighting Studio Fase 6</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=5.1">
+  <link rel="stylesheet" href="./styles.css?v=6.0">
 
   <script type="importmap">
   {
@@ -38,29 +38,74 @@
     </nav>
   </header>
 
-  <main class="three-shell">
+  <main class="three-shell phase6-shell">
     <aside class="three-panel three-controls">
       <section class="intro">
-        <span class="eyebrow">3D LIGHTING STUDIO - FASE 5 DE 6</span>
-        <h1>Luces 3D completas</h1>
-        <p>Hasta ocho luces directas con HEX libre y manipulacion espacial sobre cabeza, busto o cuerpo.</p>
+        <span class="eyebrow">3D LIGHTING STUDIO - FASE 6 DE 6</span>
+        <h1>Studio 3D completo</h1>
+        <p>Modelos, paletas Light Lab, luces, proyectos, Galeria e importacion local en un mismo flujo.</p>
       </section>
 
       <section class="control-section">
         <div class="section-heading"><span>01</span><h2>Modelo / encuadre</h2></div>
+
         <div id="modelCards" class="model-cards"></div>
+
+        <button id="importModelBtn" class="wide-action import-model-action" type="button">Importar GLB / GLTF local</button>
+        <input id="customModelInput" type="file" accept=".glb,.gltf,.bin,image/png,image/jpeg,image/webp" multiple hidden>
+        <p id="customModelStatus" class="help">Ningun modelo local cargado</p>
+        <p class="help">Para GLTF selecciona a la vez el .gltf, .bin y sus texturas. El archivo permanece local salvo que guardes/exportes el proyecto.</p>
       </section>
 
       <section class="control-section">
         <div class="section-heading"><span>02</span><h2>Color base</h2></div>
+
         <div class="color-row">
           <input id="baseColor" type="color" value="#C98E78" aria-label="Color base">
           <input id="baseHex" type="text" maxlength="7" value="#C98E78" spellcheck="false" aria-label="HEX base">
         </div>
       </section>
 
+      <section class="control-section lightlab-bridge-section">
+        <div class="section-heading"><span>03</span><h2>Paletas Light Lab</h2></div>
+
+        <select id="paletteLibrarySelect" class="bridge-select">
+          <option value="">Cargando biblioteca...</option>
+        </select>
+
+        <div class="bridge-actions">
+          <button id="refreshPaletteBtn" type="button">Actualizar</button>
+          <button id="applyPaletteBtn" type="button">Aplicar paleta</button>
+          <button id="importLightLabBtn" type="button">Importar .lls</button>
+        </div>
+
+        <input id="lightLabFileInput" type="file" accept=".lls.json,application/json,.json" hidden>
+
+        <label class="bridge-check">
+          <input id="paletteSyncLighting" type="checkbox" checked>
+          <span>Copiar tambien las luces, ambiente, sombra, rebote y rim de Light Lab</span>
+        </label>
+
+        <label class="bridge-mode">
+          <span>Material 3D</span>
+          <select id="paletteMode">
+            <option value="base-only">Color base + luces 3D</option>
+            <option value="palette-bands">Bandas de los 16 colores</option>
+          </select>
+        </label>
+
+        <div id="palettePreview" class="bridge-palette-preview">
+          <span class="palette-none">Sin paleta aplicada</span>
+        </div>
+
+        <div class="palette-ready-card">
+          <strong id="paletteBridgeStatus">16 colores preparados para Light Lab</strong>
+          <span>Las bandas se eligen por la luminosidad real que recibe cada zona del modelo.</span>
+        </div>
+      </section>
+
       <section class="control-section lighting-section">
-        <div class="section-heading"><span>03</span><h2>Luces directas</h2></div>
+        <div class="section-heading"><span>04</span><h2>Luces directas</h2></div>
 
         <div class="lighting-master">
           <label><span>Iluminacion</span><input id="lightingEnabled" type="checkbox" checked></label>
@@ -112,12 +157,10 @@
             <button id="deleteLightBtn" type="button">Eliminar</button>
           </div>
         </div>
-
-        <p class="help">Selecciona una esfera luminosa en el viewport y arrastra el gizmo para mover esa luz directamente en 3D.</p>
       </section>
 
       <section class="control-section environment-section">
-        <div class="section-heading"><span>04</span><h2>Ambiente y rebotes</h2></div>
+        <div class="section-heading"><span>05</span><h2>Ambiente y rebotes</h2></div>
 
         <div class="environment-grid">
           <div class="environment-item">
@@ -170,18 +213,6 @@
         </div>
       </section>
 
-      <section class="control-section palette-ready-section">
-        <div class="section-heading"><span>05</span><h2>Paletas Light Lab</h2></div>
-
-        <div class="palette-ready-card">
-          <strong id="paletteBridgeStatus">16 colores preparados para Light Lab</strong>
-          <span>La Fase 6 conectara las paletas completas con material, sombras, rebotes, rim y luces.</span>
-          <div class="palette-dots" aria-hidden="true">
-            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-          </div>
-        </div>
-      </section>
-
       <section class="control-section scene-controls">
         <div class="section-heading"><span>06</span><h2>Escena y camara</h2></div>
 
@@ -214,22 +245,22 @@
     <section class="three-stage-column">
       <div class="stage-toolbar">
         <div>
-          <span class="eyebrow">ESTUDIO DE LUZ 3D</span>
+          <span class="eyebrow">3D LIGHTING STUDIO COMPLETO</span>
           <h2 id="stageTitle">Asaro / Planos</h2>
         </div>
 
         <div class="stage-badges">
           <span id="webglBadge">Comprobando WebGL...</span>
-          <span>Fase 5</span>
+          <span>Fase 6</span>
         </div>
       </div>
 
       <div class="viewport-card">
-        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de iluminacion 3D"></canvas>
+        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport completo de 3D Lighting Studio"></canvas>
 
         <div class="viewport-overlay">
-          <strong id="viewportMessage">Cargando iluminacion 3D...</strong>
-          <span>Three.js + luces editables</span>
+          <strong id="viewportMessage">Cargando Studio 3D...</strong>
+          <span>Modelos + paletas + luces</span>
         </div>
 
         <div class="viewport-footer">
@@ -241,24 +272,39 @@
       </div>
 
       <section class="roadmap-card">
-        <div><b>F2</b><span>Motor 3D y camara</span></div>
-        <div><b>F3</b><span>Cabeza por planos GLB</span></div>
+        <div><b>F2</b><span>Motor 3D</span></div>
+        <div><b>F3</b><span>Cabeza por planos</span></div>
         <div><b>F4</b><span>Anatomia humana</span></div>
-        <div class="is-current"><b>F5</b><span>Luces 3D movibles</span></div>
-        <div><b>F6</b><span>Light Lab, modelos, Galeria y exportacion</span></div>
+        <div><b>F5</b><span>Luces movibles</span></div>
+        <div class="is-current"><b>F6</b><span>Integracion completa</span></div>
       </section>
     </section>
 
     <aside class="three-panel three-status">
       <section class="status-hero">
         <span class="status-orb">3D</span>
-        <div><span class="eyebrow">ILUMINACION 3D</span><h2>Estado</h2></div>
+        <div><span class="eyebrow">FASE FINAL</span><h2>Proyecto</h2></div>
       </section>
+
+      <label class="project-name-field">
+        <span>Nombre</span>
+        <input id="projectName" type="text" value="Proyecto 3D Lighting">
+      </label>
+
+      <div class="project-actions">
+        <button id="saveGalleryBtn" type="button">Guardar en Galeria</button>
+        <button id="exportPngBtn" type="button">Exportar PNG</button>
+        <button id="exportProjectBtn" type="button">Exportar .k3d.json</button>
+        <button id="importProjectBtn" type="button">Importar proyecto</button>
+      </div>
+
+      <input id="projectFileInput" type="file" accept=".k3d.json,application/json,.json" hidden>
 
       <dl class="status-list">
         <div><dt>Studio</dt><dd>3D Lighting</dd></div>
         <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos</dd></div>
         <div><dt>Fuente</dt><dd id="stateSource">Head Planes Reference</dd></div>
+        <div><dt>Paleta</dt><dd id="statePalette">Color base</dd></div>
         <div><dt>Morphs</dt><dd id="stateMorphs">No aplica</dd></div>
         <div><dt>Luces</dt><dd id="stateLights">2 / 8</dd></div>
         <div><dt>Seleccionada</dt><dd id="stateSelectedLight">Luz principal</dd></div>
@@ -268,23 +314,25 @@
       </dl>
 
       <section class="architecture-card">
-        <span class="eyebrow">CONTROL 3D</span>
-        <h3>Luces movibles</h3>
-        <p>Las esferas del viewport representan las luces directas. Selecciona una y mueve el gizmo para cambiar su posicion.</p>
+        <span class="eyebrow">LIGHT LAB + 3D</span>
+        <h3>16 colores reales</h3>
+        <p>El modo Bandas usa toda la paleta para colorear valores oscuros, medios y claros producidos por la iluminacion 3D.</p>
       </section>
 
       <section class="next-card">
-        <span class="eyebrow">FASE FINAL</span>
-        <h3>Fase 6 - Integracion completa</h3>
-        <p>Paletas Light Lab, importar modelos 3D locales, guardado, Galeria y exportacion.</p>
+        <span class="eyebrow">MODELOS LOCALES</span>
+        <h3>GLB / GLTF</h3>
+        <p>Puedes estudiar modelos con licencias restrictivas sin publicarlos en el repo: se cargan desde tu PC y solo se incluyen si guardas o exportas ese proyecto.</p>
       </section>
     </aside>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">&#9788;</button>
 
   <script src="../shared/studioBridge.js?v=18.0"></script>
+  <script src="../shared/studioGallery.js?v=18.0"></script>
 
   <script>
   (function () {
@@ -312,7 +360,7 @@
     window.addEventListener('error', function (event) {
       var text = String(event && (event.message || event.error) || '');
 
-      if (/module|script|import|three|scene3d|state\.js|human|asaro|lighting|transform/i.test(text)) {
+      if (/module|script|import|three|scene3d|state\.js|human|asaro|lighting|palette|custom|storage/i.test(text)) {
         showStartupProblem('Fallo al cargar un modulo JavaScript. Recarga sin cache.');
       }
     });
@@ -320,7 +368,7 @@
     window.addEventListener('unhandledrejection', function (event) {
       var text = String(event && event.reason || '');
 
-      if (/module|script|import|three|scene3d|state\.js|human|asaro|lighting|transform/i.test(text)) {
+      if (/module|script|import|three|scene3d|state\.js|human|asaro|lighting|palette|custom|storage/i.test(text)) {
         showStartupProblem('Fallo al cargar el sistema 3D. Recarga la pagina.');
       }
     });
@@ -333,6 +381,6 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?v=5.1"></script>
+  <script type="module" src="./js/main.js?v=6.0"></script>
 </body>
 </html>

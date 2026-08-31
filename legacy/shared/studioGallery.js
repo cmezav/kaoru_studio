@@ -208,6 +208,8 @@
     }
     if (portable?.schema === 'kaoru.light-lab.project') {
       return save({ studio: 'light', kind: 'project', name: portable.project?.name || 'Paleta Light Lab importada', payload: portable, thumbnail: null });
+    }    if (portable?.schema === 'kaoru.3d-lighting.project') {
+      return save({ studio: '3d', kind: 'project', name: portable.state?.project?.name || 'Proyecto 3D importado', payload: portable, thumbnail: null });
     }    const data = portable?.schema === 'silueta-studio-portable-project' ? portable.record : portable;
     if (!data || !['silhouette', 'text', 'image', 'light', '3d'].includes(data.studio)) throw new Error('El archivo no pertenece a Silueta Studio.');
     return save({
