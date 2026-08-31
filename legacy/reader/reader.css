@@ -500,7 +500,7 @@ body:not(.is-reading) .reader-view{display:none}
   overflow:hidden;
   background:#fff;
   box-shadow:0 1px 0 rgba(255,255,255,.06);
-  touch-action:pan-y pinch-zoom;
+  touch-action:pan-x pan-y pinch-zoom;
 }
 .pdf-page-canvas{
   display:block;
@@ -1013,28 +1013,6 @@ body{
   overflow-wrap:anywhere;
 }
 
-/* PDF zoom móvil: permitir desplazarse también de izquierda a derecha */
-html.pdf-gesture-mode,
-html.pdf-gesture-mode body{
-  max-width:none!important;
-  overflow-x:auto!important;
-  touch-action:pan-x pan-y pinch-zoom!important;
-}
-
-html.pdf-gesture-mode .pdf-view,
-html.pdf-gesture-mode .pdf-pages,
-html.pdf-gesture-mode .pdf-page,
-html.pdf-gesture-mode .pdf-page-canvas,
-html.pdf-gesture-mode .pdf-text-layer{
-  touch-action:pan-x pan-y pinch-zoom!important;
-}
-
-html.pdf-gesture-mode .pdf-view{
-  overflow-x:auto!important;
-  overscroll-behavior-x:auto;
-  -webkit-overflow-scrolling:touch;
-}
-
 /* Ya no existe buscador ni resaltado de coincidencias PDF */
 .pdf-search-form,
 .pdf-search-nav,
@@ -1224,30 +1202,6 @@ html.pdf-gesture-mode .pdf-view{
   max-width:100%;
 }
 
-/* PDF: permitir pan X/Y despues de hacer pinch zoom */
-html.pdf-gesture-mode,
-html.pdf-gesture-mode body,
-body.is-pdf-reading{
-  max-width:none!important;
-  overflow-x:auto!important;
-  touch-action:pan-x pan-y pinch-zoom!important;
-  overscroll-behavior-x:auto;
-}
-
-html.pdf-gesture-mode .pdf-view,
-html.pdf-gesture-mode .pdf-pages,
-html.pdf-gesture-mode .pdf-page,
-html.pdf-gesture-mode .pdf-page-canvas,
-html.pdf-gesture-mode .pdf-text-layer{
-  touch-action:pan-x pan-y pinch-zoom!important;
-}
-
-html.pdf-gesture-mode .pdf-view{
-  overflow-x:visible!important;
-  overscroll-behavior-x:auto;
-  -webkit-overflow-scrolling:touch;
-}
-
 @media(max-width:650px){
   .library-actions{
     width:100%;
@@ -1287,3 +1241,21 @@ html.pdf-gesture-mode .pdf-view{
     font-size:10.5px;
   }
 }
+/* PDF móvil: zoom nativo + pan horizontal y vertical */
+.pdf-view,
+.pdf-pages,
+.pdf-page,
+.pdf-page-canvas,
+.pdf-text-layer{
+  touch-action:pan-x pan-y pinch-zoom!important;
+}
+
+.pdf-view{
+  overscroll-behavior-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+/*
+  No forzamos transform, zoom CSS ni touch handlers propios.
+  El navegador hace el pinch; Kaoru solo permite también pan-x.
+*/

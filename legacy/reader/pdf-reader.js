@@ -708,7 +708,6 @@ export async function openPdfDocument(book, options = {}) {
 
   await closePdfDocument({ preserveView: true });
 
-  document.documentElement.classList.add('pdf-gesture-mode');
 
   const asset = await getAsset(`${PDF_ASSET_PREFIX}${book.id}`);
 
@@ -797,7 +796,6 @@ export async function openPdfDocument(book, options = {}) {
 }
 
 export async function closePdfDocument(options = {}) {
-  document.documentElement.classList.remove('pdf-gesture-mode');
 
   clearTimeout(saveTimer);
   clearTimeout(controlsTimer);
