@@ -54,7 +54,7 @@
 
   function normalizedRecord(input, previous) {
     const now = Date.now();
-    const studio = ['silhouette', 'text', 'image'].includes(input.studio) ? input.studio : previous?.studio;
+    const studio = ['silhouette', 'text', 'image', 'light'].includes(input.studio) ? input.studio : previous?.studio;
     const kind = input.kind === 'template' ? 'template' : 'project';
     if (!studio) throw new Error('El proyecto no especifica un Studio válido.');
     return {
@@ -206,8 +206,10 @@
     if (portable?.schema === 'silueta-studio-project') {
       return save({ studio: 'silhouette', kind: 'project', name: 'Proyecto de silueta importado', payload: portable, thumbnail: null });
     }
-    const data = portable?.schema === 'silueta-studio-portable-project' ? portable.record : portable;
-    if (!data || !['silhouette', 'text', 'image'].includes(data.studio)) throw new Error('El archivo no pertenece a Silueta Studio.');
+    if (portable?.schema === 'kaoru.light-lab.project') {
+      return save({ studio: 'light', kind: 'project', name: portable.project?.name || 'Paleta Light Lab importada', payload: portable, thumbnail: null });
+    }    const data = portable?.schema === 'silueta-studio-portable-project' ? portable.record : portable;
+    if (!data || !['silhouette', 'text', 'image', 'light'].includes(data.studio)) throw new Error('El archivo no pertenece a Silueta Studio.');
     return save({
       studio: data.studio,
       kind: data.kind === 'template' ? 'template' : 'project',

@@ -9,6 +9,7 @@ import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalett
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
+window.LightLabStore = store;
 const ADVANCED_PREVIEW_MODES = [
   ['sphere', 'Esfera'],
   ['cylinder', 'Cilindro'],

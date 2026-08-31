@@ -1,7 +1,7 @@
 import { applyLightingToPalette } from './lightingEngine.js';
 
 export const LIGHT_LAB_PROJECT_SCHEMA = 'kaoru.light-lab.project';
-export const LIGHT_LAB_PROJECT_VERSION = 4;
+export const LIGHT_LAB_PROJECT_VERSION = 6;
 
 export function buildExportEnvelope(state) {
   const timestamp = new Date().toISOString();
@@ -9,7 +9,7 @@ export function buildExportEnvelope(state) {
     schema: LIGHT_LAB_PROJECT_SCHEMA,
     version: LIGHT_LAB_PROJECT_VERSION,
     studio: 'light',
-    phase: 4,
+    phase: 6,
     exportedAt: timestamp,
     project: { ...state.project, updatedAt: timestamp },
     selection: structuredClone(state.selection),
@@ -20,7 +20,8 @@ export function buildExportEnvelope(state) {
     illuminatedPalette: applyLightingToPalette(state.palette.entries, state.lighting),
     lighting: structuredClone(state.lighting),
     reference: structuredClone(state.reference),
-    compatibility: { minimumLightLabVersion: 4, future3d: null }
+    ui: structuredClone(state.ui),
+    compatibility: { minimumLightLabVersion: 4, currentLightLabVersion: 6, future3d: 'phase-8' }
   };
 }
 

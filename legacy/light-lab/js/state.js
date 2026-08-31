@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES } from './presets.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { createDefaultLighting } from './lightingEngine.js';
 
-export const LIGHT_LAB_STATE_VERSION = 5;
+export const LIGHT_LAB_STATE_VERSION = 6;
 
 export function createInitialState() {
   const category = LIGHT_LAB_CATEGORIES[0];
@@ -19,7 +19,7 @@ export function createInitialState() {
     palette: { source: 'base-color', baseHex: preset.baseHex, colors: entries.map((item) => item.hex), entries, roles: entries.map((item) => item.role) },
     lighting: createDefaultLighting(),
     reference: { image: null, extractedColors: [], recentColors: [] },
-    ui: { activePanel: 'category', phase: 5, selectedSwatchIndex: null, lastSamplePosition: null, paletteView: 'illuminated' }
+    ui: { activePanel: 'category', phase: 6, selectedSwatchIndex: null, lastSamplePosition: null, paletteView: 'illuminated' }
   };
 }
 
