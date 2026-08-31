@@ -2,26 +2,31 @@ export const MODEL_REGISTRY = [
   {
     id: 'asaro',
     name: 'Asaro / Planos',
-    description: 'Cabeza propia con planos de luz claramente delimitados.',
-    phase: 3
+    description: 'Modelo propio F3 con 52 planos faciales para estudio de luz.',
+    phase: 3,
+    ready: true,
+    planeCount: 52
   },
   {
     id: 'realistic-head',
     name: 'Cabeza realista',
-    description: 'Volumen humano suave para iluminacion natural.',
-    phase: 4
+    description: 'Prototipo temporal. Modelo anatomico definitivo en Fase 4.',
+    phase: 4,
+    ready: false
   },
   {
     id: 'bust',
     name: 'Busto',
-    description: 'Cabeza, cuello, claviculas, hombros y torso superior.',
-    phase: 4
+    description: 'Prototipo temporal. Busto anatomico definitivo en Fase 4.',
+    phase: 4,
+    ready: false
   },
   {
     id: 'body',
     name: 'Cuerpo completo',
-    description: 'Cuerpo humano realista para estudio de luz y color.',
-    phase: 4
+    description: 'Prototipo temporal. Cuerpo humano definitivo en Fase 4.',
+    phase: 4,
+    ready: false
   }
 ];
 

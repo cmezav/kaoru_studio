@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
-  <title>Kaoru's Studio - 3D Lighting Studio Fase 2</title>
+  <title>Kaoru's Studio - 3D Lighting Studio Fase 3</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?v=18.0">
-  <link rel="stylesheet" href="./styles.css?v=2.1">
+  <link rel="stylesheet" href="./styles.css?v=3.0">
+
   <script type="importmap">
   {
     "imports": {
@@ -18,6 +19,7 @@
   }
   </script>
 </head>
+
 <body class="studio-3d" data-studio="3d">
   <header class="three-topbar">
     <a class="three-brand" href="../../index.html#3d">
@@ -25,6 +27,7 @@
       <span>Kaoru's Studio</span>
       <b>3D Lighting Studio</b>
     </a>
+
     <nav class="studio-switcher" aria-label="Cambiar de Studio">
       <a class="studio-link" data-studio-link="silhouette" href="../index.html" title="Silueta Studio - Alt+1">&#9670; <span class="studio-link-label">Silueta</span><kbd>Alt+1</kbd></a>
       <a class="studio-link" data-studio-link="text" href="../text-studio/index.html" title="Text Studio - Alt+2">Tt <span class="studio-link-label">Texto</span><kbd>Alt+2</kbd></a>
@@ -38,28 +41,41 @@
   <main class="three-shell">
     <aside class="three-panel three-controls">
       <section class="intro">
-        <span class="eyebrow">3D LIGHTING STUDIO - FASE 2 DE 6</span>
-        <h1>Escena 3D real</h1>
-        <p>Orbita, zoom, pan, piso, sombras y prototipos volumetricos antes de construir los modelos definitivos.</p>
+        <span class="eyebrow">3D LIGHTING STUDIO - FASE 3 DE 6</span>
+        <h1>Cabeza por planos</h1>
+        <p>Modelo propio construido para separar claramente los cambios de valor producidos por la direccion de la luz.</p>
       </section>
 
       <section class="control-section">
-        <div class="section-heading"><span>01</span><h2>Prototipo de modelo</h2></div>
+        <div class="section-heading">
+          <span>01</span>
+          <h2>Modelo</h2>
+        </div>
+
         <div id="modelCards" class="model-cards"></div>
-        <p class="help">Estos son volumenes de prueba. La cabeza Asaro real se construye en Fase 3 y la anatomia realista en Fase 4.</p>
+
+        <p class="help">Asaro / Planos ya es el modelo propio de Fase 3. Los otros tres siguen siendo prototipos hasta Fase 4.</p>
       </section>
 
       <section class="control-section">
-        <div class="section-heading"><span>02</span><h2>Color base</h2></div>
+        <div class="section-heading">
+          <span>02</span>
+          <h2>Color base</h2>
+        </div>
+
         <div class="color-row">
           <input id="baseColor" type="color" value="#C98E78" aria-label="Color base">
           <input id="baseHex" type="text" maxlength="7" value="#C98E78" spellcheck="false" aria-label="HEX base">
         </div>
-        <p class="help">El material 3D cambia al instante con cualquier HEX.</p>
+
+        <p class="help">Todos los planos usan el mismo color. Las diferencias visibles deben venir de la luz y la orientacion de cada superficie.</p>
       </section>
 
       <section class="control-section scene-controls">
-        <div class="section-heading"><span>03</span><h2>Escena y camara</h2></div>
+        <div class="section-heading">
+          <span>03</span>
+          <h2>Escena y planos</h2>
+        </div>
 
         <div id="cameraPresetButtons" class="camera-presets">
           <button type="button" data-camera-preset="front">Frente</button>
@@ -71,14 +87,39 @@
         <button id="resetCameraBtn" class="wide-action" type="button">Restablecer camara</button>
 
         <label class="scene-toggle">
-          <span><strong>Cuadricula</strong><small>Referencia espacial</small></span>
+          <span>
+            <strong>Aristas de planos</strong>
+            <small>Marca las divisiones anatomicas del rostro</small>
+          </span>
+          <input id="edgeToggle" type="checkbox" checked>
+        </label>
+
+        <label class="scene-toggle">
+          <span>
+            <strong>Cuadricula</strong>
+            <small>Referencia espacial</small>
+          </span>
           <input id="gridToggle" type="checkbox" checked>
         </label>
 
         <label class="scene-toggle">
-          <span><strong>Sombras</strong><small>Sombras proyectadas en piso</small></span>
+          <span>
+            <strong>Sombras</strong>
+            <small>Sombras proyectadas en piso</small>
+          </span>
           <input id="shadowToggle" type="checkbox" checked>
         </label>
+
+        <div class="face-plane-guide">
+          <span>Frente</span>
+          <span>Sienes</span>
+          <span>Orbitas</span>
+          <span>Nariz</span>
+          <span>Pomulos</span>
+          <span>Maxilar</span>
+          <span>Menton</span>
+          <span>Mandibula</span>
+        </div>
 
         <div class="mouse-guide">
           <div><b>Arrastrar izq.</b><span>Orbitar</span></div>
@@ -91,32 +132,35 @@
     <section class="three-stage-column">
       <div class="stage-toolbar">
         <div>
-          <span class="eyebrow">VIEWPORT 3D REAL</span>
-          <h2 id="stageTitle">Asaro / Planos - prototipo</h2>
+          <span class="eyebrow">ESTUDIO DE PLANOS 3D</span>
+          <h2 id="stageTitle">Asaro / Planos</h2>
         </div>
+
         <div class="stage-badges">
           <span id="webglBadge">Comprobando WebGL...</span>
-          <span>Fase 2</span>
+          <span>Fase 3</span>
         </div>
       </div>
 
       <div class="viewport-card">
-        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de 3D Lighting Studio"></canvas>
+        <canvas id="threeCanvas" width="1280" height="760" aria-label="Viewport WebGL de cabeza por planos"></canvas>
+
         <div class="viewport-overlay">
-          <strong id="viewportMessage">Cargando motor 3D...</strong>
-          <span>Three.js + WebGL</span>
+          <strong id="viewportMessage">Cargando cabeza por planos...</strong>
+          <span>Three.js + modelo original Kaoru</span>
         </div>
+
         <div class="viewport-footer">
           <span>Mouse: orbitar</span>
           <span>Rueda: zoom</span>
           <span>Click derecho: pan</span>
-          <span>Luces movibles: Fase 5</span>
+          <span>Aristas: configurables</span>
         </div>
       </div>
 
       <section class="roadmap-card">
-        <div class="is-current"><b>F2</b><span>Motor 3D, camara y sombras</span></div>
-        <div><b>F3</b><span>Cabeza propia tipo Asaro</span></div>
+        <div><b>F2</b><span>Motor 3D y camara</span></div>
+        <div class="is-current"><b>F3</b><span>Cabeza propia por planos</span></div>
         <div><b>F4</b><span>Cabeza realista, busto y cuerpo</span></div>
         <div><b>F5</b><span>Multiples luces 3D movibles</span></div>
         <div><b>F6</b><span>Light Lab, Galeria y exportacion</span></div>
@@ -126,36 +170,42 @@
     <aside class="three-panel three-status">
       <section class="status-hero">
         <span class="status-orb">3D</span>
-        <div><span class="eyebrow">MOTOR 3D</span><h2>Estado</h2></div>
+        <div>
+          <span class="eyebrow">MODELO POR PLANOS</span>
+          <h2>Estado</h2>
+        </div>
       </section>
 
       <dl class="status-list">
         <div><dt>Studio</dt><dd>3D Lighting</dd></div>
-        <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos (proto)</dd></div>
+        <div><dt>Modelo</dt><dd id="stateModel">Asaro / Planos</dd></div>
+        <div><dt>Planos</dt><dd id="statePlanes">52 planos faciales</dd></div>
         <div><dt>Base</dt><dd id="stateColor">#C98E78</dd></div>
         <div><dt>Motor</dt><dd id="stateEngine">Cargando</dd></div>
         <div><dt>Camara</dt><dd id="stateCamera">Cargando</dd></div>
       </dl>
 
       <section class="architecture-card">
-        <span class="eyebrow">RENDER</span>
-        <h3>Three.js + WebGL</h3>
-        <p>Renderer independiente con antialiasing, tone mapping, luces base, piso y shadow mapping.</p>
+        <span class="eyebrow">MODELO ORIGINAL</span>
+        <h3>Sin modelo 3D externo</h3>
+        <p>La cabeza se genera en codigo mediante superficies planas propias. No se descarga ni reutiliza un modelo Asaro de terceros.</p>
       </section>
 
       <section class="next-card">
         <span class="eyebrow">SIGUIENTE</span>
-        <h3>Fase 3 - Cabeza Asaro propia</h3>
-        <p>Reemplazaremos el prototipo por una cabeza construida especificamente alrededor de planos anatomicos de luz.</p>
+        <h3>Fase 4 - Anatomia realista</h3>
+        <p>Cabeza humana suave, busto y cuerpo completo para comparar iluminacion realista contra el estudio por planos.</p>
       </section>
     </aside>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche">&#9788;</button>
 
   <script src="../shared/studioBridge.js?v=18.0"></script>
-    <script>
+
+  <script>
   (function () {
     var finished = false;
 
@@ -180,14 +230,16 @@
 
     window.addEventListener('error', function (event) {
       var text = String(event && (event.message || event.error) || '');
-      if (/module|script|import|three|scene3d|state\.js/i.test(text)) {
+
+      if (/module|script|import|three|scene3d|state\.js|asaro/i.test(text)) {
         showStartupProblem('Fallo al cargar un modulo JavaScript. Recarga sin cache.');
       }
     });
 
     window.addEventListener('unhandledrejection', function (event) {
       var text = String(event && event.reason || '');
-      if (/module|script|import|three|scene3d|state\.js/i.test(text)) {
+
+      if (/module|script|import|three|scene3d|state\.js|asaro/i.test(text)) {
         showStartupProblem('Fallo al cargar el motor 3D. Revisa la conexion y recarga.');
       }
     });
@@ -199,6 +251,7 @@
     }, 5000);
   }());
   </script>
-  <script type="module" src="./js/main.js?v=2.1"></script>
+
+  <script type="module" src="./js/main.js?v=3.0"></script>
 </body>
 </html>

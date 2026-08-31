@@ -1,4 +1,6 @@
-export const SCENE3D_PHASE = 2;
+import { createAsaroHead } from './asaroHead.js?v=3.0';
+
+export const SCENE3D_PHASE = 3;
 
 export function detectWebGL() {
   try {
@@ -50,12 +52,12 @@ export async function create3dScene(canvas, options = {}) {
   controls.maxDistance = 13;
   controls.minPolarAngle = 0.12;
   controls.maxPolarAngle = Math.PI * 0.93;
-  controls.target.set(0, 1.05, 0);
+  controls.target.set(0, 0.82, 0);
 
-  const hemisphere = new THREE.HemisphereLight(0xd8deff, 0x302538, 1.65);
+  const hemisphere = new THREE.HemisphereLight(0xd8deff, 0x302538, 1.25);
   scene.add(hemisphere);
 
-  const key = new THREE.DirectionalLight(0xffe4d6, 4.1);
+  const key = new THREE.DirectionalLight(0xffe4d6, 4.4);
   key.position.set(4.2, 6.2, 4.5);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
@@ -69,11 +71,11 @@ export async function create3dScene(canvas, options = {}) {
   key.shadow.normalBias = 0.025;
   scene.add(key);
 
-  const fill = new THREE.DirectionalLight(0x7898ff, 0.7);
+  const fill = new THREE.DirectionalLight(0x7898ff, 0.48);
   fill.position.set(-4, 2.5, 1);
   scene.add(fill);
 
-  const rim = new THREE.DirectionalLight(0xb994ff, 0.85);
+  const rim = new THREE.DirectionalLight(0xb994ff, 0.62);
   rim.position.set(-2.5, 4.5, -4.5);
   scene.add(rim);
 
@@ -82,7 +84,11 @@ export async function create3dScene(canvas, options = {}) {
     roughness: 0.94,
     metalness: 0.02
   });
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 18), floorMaterial);
+
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(18, 18),
+    floorMaterial
+  );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.45;
   floor.receiveShadow = true;
@@ -101,6 +107,8 @@ export async function create3dScene(canvas, options = {}) {
 
   let subjectMaterials = [];
   let currentModel = null;
+  let currentAsaro = null;
+  let currentPlaneCount = 0;
   let disposed = false;
 
   function subjectMaterial(color, roughness = 0.58) {
@@ -109,6 +117,7 @@ export async function create3dScene(canvas, options = {}) {
       roughness,
       metalness: 0.015
     });
+    material.userData.subjectColor = true;
     subjectMaterials.push(material);
     return material;
   }
@@ -123,45 +132,57 @@ export async function create3dScene(canvas, options = {}) {
     subjectRoot.traverse((object) => {
       if (object.geometry) object.geometry.dispose?.();
     });
-    while (subjectRoot.children.length) subjectRoot.remove(subjectRoot.children[0]);
+
+    while (subjectRoot.children.length) {
+      subjectRoot.remove(subjectRoot.children[0]);
+    }
+
     subjectMaterials.forEach((material) => material.dispose?.());
     subjectMaterials = [];
+    currentAsaro = null;
+    currentPlaneCount = 0;
   }
 
-  function addHead(group, color, faceted = false, y = 1.15, scale = 1) {
-    const geometry = faceted
-      ? new THREE.IcosahedronGeometry(1.12 * scale, 2)
-      : new THREE.SphereGeometry(1.08 * scale, 48, 32);
-
+  function addHead(group, color, y = 1.15, scale = 1) {
+    const geometry = new THREE.SphereGeometry(1.08 * scale, 48, 32);
     geometry.scale(0.79, 1.05, 0.86);
-    if (faceted) geometry.computeVertexNormals();
 
     const head = enableShadow(new THREE.Mesh(
       geometry,
-      subjectMaterial(color, faceted ? 0.72 : 0.56)
+      subjectMaterial(color, 0.56)
     ));
     head.position.y = y;
     group.add(head);
 
     const neck = enableShadow(new THREE.Mesh(
-      new THREE.CylinderGeometry(0.43 * scale, 0.51 * scale, 1.05 * scale, faceted ? 8 : 32),
+      new THREE.CylinderGeometry(
+        0.43 * scale,
+        0.51 * scale,
+        1.05 * scale,
+        32
+      ),
       subjectMaterial(color, 0.64)
     ));
     neck.position.y = y - 1.05 * scale;
     group.add(neck);
 
-    if (!faceted) {
-      const nose = enableShadow(new THREE.Mesh(
-        new THREE.ConeGeometry(0.18 * scale, 0.48 * scale, 16),
-        subjectMaterial(color, 0.62)
-      ));
-      nose.rotation.x = Math.PI / 2;
-      nose.position.set(0, y + 0.02 * scale, 0.92 * scale);
-      group.add(nose);
-    }
+    const nose = enableShadow(new THREE.Mesh(
+      new THREE.ConeGeometry(0.18 * scale, 0.48 * scale, 16),
+      subjectMaterial(color, 0.62)
+    ));
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, y + 0.02 * scale, 0.92 * scale);
+    group.add(nose);
   }
 
-  function cylinderBetween(group, color, radius, height, position, rotationZ = 0) {
+  function cylinderBetween(
+    group,
+    color,
+    radius,
+    height,
+    position,
+    rotationZ = 0
+  ) {
     const mesh = enableShadow(new THREE.Mesh(
       new THREE.CylinderGeometry(radius, radius * 1.04, height, 20),
       subjectMaterial(color, 0.63)
@@ -176,12 +197,10 @@ export async function create3dScene(canvas, options = {}) {
     const group = new THREE.Group();
     group.name = `prototype-${kind}`;
 
-    if (kind === 'asaro') {
-      addHead(group, color, true, 1.05, 1.05);
-    } else if (kind === 'realistic-head') {
-      addHead(group, color, false, 1.05, 1.05);
+    if (kind === 'realistic-head') {
+      addHead(group, color, 1.05, 1.05);
     } else if (kind === 'bust') {
-      addHead(group, color, false, 1.55, 0.86);
+      addHead(group, color, 1.55, 0.86);
 
       const chest = enableShadow(new THREE.Mesh(
         new THREE.SphereGeometry(1.3, 36, 24),
@@ -191,10 +210,24 @@ export async function create3dScene(canvas, options = {}) {
       chest.position.y = -0.2;
       group.add(chest);
 
-      cylinderBetween(group, color, 0.26, 1.45, [-1.2, -0.18, 0], Math.PI * 0.44);
-      cylinderBetween(group, color, 0.26, 1.45, [1.2, -0.18, 0], -Math.PI * 0.44);
+      cylinderBetween(
+        group,
+        color,
+        0.26,
+        1.45,
+        [-1.2, -0.18, 0],
+        Math.PI * 0.44
+      );
+      cylinderBetween(
+        group,
+        color,
+        0.26,
+        1.45,
+        [1.2, -0.18, 0],
+        -Math.PI * 0.44
+      );
     } else {
-      addHead(group, color, false, 2.35, 0.52);
+      addHead(group, color, 2.35, 0.52);
 
       const torso = enableShadow(new THREE.Mesh(
         new THREE.CylinderGeometry(0.72, 0.54, 2.25, 24),
@@ -218,16 +251,36 @@ export async function create3dScene(canvas, options = {}) {
   function setModel(kind, color = '#C98E78') {
     clearSubject();
     currentModel = kind;
+
+    if (kind === 'asaro') {
+      currentAsaro = createAsaroHead(THREE, { color });
+      currentAsaro.materials.forEach((material) => {
+        subjectMaterials.push(material);
+      });
+      currentPlaneCount = currentAsaro.planeCount;
+      currentAsaro.setEdgesVisible(options.edgesVisible !== false);
+      subjectRoot.add(currentAsaro.root);
+      return;
+    }
+
     const model = createPrototype(kind, color);
     subjectRoot.add(model);
   }
 
   function setBaseColor(color) {
-    subjectMaterials.forEach((material) => material.color.set(color));
+    subjectMaterials.forEach((material) => {
+      if (material.userData?.subjectColor) {
+        material.color.set(color);
+      }
+    });
   }
 
   function setGridVisible(visible) {
     grid.visible = Boolean(visible);
+  }
+
+  function setEdgesVisible(visible) {
+    currentAsaro?.setEdgesVisible(visible);
   }
 
   function setShadowsEnabled(enabled) {
@@ -238,10 +291,22 @@ export async function create3dScene(canvas, options = {}) {
   }
 
   const presets = {
-    front: { position: [0, 1.35, 7], target: [0, 1.0, 0] },
-    'three-quarter': { position: [4.3, 2.8, 6.5], target: [0, 1.05, 0] },
-    side: { position: [7, 1.4, 0.15], target: [0, 1.0, 0] },
-    back: { position: [0, 1.4, -7], target: [0, 1.0, 0] }
+    front: {
+      position: [0, 0.85, 6.6],
+      target: [0, 0.78, 0.08]
+    },
+    'three-quarter': {
+      position: [4.4, 2.45, 6.3],
+      target: [0, 0.78, 0.02]
+    },
+    side: {
+      position: [6.8, 0.95, 0.10],
+      target: [0, 0.78, 0.02]
+    },
+    back: {
+      position: [0, 1.0, -6.8],
+      target: [0, 0.82, -0.12]
+    }
   };
 
   function setCameraPreset(name = 'three-quarter') {
@@ -254,6 +319,7 @@ export async function create3dScene(canvas, options = {}) {
   function resize() {
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
+
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(rect.width, rect.height, false);
@@ -280,6 +346,7 @@ export async function create3dScene(canvas, options = {}) {
 
   setModel(options.model || 'asaro', options.color || '#C98E78');
   setGridVisible(options.gridVisible !== false);
+  setEdgesVisible(options.edgesVisible !== false);
   setShadowsEnabled(options.shadowsEnabled !== false);
   setCameraPreset(options.cameraPreset || 'three-quarter');
   applyTheme(document.documentElement.dataset.theme || 'day');
@@ -294,11 +361,17 @@ export async function create3dScene(canvas, options = {}) {
     setModel,
     setBaseColor,
     setGridVisible,
+    setEdgesVisible,
     setShadowsEnabled,
     setCameraPreset,
     resize,
     applyTheme,
     getCurrentModel: () => currentModel,
+    getModelInfo: () => ({
+      id: currentModel,
+      planeCount: currentPlaneCount,
+      originalAsaro: currentModel === 'asaro'
+    }),
     dispose() {
       disposed = true;
       resizeObserver.disconnect();
