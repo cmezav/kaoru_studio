@@ -373,11 +373,7 @@ function cardMarkup(book, progress) {
   const pdf = isPdfBook(book);
 
   const authorLine = pdf
-    ? (
-        book.author
-          ? escapeHtml(book.author)
-          : escapeHtml(book.fileName || 'Documento PDF')
-      )
+    ? ''
     : `by ${escapeHtml(book.author)}`;
 
   const meta = pdf
@@ -393,7 +389,7 @@ function cardMarkup(book, progress) {
 
   return `
     <span class="book-title">${escapeHtml(book.title)}</span>
-    <span class="book-author">${authorLine}</span>
+    ${authorLine ? `<span class="book-author">${authorLine}</span>` : ''}
     <span class="book-meta">${meta}</span>
     <span class="progress-track"><i style="width:${percent}%"></i></span>
   `;
@@ -863,61 +859,77 @@ async function importReaderFile(file) {
   }
 }
 
-function applySavedCloudUi() {
+function setManualCloudIdleUi(message = '') {
   const saved = getSavedCloudConfig();
 
-  if (!saved) return;
+  elements.cloudSyncBtn.hidden = true;
+  elements.cloudLockBtn.hidden = true;
+  elements.cloudSyncBtn.disabled = true;
+  elements.cloudLockBtn.disabled = true;
 
-  elements.cloudOwner.value = saved.owner || 'cmezav';
-  elements.cloudRepo.value = saved.repo || 'kaoru-reader-library';
-  elements.cloudSummary.textContent =
-    `${saved.owner}/${saved.repo} · bloqueado`;
-  elements.cloudBadge.textContent = 'Bloqueado';
+  if (saved) {
+    elements.cloudOwner.value = saved.owner || 'cmezav';
+    elements.cloudRepo.value = saved.repo || 'kaoru-reader-library';
+    elements.cloudSummary.textContent =
+      `${saved.owner}/${saved.repo} · sincronización manual`;
+    elements.cloudBadge.textContent = 'Manual';
+    elements.cloudBadge.classList.remove('is-online');
+    elements.cloudConnectBtn.textContent = 'Sincronizar biblioteca';
+
+    elements.cloudStatus.textContent =
+      message ||
+      'Todo lo local funciona sin contraseña. Escribe tu clave únicamente cuando quieras sincronizar con la nube.';
+    return;
+  }
+
+  elements.cloudSummary.textContent = 'Solo local';
+  elements.cloudBadge.textContent = 'Local';
+  elements.cloudBadge.classList.remove('is-online');
+  elements.cloudConnectBtn.textContent = 'Configurar y sincronizar';
+
   elements.cloudStatus.textContent =
-    'Conexión guardada. Escribe tu clave de biblioteca para desbloquear; el token está cifrado localmente.';
+    message ||
+    'La nube es opcional. Puedes importar y leer EPUB/PDF sin configurarla.';
+}
+
+function applySavedCloudUi() {
+  setManualCloudIdleUi();
 }
 
 async function doCloudSync() {
-  if (!isCloudUnlocked()) return;
-
-  elements.cloudSyncBtn.disabled = true;
-
-  try {
-    const result = await syncCloud();
-
-    if (result?.font?.changed) {
-      const asset = await loadSavedReadingFont();
-      if (asset) {
-        elements.fontSummary.textContent = asset.name || 'Lucida Sans';
-      }
-    }
-
-    await renderLibrary();
-  } catch (error) {
-    elements.cloudStatus.textContent =
-      error?.message || 'No se pudo sincronizar.';
-  } finally {
-    elements.cloudSyncBtn.disabled = !isCloudUnlocked();
+  if (!isCloudUnlocked()) {
+    throw new Error('La nube no está desbloqueada.');
   }
+
+  const result = await syncCloud();
+
+  if (result?.font?.changed) {
+    const asset = await loadSavedReadingFont();
+
+    if (asset) {
+      elements.fontSummary.textContent =
+        asset.name || 'Lucida Sans';
+    }
+  }
+
+  await renderLibrary();
+  return result;
 }
 
 setCloudStatusListener(async (event) => {
-  elements.cloudStatus.textContent = event.message || '';
-
   if (event.connected) {
-    elements.cloudBadge.textContent = navigator.onLine ? 'Nube' : 'Offline';
-    elements.cloudBadge.classList.toggle('is-online', navigator.onLine);
-    elements.cloudSummary.textContent =
-      `${event.owner || elements.cloudOwner.value}/${event.repo || elements.cloudRepo.value}`;
-    elements.cloudSyncBtn.disabled = false;
-    elements.cloudLockBtn.disabled = false;
-    elements.cloudConnectBtn.textContent = 'Reconectar';
-  } else {
     elements.cloudBadge.textContent =
-      event.type === 'offline' ? 'Offline' : 'Local';
-    elements.cloudBadge.classList.remove('is-online');
-    elements.cloudSyncBtn.disabled = true;
-    elements.cloudLockBtn.disabled = true;
+      navigator.onLine ? 'Nube' : 'Offline';
+    elements.cloudBadge.classList.toggle(
+      'is-online',
+      navigator.onLine
+    );
+    elements.cloudSummary.textContent =
+      'Sincronizando biblioteca…';
+  }
+
+  if (event.type === 'working' || event.type === 'error') {
+    elements.cloudStatus.textContent = event.message || '';
   }
 
   if (event.fontChanged) {
@@ -925,7 +937,8 @@ setCloudStatusListener(async (event) => {
       const asset = await loadSavedReadingFont();
 
       if (asset) {
-        elements.fontSummary.textContent = asset.name || 'Lucida Sans';
+        elements.fontSummary.textContent =
+          asset.name || 'Lucida Sans';
       }
     } catch (_) {}
   }
@@ -938,8 +951,25 @@ elements.cloudConnectBtn.addEventListener('click', async () => {
   const password = elements.cloudPassword.value;
   const saved = getSavedCloudConfig();
 
+  if (!navigator.onLine) {
+    setManualCloudIdleUi(
+      'Necesitas Internet solo para sincronizar. Tu biblioteca local sigue disponible.'
+    );
+    return;
+  }
+
+  if (!password) {
+    elements.cloudStatus.textContent =
+      'Escribe tu clave de biblioteca solo para realizar esta sincronización.';
+    elements.cloudPassword.focus();
+    return;
+  }
+
   elements.cloudConnectBtn.disabled = true;
-  elements.cloudStatus.textContent = 'Conectando…';
+  elements.cloudStatus.textContent =
+    'Sincronizando biblioteca…';
+
+  let finalMessage = '';
 
   try {
     if (
@@ -959,28 +989,37 @@ elements.cloudConnectBtn.addEventListener('click', async () => {
     }
 
     elements.cloudToken.value = '';
+
     await doCloudSync();
+
+    finalMessage =
+      'Biblioteca sincronizada. La nube vuelve a quedar cerrada; puedes seguir leyendo sin contraseña.';
   } catch (error) {
-    elements.cloudStatus.textContent =
-      error?.message || 'No se pudo conectar.';
+    finalMessage =
+      error?.message ||
+      'No se pudo sincronizar la biblioteca.';
   } finally {
+    if (isCloudUnlocked()) {
+      lockCloud();
+    }
+
+    elements.cloudPassword.value = '';
     elements.cloudConnectBtn.disabled = false;
+    setManualCloudIdleUi(finalMessage);
   }
 });
 
-elements.cloudSyncBtn.addEventListener('click', doCloudSync);
+elements.cloudSyncBtn.addEventListener('click', () => {
+  elements.cloudConnectBtn.click();
+});
 
 elements.cloudLockBtn.addEventListener('click', () => {
-  lockCloud();
+  if (isCloudUnlocked()) {
+    lockCloud();
+  }
+
   elements.cloudPassword.value = '';
-  elements.cloudSummary.textContent =
-    `${elements.cloudOwner.value}/${elements.cloudRepo.value} · bloqueado`;
-  elements.cloudBadge.textContent = 'Bloqueado';
-  elements.cloudBadge.classList.remove('is-online');
-  elements.cloudConnectBtn.textContent = 'Desbloquear';
-  elements.cloudSyncBtn.disabled = true;
-  elements.cloudLockBtn.disabled = true;
-  renderLibrary();
+  setManualCloudIdleUi();
 });
 
 elements.fontImportBtn.addEventListener('click', () => {

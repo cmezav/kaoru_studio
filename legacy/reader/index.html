@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=pdf-reader-1">
-  <link rel="stylesheet" href="./reader.css?cache=pdf-reader-1">
+  <link rel="stylesheet" href="./reader.css?cache=reader-mobile-manual-cloud-1">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -76,7 +76,7 @@
 
         <div class="settings-body">
           <p class="settings-help">
-            Usa un repositorio <strong>privado</strong> separado. Los EPUB, PDFs, el progreso y la fuente se cifran con tu clave antes de guardarse allí.
+            La lectura local siempre está disponible y no necesita contraseña. La nube es opcional y manual: solo te pediremos la clave cuando pulses <strong>Sincronizar biblioteca</strong>.
           </p>
 
           <div class="sync-grid">
@@ -94,16 +94,16 @@
               <small>Solo Contents: Read and write, limitado al repo privado.</small>
             </label>
             <label class="sync-wide">
-              Clave de biblioteca
+              Clave para sincronizar
               <input id="cloudPassword" type="password" autocomplete="new-password" placeholder="Tu contraseña de cifrado">
-              <small>No se sube a GitHub. Debes usar la misma en laptop y celular.</small>
+              <small>Solo se usa cuando tú decides sincronizar. Leer, importar y continuar obras funciona sin esta clave.</small>
             </label>
           </div>
 
           <div class="settings-actions">
-            <button id="cloudConnectBtn" type="button">Conectar</button>
-            <button id="cloudSyncBtn" type="button" disabled>Sincronizar ahora</button>
-            <button id="cloudLockBtn" class="secondary-action" type="button" disabled>Bloquear</button>
+            <button id="cloudConnectBtn" type="button">Sincronizar biblioteca</button>
+            <button id="cloudSyncBtn" type="button" hidden disabled>Sincronizar ahora</button>
+            <button id="cloudLockBtn" class="secondary-action" type="button" hidden disabled>Bloquear</button>
             <a class="text-link" href="https://github.com/new" target="_blank" rel="noopener noreferrer">Crear repo privado</a>
           </div>
 
@@ -252,6 +252,6 @@
   </form>
 </div>
 
-  <script type="module" src="./reader.js?cache=pdf-reader-1"></script>
+  <script type="module" src="./reader.js?cache=reader-mobile-manual-cloud-1"></script>
 </body>
 </html>

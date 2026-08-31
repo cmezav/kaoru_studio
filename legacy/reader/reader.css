@@ -810,3 +810,100 @@ body:not(.is-pdf-reading) .pdf-view{display:none}
 .pdf-password-actions button{
   min-height:46px;
 }
+/* Biblioteca móvil: nunca permitir desborde horizontal */
+html,
+body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+.library-view,
+.continue-section,
+.books-section,
+.library-list,
+.book-card,
+.continue-card,
+.book-card-main{
+  min-width:0;
+  max-width:100%;
+}
+
+.library-view{
+  overflow-x:clip;
+}
+
+.library-list,
+.book-card,
+.continue-card,
+.book-card-main{
+  width:100%;
+}
+
+.book-card,
+.continue-card{
+  overflow:hidden;
+}
+
+.book-title,
+.book-author,
+.book-meta,
+.progress-label{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+.book-author{
+  white-space:normal;
+}
+
+.book-card-footer{
+  min-width:0;
+  max-width:100%;
+  flex-wrap:wrap;
+}
+
+.progress-label{
+  flex:1 1 140px;
+}
+
+.delete-book{
+  flex:0 0 auto;
+  max-width:100%;
+  margin-left:auto;
+}
+
+.progress-track{
+  width:100%;
+  max-width:100%;
+}
+
+@media(max-width:650px){
+  .library-view{
+    width:100%;
+    padding-left:16px;
+    padding-right:16px;
+  }
+
+  .book-card,
+  .continue-card{
+    width:100%;
+    padding:14px;
+  }
+
+  .book-title{
+    font-size:clamp(19px,6vw,25px);
+    line-height:1.22;
+  }
+
+  .book-card-footer{
+    gap:10px;
+  }
+
+  .delete-book{
+    padding-left:8px;
+    padding-right:0;
+  }
+}

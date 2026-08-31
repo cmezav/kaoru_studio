@@ -1345,23 +1345,11 @@ export async function syncCloud() {
   }
 }
 
-export function scheduleCloudSync(delay = 120000) {
-  if (!cloud || !navigator.onLine) return;
-
-  if (syncTimer) return;
-
-  syncTimer = setTimeout(async () => {
-    syncTimer = 0;
-
-    try {
-      await syncCloud();
-    } catch (error) {
-      emit(
-        'error',
-        error?.message || 'No se pudo sincronizar.'
-      );
-    }
-  }, Math.max(1000, Number(delay) || 120000));
+export function scheduleCloudSync() {
+  // Reader usa sincronización manual.
+  // Nunca se inicia una subida/descarga por leer, importar,
+  // cambiar de capítulo, volver a tener Internet o cerrar la página.
+  return;
 }
 
 export async function deleteBookEverywhere(bookId) {
