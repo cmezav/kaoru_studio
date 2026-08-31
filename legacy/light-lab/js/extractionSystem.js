@@ -6,7 +6,7 @@ export const MAX_RECENT_COLORS = 24;
 export const SAMPLE_ROLES = [
   { id: 'sample', name: 'Muestra' }, { id: 'base', name: 'Principal / Base' },
   { id: 'light', name: 'Luz' }, { id: 'shadow', name: 'Sombra' },
-  { id: 'ambient', name: 'Ambiente' }, { id: 'bounce', name: 'Rebote' }
+  { id: 'ambient', name: 'Luz general' }, { id: 'bounce', name: 'Luz rebotada' }
 ];
 
 function ensureImageBlob(blob) {

@@ -131,9 +131,9 @@ function boot() {
     toast('Paleta guardada en la Galeria general.');
   }
 
-  document.title = "Kaoru's Studio - Light Lab Fase 6";
+  document.title = "Kaoru's Studio - Light Lab";
   const badge = document.querySelector('.lab-intro .eyebrow');
-  if (badge) badge.textContent = 'LIGHT LAB - FASE 6 DE 8';
+  if (badge) badge.textContent = 'LIGHT LAB';
 
   const panel = document.querySelector('.status-panel');
   const copyButton = document.getElementById('copyAllBtn');

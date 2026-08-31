@@ -21,7 +21,7 @@ const ADVANCED_PREVIEW_MODES = [
   ['steel', 'Acero'],
   ['head', 'Cabeza'],
   ['planes', 'Planos'],
-  ['asaro', 'Asaro 2D'],
+  ['asaro', 'Cabeza de estudio'],
   ['reference', 'Imagen / Cuentagotas']
 ];
 
@@ -35,12 +35,12 @@ function setupAdvancedPreviewUI() {
     steel: 'Material - acero',
     head: 'Cabeza simplificada',
     planes: 'Cabeza por planos',
-    asaro: 'Estudio tipo Asaro 2D'
+    asaro: 'Cabeza para estudiar luz y sombra'
   });
 
-  document.title = "Kaoru's Studio - Light Lab Fase 5";
+  document.title = "Kaoru's Studio - Light Lab";
   const phaseBadge = document.querySelector('.lab-intro .eyebrow');
-  if (phaseBadge) phaseBadge.textContent = 'LIGHT LAB - FASE 5 DE 8';
+  if (phaseBadge) phaseBadge.textContent = 'LIGHT LAB';
 
   elements.previewTabs.replaceChildren(...ADVANCED_PREVIEW_MODES.map(([id, label], index) => {
     const button = document.createElement('button');
@@ -123,31 +123,384 @@ function renderParameters(params) {
   document.querySelectorAll('[data-output]').forEach((output) => { const value=params[output.dataset.output] ?? 0; output.value=`${value>0?'+':''}${value}`; output.textContent=output.value; });
 }
 
-function renderLightingControls(state) {
-  const lighting=state.lighting; const selected=lighting.lights.find((light)=>light.id===lighting.selectedLightId) || lighting.lights[0];
-  elements.lightingEnabled.checked=lighting.enabled; elements.activeLightsLabel.textContent=lightingSummary(lighting);
-  elements.addLight.disabled=lighting.lights.length>=MAX_DIRECT_LIGHTS;
-  if(!elements.lightingScenes.childElementCount)elements.lightingScenes.replaceChildren(...LIGHTING_SCENES.map((scene)=>{const button=document.createElement('button');button.type='button';button.dataset.scene=scene.id;button.textContent=scene.name;return button;}));
-  const signature=`${lighting.lights.map((light)=>`${light.id}:${light.name}:${light.color}:${light.enabled}`).join('|')}::${selected?.id || ''}`;
-  if(signature!==lightsRenderSignature){
-    lightsRenderSignature=signature;
-    elements.lightsList.replaceChildren(...lighting.lights.map((light,index)=>{
-      const item=document.createElement('article');const isSelected=light.id===selected?.id;item.className=`light-item${isSelected?' is-selected':''}${light.enabled?'':' is-disabled'}`;item.dataset.lightId=light.id;
-      item.innerHTML=`<div class="light-item-head"><input type="checkbox" data-light-field="enabled" ${light.enabled?'checked':''} aria-label="Activar ${escapeHtml(light.name)}"><button type="button" data-light-action="select" class="light-select"><i style="--light-color:${light.color}"></i><span><strong>${escapeHtml(light.name)}</strong><small>${light.color} · ${Math.round(light.intensity)}%</small></span></button><button type="button" data-light-action="duplicate" title="Duplicar luz" aria-label="Duplicar ${escapeHtml(light.name)}">⧉</button><button type="button" data-light-action="delete" title="Eliminar luz" aria-label="Eliminar ${escapeHtml(light.name)}" ${lighting.lights.length===1?'disabled':''}>×</button></div>${isSelected?`<div class="light-editor-inline"><label>Nombre<input type="text" maxlength="28" data-light-field="name" value="${escapeHtml(light.name)}"></label><div class="light-color-row"><input type="color" data-light-field="color" value="${light.color}" aria-label="Color de ${escapeHtml(light.name)}"><input type="text" maxlength="7" data-light-hex value="${light.color}" aria-label="HEX de ${escapeHtml(light.name)}"></div><label><span>Intensidad <output>${Math.round(light.intensity)}</output></span><input type="range" min="0" max="100" data-light-field="intensity" value="${light.intensity}"></label><label><span>Dirección <output>${Math.round(light.direction)}°</output></span><input type="range" min="-180" max="180" data-light-field="direction" value="${light.direction}"></label><label><span>Elevación <output>${Math.round(light.elevation)}°</output></span><input type="range" min="-90" max="90" data-light-field="elevation" value="${light.elevation}"></label><label><span>Suavidad <output>${Math.round(light.softness)}</output></span><input type="range" min="0" max="100" data-light-field="softness" value="${light.softness}"></label></div>`:''}`;
-      return item;
-    }));
-  }
-  lighting.lights.forEach((light)=>{
-    const item=elements.lightsList.querySelector(`[data-light-id="${light.id}"]`);if(!item)return;const summary=item.querySelector('.light-select small');if(summary)summary.textContent=`${light.color} · ${Math.round(light.intensity)}%`;
-    item.querySelectorAll('[data-light-field]').forEach((input)=>{const field=input.dataset.lightField;if(document.activeElement===input||input.type==='checkbox'||field==='name'||field==='color')return;input.value=String(light[field]);const output=input.closest('label')?.querySelector('output');if(output){output.value=String(Math.round(light[field]));output.textContent=`${output.value}${['direction','elevation'].includes(field)?'°':''}`;}});
-  });
-  elements.environmentControls.querySelectorAll('[data-light-component]').forEach((row)=>{
-    const component=lighting[row.dataset.lightComponent];if(!component)return;
-    const picker=row.querySelector('[data-component-field="color"]');const hex=row.querySelector('[data-component-hex]');const intensity=row.querySelector('[data-component-field="intensity"]');const output=row.querySelector('[data-component-output]');
-    if(document.activeElement!==picker)picker.value=component.color;if(document.activeElement!==hex)hex.value=component.color;if(document.activeElement!==intensity)intensity.value=String(component.intensity);output.value=String(Math.round(component.intensity));output.textContent=output.value;
-  });
+function directionLabel(value) {
+  const angle = Number(value) || 0;
+  if (angle <= -135 || angle >= 135) return 'Desde atrás';
+  if (angle < -45) return 'Desde la izquierda';
+  if (angle > 45) return 'Desde la derecha';
+  return 'Desde el frente';
 }
 
+function elevationLabel(value) {
+  const angle = Number(value) || 0;
+  if (angle <= -30) return 'Desde abajo';
+  if (angle >= 30) return 'Desde arriba';
+  return 'A la altura';
+}
+
+function softnessLabel(value) {
+  const amount = Number(value) || 0;
+  if (amount < 28) return 'Marcada';
+  if (amount < 68) return 'Suave';
+  return 'Muy suave';
+}
+
+function formatLightControlValue(field, value) {
+  const amount = Number(value) || 0;
+  if (field === 'intensity') return `${Math.round(amount)}%`;
+  if (field === 'direction') return directionLabel(amount);
+  if (field === 'elevation') return elevationLabel(amount);
+  if (field === 'softness') return softnessLabel(amount);
+  return String(Math.round(amount));
+}
+
+function renderLightingControls(state) {
+  const lighting = state.lighting;
+  const selected =
+    lighting.lights.find(
+      (light) =>
+        light.id === lighting.selectedLightId
+    ) || lighting.lights[0];
+
+  elements.lightingEnabled.checked =
+    lighting.enabled;
+
+  elements.activeLightsLabel.textContent =
+    lightingSummary(lighting);
+
+  elements.addLight.disabled =
+    lighting.lights.length >= MAX_DIRECT_LIGHTS;
+
+  if (!elements.lightingScenes.childElementCount) {
+    elements.lightingScenes.replaceChildren(
+      ...LIGHTING_SCENES.map((scene) => {
+        const button = document.createElement('button');
+
+        button.type = 'button';
+        button.dataset.scene = scene.id;
+        button.className = 'lighting-preset-card';
+
+        button.style.setProperty(
+          '--scene-a',
+          scene.preview?.a || '#FFF1D6'
+        );
+
+        button.style.setProperty(
+          '--scene-b',
+          scene.preview?.b || '#232532'
+        );
+
+        button.style.setProperty(
+          '--scene-bg',
+          scene.preview?.bg || '#11131A'
+        );
+
+        button.style.setProperty(
+          '--scene-x',
+          scene.preview?.x || '35%'
+        );
+
+        button.style.setProperty(
+          '--scene-y',
+          scene.preview?.y || '28%'
+        );
+
+        button.innerHTML = `
+          <span class="scene-preview" aria-hidden="true">
+            <i></i>
+          </span>
+          <span class="scene-copy">
+            <strong>${escapeHtml(scene.name)}</strong>
+            <small>${escapeHtml(scene.description)}</small>
+          </span>
+        `;
+
+        return button;
+      })
+    );
+  }
+
+  elements.lightingScenes
+    .querySelectorAll('[data-scene]')
+    .forEach((button) => {
+      const active =
+        button.dataset.scene === lighting.sceneId;
+
+      button.classList.toggle(
+        'is-active',
+        active
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(active)
+      );
+    });
+
+  const signature = `${
+    lighting.sceneId || 'custom'
+  }::${
+    lighting.lights
+      .map(
+        (light) =>
+          `${light.id}:${light.name}:${light.color}:${light.enabled}`
+      )
+      .join('|')
+  }::${selected?.id || ''}`;
+
+  if (signature !== lightsRenderSignature) {
+    lightsRenderSignature = signature;
+
+    elements.lightsList.replaceChildren(
+      ...lighting.lights.map((light) => {
+        const item =
+          document.createElement('article');
+
+        const isSelected =
+          light.id === selected?.id;
+
+        item.className =
+          `light-item friendly-light-item${
+            isSelected ? ' is-selected' : ''
+          }${
+            light.enabled ? '' : ' is-disabled'
+          }`;
+
+        item.dataset.lightId = light.id;
+
+        item.innerHTML = `
+          <div class="light-item-head">
+            <input
+              type="checkbox"
+              data-light-field="enabled"
+              ${light.enabled ? 'checked' : ''}
+              aria-label="Activar ${escapeHtml(light.name)}"
+            >
+
+            <button
+              type="button"
+              data-light-action="select"
+              class="light-select"
+            >
+              <i style="--light-color:${light.color}"></i>
+              <span>
+                <strong>${escapeHtml(light.name)}</strong>
+                <small>${light.color} · ${Math.round(light.intensity)}%</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              data-light-action="duplicate"
+              title="Duplicar esta luz"
+              aria-label="Duplicar ${escapeHtml(light.name)}"
+            >⧉</button>
+
+            <button
+              type="button"
+              data-light-action="delete"
+              title="Eliminar esta luz"
+              aria-label="Eliminar ${escapeHtml(light.name)}"
+              ${lighting.lights.length === 1 ? 'disabled' : ''}
+            >×</button>
+          </div>
+
+          ${
+            isSelected
+              ? `
+                <div class="light-editor-inline friendly-light-editor">
+                  <label class="friendly-name-field">
+                    <span>Nombre de la luz</span>
+                    <input
+                      type="text"
+                      maxlength="28"
+                      data-light-field="name"
+                      value="${escapeHtml(light.name)}"
+                    >
+                  </label>
+
+                  <label class="friendly-color-field">
+                    <span>Color de esta luz</span>
+                    <div class="light-color-row">
+                      <input
+                        type="color"
+                        data-light-field="color"
+                        value="${light.color}"
+                        aria-label="Color de ${escapeHtml(light.name)}"
+                      >
+                      <input
+                        type="text"
+                        maxlength="7"
+                        data-light-hex
+                        value="${light.color}"
+                        aria-label="HEX de ${escapeHtml(light.name)}"
+                      >
+                    </div>
+                  </label>
+
+                  <label>
+                    <span>
+                      Fuerza
+                      <output>${formatLightControlValue('intensity', light.intensity)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      data-light-field="intensity"
+                      value="${light.intensity}"
+                    >
+                  </label>
+
+                  <label>
+                    <span>
+                      ¿Desde qué lado?
+                      <output>${formatLightControlValue('direction', light.direction)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      data-light-field="direction"
+                      value="${light.direction}"
+                    >
+                  </label>
+
+                  <label>
+                    <span>
+                      Altura de la luz
+                      <output>${formatLightControlValue('elevation', light.elevation)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="-90"
+                      max="90"
+                      data-light-field="elevation"
+                      value="${light.elevation}"
+                    >
+                  </label>
+
+                  <label>
+                    <span>
+                      Suavidad
+                      <output>${formatLightControlValue('softness', light.softness)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      data-light-field="softness"
+                      value="${light.softness}"
+                    >
+                  </label>
+                </div>
+              `
+              : ''
+          }
+        `;
+
+        return item;
+      })
+    );
+  }
+
+  lighting.lights.forEach((light) => {
+    const item =
+      elements.lightsList.querySelector(
+        `[data-light-id="${light.id}"]`
+      );
+
+    if (!item) return;
+
+    const summary =
+      item.querySelector('.light-select small');
+
+    if (summary) {
+      summary.textContent =
+        `${light.color} · ${Math.round(light.intensity)}%`;
+    }
+
+    item
+      .querySelectorAll('[data-light-field]')
+      .forEach((input) => {
+        const field =
+          input.dataset.lightField;
+
+        if (
+          document.activeElement === input ||
+          input.type === 'checkbox' ||
+          field === 'name' ||
+          field === 'color'
+        ) {
+          return;
+        }
+
+        input.value =
+          String(light[field]);
+
+        const output =
+          input
+            .closest('label')
+            ?.querySelector('output');
+
+        if (output) {
+          const text =
+            formatLightControlValue(
+              field,
+              light[field]
+            );
+
+          output.value = text;
+          output.textContent = text;
+        }
+      });
+  });
+
+  elements.environmentControls
+    .querySelectorAll('[data-light-component]')
+    .forEach((row) => {
+      const component =
+        lighting[row.dataset.lightComponent];
+
+      if (!component) return;
+
+      const picker =
+        row.querySelector(
+          '[data-component-field="color"]'
+        );
+
+      const hex =
+        row.querySelector(
+          '[data-component-hex]'
+        );
+
+      const intensity =
+        row.querySelector(
+          '[data-component-field="intensity"]'
+        );
+
+      const output =
+        row.querySelector(
+          '[data-component-output]'
+        );
+
+      if (document.activeElement !== picker)
+        picker.value = component.color;
+
+      if (document.activeElement !== hex)
+        hex.value = component.color;
+
+      if (document.activeElement !== intensity)
+        intensity.value =
+          String(component.intensity);
+
+      const text =
+        `${Math.round(component.intensity)}%`;
+
+      output.value = text;
+      output.textContent = text;
+    });
+}
 function renderSwatches(entries,{editable=false,kind='illuminated'}={}) {
   elements.swatchGrid.replaceChildren(...entries.map((color,index) => {
     const item=document.createElement('article'); item.className='swatch'; item.dataset.index=String(index); item.dataset.paletteKind=kind; item.tabIndex=0; item.setAttribute('role','button');
@@ -234,13 +587,54 @@ function useExtractedAsBase(hex, label='color extraído') {
 }
 
 function updateDirectLight(lightId, changes) {
-  store.setState((state)=>({...state,lighting:{...state.lighting,lights:state.lighting.lights.map((light)=>light.id===lightId?{...light,...changes}:light)},reference:changes.color?{...state.reference,recentColors:addRecentColor(state.reference.recentColors,changes.color,'light')} : state.reference}));
+  store.setState((state)=>({
+    ...state,
+    lighting:{
+      ...state.lighting,
+      sceneId:'custom',
+      lights:state.lighting.lights.map(
+        (light)=>
+          light.id===lightId
+            ? {...light,...changes}
+            : light
+      )
+    },
+    reference:changes.color
+      ? {
+          ...state.reference,
+          recentColors:addRecentColor(
+            state.reference.recentColors,
+            changes.color,
+            'light'
+          )
+        }
+      : state.reference
+  }));
 }
 
 function updateLightingComponent(component, changes) {
-  store.setState((state)=>({...state,lighting:{...state.lighting,[component]:{...state.lighting[component],...changes}},reference:changes.color?{...state.reference,recentColors:addRecentColor(state.reference.recentColors,changes.color,component)}:state.reference}));
+  store.setState((state)=>({
+    ...state,
+    lighting:{
+      ...state.lighting,
+      sceneId:'custom',
+      [component]:{
+        ...state.lighting[component],
+        ...changes
+      }
+    },
+    reference:changes.color
+      ? {
+          ...state.reference,
+          recentColors:addRecentColor(
+            state.reference.recentColors,
+            changes.color,
+            component
+          )
+        }
+      : state.reference
+  }));
 }
-
 function applyLightHex(input) {
   const item=input.closest('[data-light-id]');const hex=normalizeHex(input.value);input.setAttribute('aria-invalid',String(!hex));
   if(hex&&item)updateDirectLight(item.dataset.lightId,{color:hex});
@@ -310,14 +704,65 @@ elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=element
 document.querySelector('.parameter-list').addEventListener('input',(event)=>{const input=event.target.closest('[data-param]');if(!input)return;store.setState((state)=>{const params={...state.params,[input.dataset.param]:Number(input.value)};const next={...state,selection:{...state.selection,presetId:'custom'},params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});});
 elements.resetParams.addEventListener('click',()=>{store.setState((state)=>{const params={...DEFAULT_PARAMS};const next={...state,params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});showToast('Ajustes restablecidos');});
 elements.lightingEnabled.addEventListener('change',()=>{store.setState((state)=>({...state,lighting:{...state.lighting,enabled:elements.lightingEnabled.checked}}));showToast(elements.lightingEnabled.checked?'Iluminación activada':'Iluminación apagada');});
-elements.lightingScenes.addEventListener('click',(event)=>{const button=event.target.closest('[data-scene]');if(!button)return;lightsRenderSignature='';store.setState((state)=>({...state,lighting:sceneLighting(button.dataset.scene),ui:{...state.ui,paletteView:'illuminated'}}));showToast(`Escena ${button.textContent} aplicada`);});
+elements.lightingScenes.addEventListener('click',(event)=>{
+  const button=event.target.closest('[data-scene]');
+  if(!button)return;
+
+  const scene=LIGHTING_SCENES.find(
+    (item)=>item.id===button.dataset.scene
+  );
+
+  lightsRenderSignature='';
+
+  store.setState((state)=>({
+    ...state,
+    lighting:sceneLighting(button.dataset.scene),
+    ui:{
+      ...state.ui,
+      paletteView:'illuminated'
+    }
+  }));
+
+  showToast(
+    `${scene?.name || 'Iluminación'} aplicada`
+  );
+});
 elements.addLight.addEventListener('click',()=>{store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const light=createDirectLight({},state.lighting.lights.length);return {...state,lighting:{...state.lighting,enabled:true,lights:[...state.lighting.lights,light],selectedLightId:light.id},ui:{...state.ui,paletteView:'illuminated'}};});showToast('Nueva luz añadida');});
 elements.lightsList.addEventListener('click',(event)=>{const item=event.target.closest('[data-light-id]');const action=event.target.closest('[data-light-action]')?.dataset.lightAction;if(!item||!action)return;const id=item.dataset.lightId;
   if(action==='select'){store.setState((state)=>({...state,lighting:{...state.lighting,selectedLightId:id}}));return;}
   if(action==='duplicate'){store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const source=state.lighting.lights.find((light)=>light.id===id);if(!source)return state;const duplicate=createDirectLight({...source,id:null,name:`${source.name} copia`},state.lighting.lights.length);const index=state.lighting.lights.findIndex((light)=>light.id===id);const lights=[...state.lighting.lights];lights.splice(index+1,0,duplicate);return {...state,lighting:{...state.lighting,lights,selectedLightId:duplicate.id}};});showToast('Luz duplicada');return;}
   if(action==='delete'){store.setState((state)=>{if(state.lighting.lights.length===1)return state;const lights=state.lighting.lights.filter((light)=>light.id!==id);return {...state,lighting:{...state.lighting,lights,selectedLightId:state.lighting.selectedLightId===id?lights[0].id:state.lighting.selectedLightId}};});showToast('Luz eliminada');}
 });
-elements.lightsList.addEventListener('input',(event)=>{const input=event.target.closest('[data-light-field]');const item=event.target.closest('[data-light-id]');if(!input||!item||input.type!=='range')return;const value=Number(input.value);const output=input.closest('label')?.querySelector('output');if(output){output.value=String(Math.round(value));output.textContent=`${Math.round(value)}${['direction','elevation'].includes(input.dataset.lightField)?'°':''}`;}updateDirectLight(item.dataset.lightId,{[input.dataset.lightField]:value});});
+elements.lightsList.addEventListener('input',(event)=>{
+  const input=event.target.closest('[data-light-field]');
+  const item=event.target.closest('[data-light-id]');
+
+  if(
+    !input ||
+    !item ||
+    input.type!=='range'
+  )return;
+
+  const value=Number(input.value);
+  const output=
+    input.closest('label')?.querySelector('output');
+
+  if(output){
+    const text=
+      formatLightControlValue(
+        input.dataset.lightField,
+        value
+      );
+
+    output.value=text;
+    output.textContent=text;
+  }
+
+  updateDirectLight(
+    item.dataset.lightId,
+    {[input.dataset.lightField]:value}
+  );
+});
 elements.lightsList.addEventListener('change',(event)=>{const input=event.target.closest('[data-light-field]');const item=event.target.closest('[data-light-id]');if(!input||!item||input.type==='range')return;const field=input.dataset.lightField;const value=input.type==='checkbox'?input.checked:field==='color'?(normalizeHex(input.value)||input.value):input.value.trim()||'Luz';updateDirectLight(item.dataset.lightId,{[field]:value});});
 elements.lightsList.addEventListener('keydown',(event)=>{const input=event.target.closest('[data-light-hex]');if(input&&event.key==='Enter'){event.preventDefault();applyLightHex(input);}});
 elements.lightsList.addEventListener('focusout',(event)=>{const input=event.target.closest('[data-light-hex]');if(input)applyLightHex(input);});

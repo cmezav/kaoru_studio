@@ -36,3 +36,392 @@ html.kaoru-embedded .light-topbar{display:none}html.kaoru-embedded body{min-widt
 .environment-controls{margin-top:10px;border-top:1px solid var(--lab-line);padding-top:9px}.environment-controls summary{display:flex;align-items:center;justify-content:space-between;list-style:none;color:var(--lab-muted);font-size:7.5px;cursor:pointer}.environment-controls summary::-webkit-details-marker{display:none}.environment-controls[open] summary span{transform:rotate(180deg)}.lighting-components{display:grid;gap:7px;margin-top:9px}.lighting-component{display:grid;grid-template-columns:55px 29px minmax(0,1fr) 24px;gap:4px;align-items:center}.lighting-component>span{font-size:7px;font-weight:800}.lighting-component input[type=color]{width:29px;height:27px;padding:2px;border:1px solid var(--lab-line);border-radius:6px;background:var(--lab-surface-2)}.lighting-component input[type=text]{min-width:0;height:27px;padding:0 5px;border:1px solid var(--lab-line);border-radius:6px;background:var(--lab-surface-2);font:750 7px/1 ui-monospace,SFMono-Regular,Consolas,monospace}.lighting-component output{text-align:right;font:750 6.8px/1 ui-monospace,SFMono-Regular,Consolas,monospace}.lighting-component input[type=range]{grid-column:2/-1;width:100%;height:3px;margin:0;accent-color:var(--lab-accent)}
 .palette-view-tabs{display:flex;padding:3px;border:1px solid var(--lab-line);border-radius:9px;background:var(--lab-surface-2)}.palette-view-tabs button{height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;color:var(--lab-muted);font-size:7.5px;font-weight:820;cursor:pointer}.palette-view-tabs button.is-active{background:var(--lab-accent-soft);color:var(--lab-accent)}.palette-tip{margin:8px 0 0;color:var(--lab-muted);font-size:7.3px;text-align:right}.comparison-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.comparison-item{min-width:0;padding:6px;border:1px solid var(--lab-line);border-radius:8px;background:var(--lab-surface-2)}.comparison-item>strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:5px;font-size:6.8px;text-transform:uppercase}.comparison-item>div{display:grid;grid-template-columns:1fr 8px 1fr;gap:3px;align-items:center}.comparison-item b{text-align:center;color:var(--lab-muted);font-size:7px}.comparison-item button{min-width:0;padding:0;overflow:hidden;border:1px solid var(--lab-line);border-radius:6px;background:var(--lab-surface);cursor:pointer}.comparison-item button:hover{border-color:var(--lab-accent)}.comparison-item button i{display:block;height:20px;background:var(--compare)}.comparison-item button span{display:block;padding:3px 1px;color:var(--lab-muted);font:650 5.8px/1 ui-monospace,SFMono-Regular,Consolas,monospace}
 @media(max-height:800px){.lighting-scenes{margin-bottom:7px}.light-editor-inline{gap:6px;padding:7px}.environment-controls{margin-top:7px;padding-top:7px}.lighting-components{gap:5px}.comparison-grid{gap:4px}.comparison-item{padding:4px}}
+/* ============================================================
+   Light Lab simple: elegir un look -> ajustar
+   ============================================================ */
+.lighting-simple-section{
+  display:grid;
+  gap:12px;
+}
+
+.lighting-simple-section .lighting-heading{
+  align-items:flex-start;
+}
+
+.lighting-simple-section .lighting-heading>div{
+  min-width:0;
+}
+
+.lighting-simple-section .lighting-heading h2{
+  margin:0;
+}
+
+.lighting-simple-section .lighting-heading small{
+  display:block;
+  margin-top:3px;
+  color:var(--lab-muted);
+  font-size:7px;
+  line-height:1.45;
+}
+
+.lighting-simple-help{
+  margin:0;
+  padding:9px 10px;
+  border:1px solid var(--lab-line);
+  border-radius:9px;
+  background:var(--lab-surface-2);
+  color:var(--lab-muted);
+  font-size:7.5px;
+  line-height:1.55;
+}
+
+.lighting-preset-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px!important;
+}
+
+.lighting-preset-card{
+  min-width:0;
+  min-height:116px;
+  display:grid;
+  grid-template-rows:58px auto;
+  gap:7px;
+  padding:7px!important;
+  border:1px solid var(--lab-line)!important;
+  border-radius:10px!important;
+  background:var(--lab-surface)!important;
+  color:var(--lab-text)!important;
+  text-align:left!important;
+  cursor:pointer;
+  overflow:hidden;
+  transition:
+    border-color .16s ease,
+    box-shadow .16s ease,
+    transform .16s ease;
+}
+
+.lighting-preset-card:hover{
+  transform:translateY(-1px);
+  border-color:color-mix(
+    in srgb,
+    var(--lab-accent) 55%,
+    var(--lab-line)
+  )!important;
+}
+
+.lighting-preset-card.is-active{
+  border-color:var(--lab-accent)!important;
+  box-shadow:
+    0 0 0 1px var(--lab-accent),
+    0 8px 20px color-mix(
+      in srgb,
+      var(--lab-accent) 12%,
+      transparent
+    );
+}
+
+.scene-preview{
+  position:relative;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  min-height:58px;
+  border-radius:7px;
+  background:
+    radial-gradient(
+      circle at 50% 120%,
+      color-mix(in srgb,var(--scene-a) 28%,transparent),
+      transparent 54%
+    ),
+    linear-gradient(
+      145deg,
+      var(--scene-bg),
+      color-mix(in srgb,var(--scene-b) 50%,var(--scene-bg))
+    );
+}
+
+.scene-preview::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb,var(--scene-a) 14%,transparent),
+      transparent 46%,
+      color-mix(in srgb,var(--scene-b) 12%,transparent)
+    );
+  pointer-events:none;
+}
+
+.scene-preview i{
+  width:43px;
+  height:43px;
+  border-radius:50%;
+  position:relative;
+  z-index:1;
+  background:
+    radial-gradient(
+      circle at var(--scene-x) var(--scene-y),
+      #fff 0 2%,
+      color-mix(in srgb,var(--scene-a) 88%,white) 7%,
+      var(--scene-a) 23%,
+      color-mix(in srgb,var(--scene-a) 34%,var(--scene-b)) 51%,
+      var(--scene-b) 76%,
+      #08090d 100%
+    );
+  box-shadow:
+    0 8px 13px rgba(0,0,0,.42),
+    0 0 18px color-mix(in srgb,var(--scene-a) 24%,transparent);
+}
+
+.scene-copy{
+  min-width:0;
+}
+
+.scene-copy strong,
+.scene-copy small{
+  display:block;
+}
+
+.scene-copy strong{
+  font-size:8px;
+  line-height:1.25;
+}
+
+.scene-copy small{
+  margin-top:3px;
+  color:var(--lab-muted);
+  font-size:6.6px;
+  line-height:1.38;
+}
+
+.simple-light-editor-heading{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:8px;
+  padding-top:3px;
+}
+
+.simple-light-editor-heading strong,
+.simple-light-editor-heading small{
+  display:block;
+}
+
+.simple-light-editor-heading strong{
+  font-size:8px;
+}
+
+.simple-light-editor-heading small{
+  margin-top:2px;
+  color:var(--lab-muted);
+  font-size:6.8px;
+}
+
+.simple-lights-list{
+  display:grid;
+  gap:7px;
+}
+
+.friendly-light-item{
+  border-radius:10px!important;
+}
+
+.friendly-light-item.is-selected{
+  border-color:
+    color-mix(
+      in srgb,
+      var(--lab-accent) 55%,
+      var(--lab-line)
+    )!important;
+}
+
+.friendly-light-editor{
+  display:grid!important;
+  gap:9px!important;
+  padding-top:9px!important;
+}
+
+.friendly-light-editor>label>span,
+.friendly-name-field>span,
+.friendly-color-field>span{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:4px;
+  color:var(--lab-muted);
+  font-size:7px;
+  font-weight:800;
+}
+
+.friendly-light-editor output{
+  max-width:54%;
+  color:var(--lab-text);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  text-align:right;
+}
+
+.friendly-color-field .light-color-row{
+  margin-top:0;
+}
+
+.simple-more-lighting{
+  margin-top:2px;
+  border:1px solid var(--lab-line);
+  border-radius:10px;
+  background:var(--lab-surface-2);
+  overflow:hidden;
+}
+
+.simple-more-lighting>summary{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 10px;
+  cursor:pointer;
+  list-style:none;
+}
+
+.simple-more-lighting>summary::-webkit-details-marker{
+  display:none;
+}
+
+.simple-more-lighting>summary span{
+  min-width:0;
+}
+
+.simple-more-lighting>summary strong,
+.simple-more-lighting>summary small{
+  display:block;
+}
+
+.simple-more-lighting>summary strong{
+  font-size:8px;
+}
+
+.simple-more-lighting>summary small{
+  margin-top:2px;
+  color:var(--lab-muted);
+  font-size:6.7px;
+}
+
+.simple-more-lighting>summary b{
+  color:var(--lab-muted);
+  transition:transform .16s ease;
+}
+
+.simple-more-lighting[open]>summary b{
+  transform:rotate(180deg);
+}
+
+.add-light-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 10px;
+  border-top:1px solid var(--lab-line);
+}
+
+.add-light-row strong,
+.add-light-row small{
+  display:block;
+}
+
+.add-light-row strong{
+  font-size:7.5px;
+}
+
+.add-light-row small{
+  margin-top:2px;
+  color:var(--lab-muted);
+  font-size:6.5px;
+  line-height:1.35;
+}
+
+.add-light-row button{
+  flex:0 0 auto;
+  min-height:29px;
+  padding:0 8px;
+  border:1px solid var(--lab-line);
+  border-radius:7px;
+  background:var(--lab-surface);
+  color:var(--lab-text);
+  font-size:7px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.add-light-row button:hover{
+  border-color:var(--lab-accent);
+  color:var(--lab-accent);
+}
+
+.friendly-lighting-components{
+  display:grid!important;
+  gap:0!important;
+  padding:0!important;
+  border-top:1px solid var(--lab-line);
+}
+
+.friendly-lighting-components .lighting-component{
+  grid-template-columns:minmax(92px,1.25fr) 30px 68px 34px!important;
+  gap:5px!important;
+  padding:8px 10px!important;
+  border-bottom:1px solid var(--lab-line);
+}
+
+.friendly-lighting-components .lighting-component:last-child{
+  border-bottom:0;
+}
+
+.friendly-lighting-components .lighting-component>span strong,
+.friendly-lighting-components .lighting-component>span small{
+  display:block;
+}
+
+.friendly-lighting-components .lighting-component>span strong{
+  color:var(--lab-text);
+  font-size:7px;
+}
+
+.friendly-lighting-components .lighting-component>span small{
+  margin-top:2px;
+  color:var(--lab-muted);
+  font-size:6.2px;
+  line-height:1.3;
+}
+
+.friendly-lighting-components .lighting-component>input[type="range"]{
+  grid-column:1 / -1;
+  width:100%;
+}
+
+.friendly-lighting-components .lighting-component output{
+  text-align:right;
+  color:var(--lab-muted);
+  font-size:6.5px;
+}
+
+@media(max-width:1250px){
+  .lighting-preset-grid{
+    grid-template-columns:1fr;
+  }
+
+  .lighting-preset-card{
+    grid-template-columns:76px 1fr;
+    grid-template-rows:auto;
+    min-height:72px;
+    align-items:center;
+  }
+
+  .scene-preview{
+    min-height:56px;
+  }
+}

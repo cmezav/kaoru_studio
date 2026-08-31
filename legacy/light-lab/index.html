@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=current">
+  <link rel="stylesheet" href="./styles.css?cache=lighting-simple-1">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -48,23 +48,87 @@
         <p class="base-help">Puedes escribir o pegar cualquier HEX. La paleta se actualiza al instante.</p>
       </section>
 
-      <section class="control-section lighting-section">
-        <div class="section-heading lighting-heading"><span>03</span><h2>Iluminación</h2><label class="master-switch" title="Activar iluminación"><input id="lightingEnabled" type="checkbox" checked><i></i></label></div>
-        <div id="lightingScenes" class="lighting-scenes" aria-label="Escenas rápidas"></div>
-        <div class="lights-title"><div><strong>Luces directas</strong><small id="activeLightsLabel">1 luz activa</small></div><button id="addLightBtn" type="button">＋ Añadir luz</button></div>
-        <div id="lightsList" class="lights-list"></div>
+      <section class="control-section lighting-section lighting-simple-section">
+        <div class="section-heading lighting-heading">
+          <span>03</span>
+          <div>
+            <h2>Elige un tipo de iluminación</h2>
+            <small>Empieza con un estilo y luego cambia sus colores y fuerza.</small>
+          </div>
+          <label class="master-switch" title="Activar o apagar la iluminación">
+            <input id="lightingEnabled" type="checkbox" checked>
+            <i></i>
+          </label>
+        </div>
 
-        <details class="environment-controls" open>
-          <summary><strong>Ambiente y sombra</strong><span>⌄</span></summary>
-          <div id="environmentControls" class="lighting-components">
-            <label class="lighting-component" data-light-component="ambient"><span>Ambiente</span><input type="color" data-component-field="color" aria-label="Color ambiente"><input type="text" maxlength="7" data-component-hex aria-label="HEX ambiente"><output data-component-output>12</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad ambiente"></label>
-            <label class="lighting-component" data-light-component="shadow"><span>Sombra</span><input type="color" data-component-field="color" aria-label="Color de sombra"><input type="text" maxlength="7" data-component-hex aria-label="HEX de sombra"><output data-component-output>30</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad de sombra"></label>
-            <label class="lighting-component" data-light-component="bounce"><span>Rebote</span><input type="color" data-component-field="color" aria-label="Color de rebote"><input type="text" maxlength="7" data-component-hex aria-label="HEX de rebote"><output data-component-output>10</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad de rebote"></label>
-            <label class="lighting-component" data-light-component="rim"><span>Rim light</span><input type="color" data-component-field="color" aria-label="Color de rim light"><input type="text" maxlength="7" data-component-hex aria-label="HEX de rim light"><output data-component-output>0</output><input type="range" min="0" max="100" data-component-field="intensity" aria-label="Intensidad de rim light"></label>
+        <p class="lighting-simple-help">
+          No necesitas configurar todo desde cero. Elige el aspecto que más se parezca
+          a lo que buscas y después ajústalo.
+        </p>
+
+        <div id="lightingScenes" class="lighting-scenes lighting-preset-grid" aria-label="Tipos de iluminación"></div>
+
+        <div class="simple-light-editor-heading">
+          <div>
+            <strong>Ajusta las luces a tu gusto</strong>
+            <small id="activeLightsLabel">1 luz activa</small>
+          </div>
+        </div>
+
+        <div id="lightsList" class="lights-list simple-lights-list"></div>
+
+        <details class="environment-controls simple-more-lighting">
+          <summary>
+            <span>
+              <strong>Más ajustes de iluminación</strong>
+              <small>Luz general, sombras, contorno y luces adicionales</small>
+            </span>
+            <b>⌄</b>
+          </summary>
+
+          <div class="add-light-row">
+            <div>
+              <strong>¿Quieres otra luz?</strong>
+              <small>Puedes añadir hasta 8 y editar cada una por separado.</small>
+            </div>
+            <button id="addLightBtn" type="button">＋ Añadir otra luz</button>
+          </div>
+
+          <div id="environmentControls" class="lighting-components friendly-lighting-components">
+            <label class="lighting-component" data-light-component="ambient">
+              <span><strong>Luz general</strong><small>Ilumina suavemente toda la escena.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de la luz general">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de la luz general">
+              <output data-component-output>12</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de la luz general">
+            </label>
+
+            <label class="lighting-component" data-light-component="shadow">
+              <span><strong>Sombras</strong><small>Color y fuerza de las zonas oscuras.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de las sombras">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de las sombras">
+              <output data-component-output>30</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de las sombras">
+            </label>
+
+            <label class="lighting-component" data-light-component="bounce">
+              <span><strong>Luz rebotada</strong><small>Aclara un poco las partes que quedarían muy oscuras.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de la luz rebotada">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de la luz rebotada">
+              <output data-component-output>10</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de la luz rebotada">
+            </label>
+
+            <label class="lighting-component" data-light-component="rim">
+              <span><strong>Luz de contorno</strong><small>Marca el borde de la figura desde atrás o un costado.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de la luz de contorno">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de la luz de contorno">
+              <output data-component-output>0</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de la luz de contorno">
+            </label>
           </div>
         </details>
       </section>
-
       <section class="control-section extraction-controls">
         <div class="section-heading"><span>04</span><h2>O tómalo de una imagen</h2></div>
         <label class="upload-reference-button" for="referenceFileInput"><input id="referenceFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><span>＋</span><strong>Subir imagen</strong><small>PNG · JPG · WEBP · GIF</small></label>
@@ -80,7 +144,7 @@
           <label><span>Contraste <output data-output="contrast">0</output></span><input data-param="contrast" type="range" min="-50" max="50" value="0"></label>
           <label><span>Profundidad de sombras <output data-output="shadowDepth">0</output></span><input data-param="shadowDepth" type="range" min="-50" max="50" value="0"></label>
           <label><span>Intensidad de luces <output data-output="lightStrength">0</output></span><input data-param="lightStrength" type="range" min="-50" max="50" value="0"></label>
-          <label><span>Brillo especular <output data-output="specular">0</output></span><input data-param="specular" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Brillos fuertes <output data-output="specular">0</output></span><input data-param="specular" type="range" min="-50" max="50" value="0"></label>
           <label><span>Suavidad <output data-output="softness">0</output></span><input data-param="softness" type="range" min="-50" max="50" value="0"></label>
         </div>
         <button id="resetParamsBtn" class="reset-params-button" type="button">Restablecer ajustes</button>
@@ -111,9 +175,9 @@
         <div class="palette-heading">
           <div><span class="eyebrow">PALETA DETALLADA · 16 COLORES</span><h2 id="paletteName">Muy clara cálida</h2></div>
           <div id="paletteViewTabs" class="palette-view-tabs" role="tablist" aria-label="Comparar iluminación">
-            <button type="button" data-palette-view="original" role="tab">Original</button>
-            <button type="button" class="is-active" data-palette-view="illuminated" role="tab">Iluminada</button>
-            <button type="button" data-palette-view="selected" role="tab">Luz elegida</button>
+            <button type="button" data-palette-view="original" role="tab">Sin iluminación</button>
+            <button type="button" class="is-active" data-palette-view="illuminated" role="tab">Con iluminación</button>
+            <button type="button" data-palette-view="selected" role="tab">Solo esta luz</button>
             <button type="button" data-palette-view="compare" role="tab">Comparar</button>
           </div>
         </div>
@@ -126,9 +190,9 @@
     <aside class="panel status-panel" aria-label="Estado y edición">
       <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">ILUMINACIÓN ACTIVA</span><h2>Color bajo varias luces</h2></div></section>
       <ol class="quick-guide">
-        <li>Elige un color base.</li>
-        <li>Añade luces y cambia cada HEX.</li>
-        <li>Compara Original e Iluminada.</li>
+        <li>Elige el tipo de iluminación que más se parece a lo que buscas.</li>
+        <li>Cambia el color y la fuerza de cada luz.</li>
+        <li>Compara Sin iluminación y Con iluminación.</li>
       </ol>
       <dl class="state-list">
         <div><dt>Tipo</dt><dd id="stateCategory">Piel natural</dd></div>
@@ -165,9 +229,9 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=current"></script>
+  <script type="module" src="./js/main.js?cache=lighting-simple-1"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
-  <script type="module" src="./js/phase7.js?cache=current"></script>
+  
   <script type="module" src="./js/bridge3d.js?cache=current"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
