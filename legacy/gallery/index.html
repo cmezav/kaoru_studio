@@ -7,7 +7,7 @@
 <title>Kaoru's Studio — Galería</title>
 <link rel="icon" href="../../logo.png" type="image/png" />
 <link rel="stylesheet" href="../shared/studioBridge.css?v=11.0">
-<link rel="stylesheet" href="./styles.css?v=11.0">
+<link rel="stylesheet" href="./styles.css?v=11.1">
 <script>if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
 <link rel="stylesheet" href="../shared/kaoruLegacy.css?v=12.0">
 </head>
@@ -21,7 +21,8 @@
       <a class="studio-link" data-studio-link="image" href="../image-studio/index.html" title="Image Studio · Alt+3">◫ <span class="studio-link-label">Imagen</span><kbd>Alt+3</kbd></a>
       <a class="studio-link" data-studio-link="light" href="../light-lab/index.html" title="Light Lab · Alt+4">✦ <span class="studio-link-label">Light Lab</span><kbd>Alt+4</kbd></a>
       <a class="studio-link" data-studio-link="3d" href="../3d-lighting/index.html" title="3D Lighting Studio - Alt+5">3D <span class="studio-link-label">3D</span><kbd>Alt+5</kbd></a>
-        <a class="studio-link" data-studio-link="gallery" href="./index.html" title="Galería · Alt+6">▦ <span class="studio-link-label">Galería</span><kbd>Alt+6</kbd></a>
+      <a class="studio-link" data-studio-link="combiner" href="../image-combiner/index.html" title="Image Combiner Studio - Alt+6">CMB <span class="studio-link-label">Combiner</span><kbd>Alt+6</kbd></a>
+      <a class="studio-link" data-studio-link="gallery" href="./index.html" title="Galería - Alt+7">▦ <span class="studio-link-label">Galería</span><kbd>Alt+7</kbd></a>
     </nav>
     <button id="importBtn" class="btn ghost" type="button">Importar proyecto</button>
     <input id="importInput" type="file" accept="application/json,.json,.studio.json,.tes.json,.sis.json,.ims.json,.lls.json,.k3d.json" hidden>
@@ -35,14 +36,7 @@
       <h1>Galería de diseños</h1>
       <p>Proyectos editables y plantillas de Kaoru’s Studio, guardados únicamente en este navegador.</p>
     </div>
-    <div class="new-actions">
-      <a class="new-card" href="../index.html"><strong>◆ Nueva silueta</strong><span>Crear en Silueta Studio</span></a>
-      <a class="new-card" href="../text-studio/index.html"><strong>Tt Nuevo texto</strong><span>Crear en Text Studio</span></a>
-      <a class="new-card" href="../image-studio/index.html"><strong>◫ Nueva imagen</strong><span>Crear en Image Studio</span></a>
-      <a class="new-card" href="../light-lab/index.html"><strong>✦ Nueva paleta</strong><span>Crear en Light Lab</span></a>
-      <a class="new-card" href="../3d-lighting/index.html"><strong>3D Nueva escena 3D</strong><span>Crear en 3D Lighting Studio</span></a>
-    </div>
-  </section>
+    </section>
 
   <section class="toolbar-card">
     <div class="segmented" id="kindFilters">
@@ -70,7 +64,7 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 <button id="themeFab" class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"></circle><line x1="12" y1="2.5" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="21.5" y2="12"></line><line x1="5.1" y1="5.1" x2="6.8" y2="6.8"></line><line x1="17.2" y1="17.2" x2="18.9" y2="18.9"></line><line x1="5.1" y1="18.9" x2="6.8" y2="17.2"></line><line x1="17.2" y1="6.8" x2="18.9" y2="5.1"></line></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
-<script src="../shared/studioBridge.js?v=15.0"></script>
+<script src="../shared/studioBridge.js?v=19.0"></script>
 <script src="../shared/studioGallery.js?v=18.0"></script>
 <script src="./js/main.js?v=18.0"></script>
 </body>

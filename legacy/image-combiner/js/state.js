@@ -7,8 +7,8 @@
 
   function initial(){
     return {
-      version:1,
-      phase:1,
+      version:2,
+      phase:2,
       canvas:{
         width:1080,
         height:1080,
@@ -16,14 +16,18 @@
         backgroundColor:'#FFFFFF'
       },
       layers:[],
-      selectedId:null,
+      selection:{
+        ids:[],
+        primaryId:null
+      },
       aspectLock:true,
+      alignTarget:'canvas',
       zoom:'fit'
     };
   }
 
   class History{
-    constructor(limit=80){
+    constructor(limit=100){
       this.limit=limit;
       this.items=[];
       this.index=-1;

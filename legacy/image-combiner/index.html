@@ -7,7 +7,7 @@
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
   <title>Kaoru's Studio - Image Combiner Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=1.0">
+  <link rel="stylesheet" href="./styles.css?v=2.0">
 </head>
 
 <body data-studio="combiner">
@@ -33,9 +33,9 @@
     <main class="workspace">
       <aside class="panel settings-panel">
         <section class="intro">
-          <span class="eyebrow">IMAGE COMBINER - FASE 1 DE 6</span>
-          <h1>Combina imagenes</h1>
-          <p>Crea un lienzo, pega varias imagenes y acomodalas libremente.</p>
+          <span class="eyebrow">IMAGE COMBINER - FASE 2 DE 6</span>
+          <h1>Capas y selección</h1>
+          <p>Trabaja con varias imágenes a la vez, alínea, distribuye y organiza tu composición.</p>
         </section>
 
         <section class="panel-section">
@@ -52,7 +52,7 @@
           </div>
 
           <div class="button-grid">
-            <button class="primary" id="applyCanvasBtn" type="button">Aplicar tamano</button>
+            <button class="primary" id="applyCanvasBtn" type="button">Aplicar tamaño</button>
             <button class="secondary" id="savePresetBtn" type="button">Guardar preset</button>
           </div>
         </section>
@@ -77,21 +77,19 @@
         </section>
 
         <section class="panel-section">
-          <div class="section-title"><span>03</span><h2>Imagenes</h2></div>
+          <div class="section-title"><span>03</span><h2>Imágenes</h2></div>
 
-          <button class="primary full" id="importImagesBtn" type="button">+ Agregar imagenes</button>
+          <button class="primary full" id="importImagesBtn" type="button">+ Agregar imágenes</button>
           <input id="imageFiles" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
 
           <div class="drop-zone" id="dropZone">
-            <strong>Arrastra imagenes al lienzo</strong>
+            <strong>Arrastra imágenes al lienzo</strong>
             <small>o pega una imagen con Ctrl+V</small>
           </div>
-
-          <p class="helper">PNG, JPG, WEBP y GIF. Puedes seleccionar varios archivos a la vez.</p>
         </section>
 
         <section class="panel-section" id="layerControls">
-          <div class="section-title"><span>04</span><h2>Imagen seleccionada</h2></div>
+          <div class="section-title"><span>04</span><h2>Selección</h2></div>
           <strong class="selected-name" id="selectedName">Ninguna imagen seleccionada</strong>
 
           <div class="grid2 transform-grid">
@@ -99,7 +97,7 @@
             <label class="field"><span>Y</span><input id="layerY" type="number" step="1" disabled></label>
             <label class="field"><span>Ancho</span><input id="layerW" type="number" min="20" step="1" disabled></label>
             <label class="field"><span>Alto</span><input id="layerH" type="number" min="20" step="1" disabled></label>
-            <label class="field"><span>Rotacion</span><input id="layerRotation" type="number" min="-360" max="360" step="1" disabled></label>
+            <label class="field"><span>Rotación</span><input id="layerRotation" type="number" min="-360" max="360" step="1" disabled></label>
           </div>
 
           <label class="range-field">
@@ -109,7 +107,7 @@
 
           <label class="check-row">
             <input id="aspectLock" type="checkbox" checked>
-            <span>Mantener proporcion</span>
+            <span>Mantener proporción</span>
           </label>
 
           <div class="button-grid two">
@@ -120,8 +118,34 @@
             <button class="secondary" id="forwardBtn" type="button" disabled>Subir capa</button>
             <button class="secondary" id="backwardBtn" type="button" disabled>Bajar capa</button>
           </div>
+        </section>
 
-          <p class="helper">Ctrl+D duplica. Delete elimina. Flechas mueven; Shift+flechas mueve 10 px.</p>
+        <section class="panel-section align-section">
+          <div class="section-title"><span>05</span><h2>Alinear y distribuir</h2></div>
+
+          <label class="field">
+            <span>Alinear con respecto a</span>
+            <select id="alignTarget">
+              <option value="canvas">Lienzo</option>
+              <option value="selection">Selección</option>
+            </select>
+          </label>
+
+          <div class="align-grid">
+            <button type="button" data-align="left" title="Alinear izquierda">Izq</button>
+            <button type="button" data-align="center-x" title="Centrar horizontal">Centro H</button>
+            <button type="button" data-align="right" title="Alinear derecha">Der</button>
+            <button type="button" data-align="top" title="Alinear arriba">Arriba</button>
+            <button type="button" data-align="center-y" title="Centrar vertical">Centro V</button>
+            <button type="button" data-align="bottom" title="Alinear abajo">Abajo</button>
+          </div>
+
+          <div class="button-grid">
+            <button class="secondary" id="distributeHBtn" type="button">Distribuir H</button>
+            <button class="secondary" id="distributeVBtn" type="button">Distribuir V</button>
+          </div>
+
+          <p class="helper">Con “Lienzo”, la selección se mueve como grupo. Con “Selección”, las imágenes se alinean entre sí. Distribuir requiere 3 o más.</p>
         </section>
       </aside>
 
@@ -133,6 +157,7 @@
           </div>
 
           <div class="toolbar-actions">
+            <button id="selectAllBtn" class="ghost" type="button">Seleccionar todo</button>
             <button id="undoBtn" class="ghost" type="button" disabled title="Ctrl+Z">Deshacer</button>
             <button id="redoBtn" class="ghost" type="button" disabled title="Ctrl+Shift+Z">Rehacer</button>
             <select id="zoomSelect" class="zoom-select" title="Zoom">
@@ -152,18 +177,40 @@
           <div class="stage-shell" id="stageShell">
             <div class="canvas-stage" id="canvasStage" data-background="color">
               <div class="empty-canvas-hint" id="emptyCanvasHint">
-                <strong>Tu composicion empieza aqui</strong>
-                <span>Agrega o pega imagenes para comenzar</span>
+                <strong>Tu composición empieza aquí</strong>
+                <span>Agrega o pega imágenes para comenzar</span>
               </div>
+              <div class="selection-marquee" id="selectionMarquee" hidden></div>
             </div>
           </div>
         </div>
 
         <footer class="stage-footer">
-          <span id="layerCount">0 imagenes</span>
-          <span>Arrastra para mover - tirador inferior para escalar - tirador superior para rotar</span>
+          <span id="layerCount">0 imágenes</span>
+          <span>Shift/Ctrl + clic: selección múltiple · arrastra en vacío: selección por cuadro</span>
         </footer>
       </section>
+
+      <aside class="panel layers-panel">
+        <header class="layers-header">
+          <div>
+            <span class="eyebrow">CAPAS</span>
+            <h2>Orden visual</h2>
+          </div>
+          <span id="selectionCount" class="selection-count">0 seleccionadas</span>
+        </header>
+
+        <div class="layers-help">Arriba = delante. Arrastra una capa para reordenarla.</div>
+
+        <div id="layersList" class="layers-list">
+          <div class="layers-empty">Agrega imágenes para ver sus capas aquí.</div>
+        </div>
+
+        <footer class="layers-footer">
+          <button id="showAllBtn" type="button">Mostrar todas</button>
+          <button id="unlockAllBtn" type="button">Desbloquear</button>
+        </footer>
+      </aside>
     </main>
   </div>
 
@@ -171,7 +218,8 @@
 
   <script src="../shared/studioBridge.js?v=19.0"></script>
   <script src="./js/presets.js?v=1.0"></script>
-  <script src="./js/state.js?v=1.0"></script>
-  <script src="./js/main.js?v=1.0"></script>
+  <script src="./js/state.js?v=2.0"></script>
+  <script src="./js/layers.js?v=2.0"></script>
+  <script src="./js/main.js?v=2.0"></script>
 </body>
 </html>
