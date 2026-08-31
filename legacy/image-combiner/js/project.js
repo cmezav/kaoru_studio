@@ -120,7 +120,7 @@
 
     return {
       schema:'kaoru.image-combiner.project',
-      version:5,
+      version:6,
       kind,
       name:safeName(els.name.value),
       exportedAt:new Date().toISOString(),

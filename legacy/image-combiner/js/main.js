@@ -402,6 +402,7 @@
       node.style.height=`${layer.height}px`;
       node.style.opacity=layer.opacity;
       node.style.zIndex=String(index+2);
+      node.style.mixBlendMode=CombinerEffects.blendCss(layer);
       node.style.transform=
         `rotate(${layer.rotation}deg) scale(${layer.flipX?-1:1},${layer.flipY?-1:1})`;
 
@@ -410,7 +411,7 @@
       const cropFrame=document.createElement('div');
       cropFrame.className='crop-frame';
       cropFrame.style.filter=CombinerEffects.filterCss(layer);
-
+      CombinerEffects.applyMaskElement(cropFrame,layer);
       const img=document.createElement('img');
       const imageStyle=CombinerEffects.cropImageStyle(layer);
 
@@ -1835,8 +1836,8 @@
 
       const loaded=clone(next);
 
-      loaded.version=5;
-      loaded.phase=5;
+      loaded.version=6;
+      loaded.phase=6;
       loaded.canvas={
         width:1080,
         height:1080,
@@ -1873,6 +1874,47 @@
       render();
       history.reset(state);
       return clone(state);
+    },
+    mutate(mutator,label=null,commit=true){
+      if(typeof mutator!=='function'){
+        throw new Error('La mutación del Combiner debe ser una función.');
+      }
+
+      mutator(state);
+      state.layers.forEach(CombinerEffects.ensure);
+      render();
+
+      if(commit){
+        snapshot(label||'Herramienta PRO actualizada');
+      }
+
+      return clone(state);
+    },
+
+    commit(label='Herramienta PRO actualizada'){
+      snapshot(label);
+      return clone(state);
+    },
+
+    selectIds(ids,primaryId=null){
+      setSelection(
+        Array.isArray(ids)?ids:[],
+        primaryId
+      );
+      render();
+      return clone(state.selection);
+    },
+
+    getSelection(){
+      return clone(state.selection);
+    },
+
+    notify(message){
+      toast(message);
+    },
+
+    renderNow(){
+      render();
     },
 
     addFiles,

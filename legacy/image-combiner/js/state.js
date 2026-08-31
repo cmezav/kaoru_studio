@@ -7,8 +7,8 @@
 
   function initial(){
     return {
-      version:4,
-      phase:4,
+      version:6,
+      phase:6,
       canvas:{
         width:1080,
         height:1080,
@@ -26,12 +26,17 @@
       cropUi:{
         enabled:false,
         mode:'free'
+      },
+      proUi:{
+        grid:false,
+        centerGuides:false,
+        safeArea:'none'
       }
     };
   }
 
   class History{
-    constructor(limit=100){
+    constructor(limit=120){
       this.limit=limit;
       this.items=[];
       this.index=-1;

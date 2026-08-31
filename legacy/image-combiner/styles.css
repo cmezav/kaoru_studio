@@ -193,3 +193,22 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-m
 .project-status{margin:7px 0 0;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--muted);font-size:7.7px;text-align:center}
 #advancedExportBtn{margin-top:7px}
 #exportQualityOut.muted{opacity:.45}
+/* ============================================================
+   FASE 6 FINAL — PRO TOOLS
+   ============================================================ */
+.pro-tools-section{padding-bottom:14px}
+.pro-selection-summary{margin-bottom:8px;padding:7px 8px;border:1px dashed var(--line);border-radius:8px;background:var(--surface);color:var(--muted);font-size:7.8px;text-align:center}
+.pro-card{margin:8px 0;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.pro-card>strong{display:block;margin-bottom:6px;font-size:9px}
+.pro-card-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}
+.pro-card-title strong{font-size:9px}
+.pro-card-title span{max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent);font-size:7px;font-weight:850}
+.pro-layer-badge{display:block;margin-top:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent);font-size:6.4px;font-weight:850}
+.pro-guide-overlay{position:absolute;inset:0;z-index:9000;pointer-events:none;overflow:hidden}
+.pro-grid-guide{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(25,25,25,.16) 1px,transparent 1px),linear-gradient(to bottom,rgba(25,25,25,.16) 1px,transparent 1px);background-size:50px 50px}
+.pro-center-guide{position:absolute;background:rgba(224,95,135,.9);box-shadow:0 0 0 1px rgba(255,255,255,.55)}
+.pro-center-h{left:0;right:0;top:50%;height:1px}
+.pro-center-v{top:0;bottom:0;left:50%;width:1px}
+.pro-safe-guide{position:absolute;border:2px dashed rgba(20,20,20,.75);box-shadow:0 0 0 1px rgba(255,255,255,.75) inset}
+html[data-theme=night] .pro-grid-guide{background-image:linear-gradient(to right,rgba(255,255,255,.13) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.13) 1px,transparent 1px)}
+html[data-theme=night] .pro-safe-guide{border-color:rgba(255,255,255,.82);box-shadow:0 0 0 1px rgba(0,0,0,.65) inset}

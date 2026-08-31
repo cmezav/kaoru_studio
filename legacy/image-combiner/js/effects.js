@@ -1,6 +1,17 @@
 (function(){
   'use strict';
 
+  const MASKS=[
+    'none','rounded','circle','ellipse',
+    'triangle','diamond','hexagon','star'
+  ];
+
+  const BLENDS=[
+    'normal','multiply','screen','overlay','darken','lighten',
+    'color-dodge','color-burn','hard-light','soft-light',
+    'difference','exclusion','hue','saturation','color','luminosity'
+  ];
+
   function clamp(value,min,max){
     return Math.max(min,Math.min(max,Number(value)||0));
   }
@@ -53,7 +64,14 @@
         saturation:100,
         blur:0,
         grayscale:0
-      }
+      },
+      mask:{
+        type:'none',
+        radius:18
+      },
+      blendMode:'normal',
+      groupId:null,
+      groupName:''
     };
   }
 
@@ -95,6 +113,24 @@
       ...(layer.effects||{})
     };
 
+    layer.mask={
+      ...defaults.mask,
+      ...(layer.mask||{})
+    };
+
+    if(!MASKS.includes(layer.mask.type)){
+      layer.mask.type='none';
+    }
+
+    layer.mask.radius=clamp(layer.mask.radius,0,50);
+
+    if(!BLENDS.includes(layer.blendMode)){
+      layer.blendMode='normal';
+    }
+
+    layer.groupId=layer.groupId||null;
+    layer.groupName=String(layer.groupName||'').slice(0,60);
+
     return layer;
   }
 
@@ -117,6 +153,7 @@
       const distance=clamp(layer.shadow.distance,0,200);
       const dx=Math.cos(angle)*distance;
       const dy=Math.sin(angle)*distance;
+
       filters.push(
         `drop-shadow(${dx.toFixed(2)}px ${dy.toFixed(2)}px ${clamp(layer.shadow.blur,0,120)}px ${rgba(layer.shadow.color,layer.shadow.opacity)})`
       );
@@ -186,7 +223,6 @@
 
   function borderRects(layer){
     ensure(layer);
-
     let cumulative=0;
 
     return layer.borders.map(border=>{
@@ -231,6 +267,136 @@
     }
   }
 
+  function maskCss(layer){
+    ensure(layer);
+
+    const type=layer.mask.type;
+    const radius=clamp(layer.mask.radius,0,50);
+
+    if(type==='none') return 'none';
+    if(type==='rounded') return `inset(0 round ${radius}px)`;
+    if(type==='circle') return 'circle(50% at 50% 50%)';
+    if(type==='ellipse') return 'ellipse(50% 43% at 50% 50%)';
+    if(type==='triangle') return 'polygon(50% 0%,100% 100%,0% 100%)';
+    if(type==='diamond') return 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)';
+    if(type==='hexagon') return 'polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%)';
+    if(type==='star') return 'polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 94%,50% 72%,21% 94%,32% 57%,2% 35%,39% 35%)';
+
+    return 'none';
+  }
+
+  function applyMaskElement(element,layer){
+    const clip=maskCss(layer);
+    element.style.clipPath=clip;
+    element.style.webkitClipPath=clip;
+  }
+
+  function blendCss(layer){
+    ensure(layer);
+    return layer.blendMode==='normal'?'normal':layer.blendMode;
+  }
+
+  function blendCanvas(layer){
+    ensure(layer);
+    return layer.blendMode==='normal'?'source-over':layer.blendMode;
+  }
+
+  function polygonPath(ctx,points,width,height){
+    const left=-width/2;
+    const top=-height/2;
+
+    ctx.moveTo(
+      left+points[0][0]*width,
+      top+points[0][1]*height
+    );
+
+    for(let i=1;i<points.length;i+=1){
+      ctx.lineTo(
+        left+points[i][0]*width,
+        top+points[i][1]*height
+      );
+    }
+
+    ctx.closePath();
+  }
+
+  function roundedPath(ctx,x,y,w,h,r){
+    const radius=Math.min(Math.max(0,r),w/2,h/2);
+
+    if(typeof ctx.roundRect==='function'){
+      ctx.roundRect(x,y,w,h,radius);
+      return;
+    }
+
+    ctx.moveTo(x+radius,y);
+    ctx.lineTo(x+w-radius,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+radius);
+    ctx.lineTo(x+w,y+h-radius);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-radius,y+h);
+    ctx.lineTo(x+radius,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-radius);
+    ctx.lineTo(x,y+radius);
+    ctx.quadraticCurveTo(x,y,x+radius,y);
+    ctx.closePath();
+  }
+
+  function traceMask(ctx,layer){
+    ensure(layer);
+
+    const type=layer.mask.type;
+    const w=layer.width;
+    const h=layer.height;
+    const x=-w/2;
+    const y=-h/2;
+
+    ctx.beginPath();
+
+    if(type==='none'){
+      ctx.rect(x,y,w,h);
+      return;
+    }
+
+    if(type==='rounded'){
+      roundedPath(ctx,x,y,w,h,layer.mask.radius);
+      return;
+    }
+
+    if(type==='circle'){
+      ctx.arc(0,0,Math.min(w,h)/2,0,Math.PI*2);
+      return;
+    }
+
+    if(type==='ellipse'){
+      ctx.ellipse(0,0,w/2,h*.43,0,0,Math.PI*2);
+      return;
+    }
+
+    if(type==='triangle'){
+      polygonPath(ctx,[[.5,0],[1,1],[0,1]],w,h);
+      return;
+    }
+
+    if(type==='diamond'){
+      polygonPath(ctx,[[.5,0],[1,.5],[.5,1],[0,.5]],w,h);
+      return;
+    }
+
+    if(type==='hexagon'){
+      polygonPath(ctx,[[.25,0],[.75,0],[1,.5],[.75,1],[.25,1],[0,.5]],w,h);
+      return;
+    }
+
+    if(type==='star'){
+      polygonPath(ctx,[
+        [.5,0],[.61,.35],[.98,.35],[.68,.57],[.79,.94],
+        [.5,.72],[.21,.94],[.32,.57],[.02,.35],[.39,.35]
+      ],w,h);
+      return;
+    }
+
+    ctx.rect(x,y,w,h);
+  }
+
   function canvasFilter(layer){
     return filterCss(layer);
   }
@@ -255,6 +421,7 @@
 
     ctx.save();
     ctx.globalAlpha=clamp(layer.opacity,0,1);
+    ctx.globalCompositeOperation=blendCanvas(layer);
 
     ctx.translate(
       layer.x+layer.width/2,
@@ -265,6 +432,13 @@
     ctx.scale(layer.flipX?-1:1,layer.flipY?-1:1);
 
     drawBorders(ctx,layer);
+
+    ctx.save();
+
+    if(layer.mask.type!=='none'){
+      traceMask(ctx,layer);
+      ctx.clip();
+    }
 
     const oldFilter=ctx.filter;
     ctx.filter=canvasFilter(layer);
@@ -280,9 +454,12 @@
 
     ctx.filter=oldFilter;
     ctx.restore();
+    ctx.restore();
   }
 
   window.CombinerEffects={
+    MASKS,
+    BLENDS,
     clamp,
     hex,
     rgba,
@@ -295,7 +472,11 @@
     cropAspect,
     borderRects,
     applyBorderElements,
-    drawBorders,
+    maskCss,
+    applyMaskElement,
+    blendCss,
+    blendCanvas,
+    traceMask,
     imageFromSource,
     drawLayer
   };
