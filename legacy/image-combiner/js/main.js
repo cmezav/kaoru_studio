@@ -1827,6 +1827,54 @@
 
   window.ImageCombinerStudio={
     getState:()=>clone(state),
+
+    loadState(next){
+      if(!next || typeof next!=='object'){
+        throw new Error('El proyecto Combiner no contiene un estado válido.');
+      }
+
+      const loaded=clone(next);
+
+      loaded.version=5;
+      loaded.phase=5;
+      loaded.canvas={
+        width:1080,
+        height:1080,
+        backgroundMode:'color',
+        backgroundColor:'#FFFFFF',
+        ...(loaded.canvas||{})
+      };
+
+      loaded.layers=Array.isArray(loaded.layers)?loaded.layers:[];
+      loaded.layers.forEach(CombinerEffects.ensure);
+
+      loaded.selection={
+        ids:[],
+        primaryId:null
+      };
+
+      loaded.aspectLock=loaded.aspectLock!==false;
+      loaded.alignTarget=loaded.alignTarget||'canvas';
+      loaded.zoom='fit';
+      loaded.cropUi={
+        enabled:false,
+        mode:'free'
+      };
+
+      state=loaded;
+      els.zoom.value='fit';
+      render();
+      history.reset(state);
+      return clone(state);
+    },
+
+    clearProject(){
+      state=CombinerState.initial();
+      render();
+      history.reset(state);
+      return clone(state);
+    },
+
     addFiles,
     selectAll
   };

@@ -7,7 +7,7 @@
   <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
   <title>Kaoru's Studio - Image Combiner Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=4.0">
+  <link rel="stylesheet" href="./styles.css?v=5.0">
 </head>
 
 <body data-studio="combiner">
@@ -33,7 +33,7 @@
     <main class="workspace">
       <aside class="panel settings-panel">
         <section class="intro">
-          <span class="eyebrow">IMAGE COMBINER - FASE 4 DE 6</span>
+          <span class="eyebrow">IMAGE COMBINER - FASE 5 DE 6</span>
           <h1>Recorte normal + efectos</h1>
           <p>Se mantiene el crop numérico y ahora se suma un recorte visual clásico con esquinas, borde negro y edición directa sobre la imagen.</p>
         </section>
@@ -134,6 +134,58 @@
           </div>
         </section>
 
+        <section class="panel-section project-section">
+          <div class="section-title"><span>05</span><h2>Proyecto y exportación</h2></div>
+
+          <label class="field">
+            <span>Nombre</span>
+            <input id="projectName" type="text" maxlength="100" value="Mi composición">
+          </label>
+
+          <div class="button-grid two">
+            <button class="primary" id="saveGalleryBtn" type="button">Guardar en Galería</button>
+            <button class="secondary" id="saveTemplateBtn" type="button">Guardar plantilla</button>
+            <button class="secondary" id="exportProjectBtn" type="button">Exportar .cmb.json</button>
+            <button class="secondary" id="importProjectBtn" type="button">Importar proyecto</button>
+          </div>
+
+          <input id="projectFileInput" type="file" accept="application/json,.json,.cmb.json" hidden>
+
+          <div class="subsection-heading">
+            <strong>Exportación avanzada</strong>
+            <button id="newProjectBtn" type="button">Nuevo</button>
+          </div>
+
+          <div class="grid2">
+            <label class="field">
+              <span>Formato</span>
+              <select id="exportFormat">
+                <option value="png">PNG</option>
+                <option value="jpeg">JPG</option>
+                <option value="webp">WEBP</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Escala</span>
+              <select id="exportScale">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+                <option value="4">4×</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="range-field slim">
+            <span>Calidad JPG/WEBP <output id="exportQualityOut">92%</output></span>
+            <input id="exportQuality" type="range" min="50" max="100" step="1" value="92">
+          </label>
+
+          <button class="primary full" id="advancedExportBtn" type="button">Exportar archivo</button>
+          <p class="project-status" id="projectStatus">Sin guardar</p>
+        </section>
         <section class="panel-section visual-section" id="visualControls">
           <div class="section-title"><span>05</span><h2>Recorte y efectos</h2></div>
 
@@ -305,7 +357,9 @@
   <script src="./js/presets.js?v=1.0"></script>
   <script src="./js/state.js?v=4.0"></script>
   <script src="./js/layers.js?v=2.0"></script>
+  <script src="../shared/studioGallery.js?v=19.1"></script>
   <script src="./js/effects.js?v=3.0"></script>
-  <script src="./js/main.js?v=4.0"></script>
+  <script src="./js/main.js?v=5.0"></script>
+  <script src="./js/project.js?v=5.0"></script>
 </body>
 </html>

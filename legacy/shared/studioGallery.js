@@ -54,7 +54,7 @@
 
   function normalizedRecord(input, previous) {
     const now = Date.now();
-    const studio = ['silhouette', 'text', 'image', 'light', '3d'].includes(input.studio) ? input.studio : previous?.studio;
+    const studio = ['silhouette', 'text', 'image', 'light', '3d', 'combiner'].includes(input.studio) ? input.studio : previous?.studio;
     const kind = input.kind === 'template' ? 'template' : 'project';
     if (!studio) throw new Error('El proyecto no especifica un Studio válido.');
     return {
@@ -210,8 +210,17 @@
       return save({ studio: 'light', kind: 'project', name: portable.project?.name || 'Paleta Light Lab importada', payload: portable, thumbnail: null });
     }    if (portable?.schema === 'kaoru.3d-lighting.project') {
       return save({ studio: '3d', kind: 'project', name: portable.state?.project?.name || 'Proyecto 3D importado', payload: portable, thumbnail: null });
-    }    const data = portable?.schema === 'silueta-studio-portable-project' ? portable.record : portable;
-    if (!data || !['silhouette', 'text', 'image', 'light', '3d'].includes(data.studio)) throw new Error('El archivo no pertenece a Silueta Studio.');
+    }    if (portable?.schema === 'kaoru.image-combiner.project') {
+      return save({
+        studio: 'combiner',
+        kind: portable.kind === 'template' ? 'template' : 'project',
+        name: portable.name || 'Proyecto Combiner importado',
+        payload: portable,
+        thumbnail: portable.thumbnail || null
+      });
+    }
+    const data = portable?.schema === 'silueta-studio-portable-project' ? portable.record : portable;
+    if (!data || !['silhouette', 'text', 'image', 'light', '3d', 'combiner'].includes(data.studio)) throw new Error('El archivo no pertenece a Silueta Studio.');
     return save({
       studio: data.studio,
       kind: data.kind === 'template' ? 'template' : 'project',

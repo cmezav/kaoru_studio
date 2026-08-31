@@ -188,3 +188,8 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-m
   .workspace{grid-template-columns:285px minmax(0,1fr)}
   .layers-panel{display:none}
 }
+/* Fase 5 - proyectos y exportación */
+.project-section .button-grid.two{grid-template-columns:1fr 1fr}
+.project-status{margin:7px 0 0;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--muted);font-size:7.7px;text-align:center}
+#advancedExportBtn{margin-top:7px}
+#exportQualityOut.muted{opacity:.45}
