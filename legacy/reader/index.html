@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=pdf-reader-1">
-  <link rel="stylesheet" href="./reader.css?cache=reader-mobile-fixes-2">
+  <link rel="stylesheet" href="./reader.css?cache=reader-pdf-hotfix-4">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -17,15 +17,15 @@
         <p class="library-subtitle">EPUB y PDF · local primero · lectura offline.</p>
       </div>
       <div class="library-actions">
-        <button id="importBtn" type="button">Importar EPUB / PDF</button>
+        <button id="importBtn" class="library-top-action" type="button">Importar</button>
         <a
           id="pdfExternalConverter"
-          class="external-pdf-tool"
+          class="library-top-action"
           href="https://pdfresizer.com/es/black-and-white"
           target="_blank"
           rel="noopener noreferrer"
-        >Convertir colores PDF ↗</a>
-        <button id="leaveReaderBtn" class="secondary-action" type="button">Kaoru's Studio</button>
+        >Convertir PDF</a>
+        <button id="leaveReaderBtn" class="library-top-action" type="button">Inicio</button>
       </div>
       <input id="epubInput" type="file" hidden>
     </header>
@@ -245,6 +245,6 @@
   </form>
 </div>
 
-  <script type="module" src="./reader.js?cache=reader-mobile-fixes-2"></script>
+  <script type="module" src="./reader.js?cache=reader-pdf-hotfix-4"></script>
 </body>
 </html>

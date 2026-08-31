@@ -608,6 +608,38 @@ async function renderPage(pageNumber) {
   }
 }
 
+async function jumpToPage(pageNumber, ratio = 0) {
+  if (!currentBook) return;
+
+  const page = clamp(
+    Math.round(Number(pageNumber) || 1),
+    1,
+    Math.max(1, Number(currentBook.pageCount) || 1)
+  );
+
+  await renderPage(page);
+
+  const element = pageElement(page);
+  if (!element) return;
+
+  setControlsPage(page);
+
+  requestAnimationFrame(() => {
+    const target = Math.max(
+      0,
+      element.offsetTop +
+      clamp(ratio, 0, 1) * element.offsetHeight -
+      window.innerHeight * 0.22
+    );
+
+    window.scrollTo({
+      top: target,
+      left: window.scrollX,
+      behavior: 'auto'
+    });
+  });
+}
+
 function createPlaceholders(pageCount, firstViewport) {
   pageRecords.clear();
   elements.pages?.replaceChildren();
@@ -672,9 +704,11 @@ function setupRenderObserver() {
 export async function openPdfDocument(book, options = {}) {
   if (!isPdfBook(book)) return false;
 
-  document.documentElement.classList.add('pdf-gesture-mode');
+  
 
   await closePdfDocument({ preserveView: true });
+
+  document.documentElement.classList.add('pdf-gesture-mode');
 
   const asset = await getAsset(`${PDF_ASSET_PREFIX}${book.id}`);
 
@@ -863,22 +897,7 @@ function initializeEvents() {
 
   elements.pageInput?.addEventListener('change', handlePageInput);
 
-  elements.searchForm?.addEventListener('submit', (event) => {
-    event.preventDefault();
-    searchPdf(elements.searchInput?.value || '');
-  });
-
-  elements.searchPrev?.addEventListener('click', () => {
-    goToSearchResult(activeSearchIndex - 1);
-  });
-
-  elements.searchNext?.addEventListener('click', () => {
-    goToSearchResult(activeSearchIndex + 1);
-  });
-
-  elements.searchClear?.addEventListener('click', clearSearch);
-
-  elements.libraryBtn?.addEventListener('click', () => {
+elements.libraryBtn?.addEventListener('click', () => {
     window.dispatchEvent(
       new CustomEvent('kaoru:pdf-library-request')
     );
