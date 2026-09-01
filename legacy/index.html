@@ -500,7 +500,7 @@ html[data-theme=night] .eyedropper-btn{
         <button id="pinterestBtn" class="pinterest-btn" type="button" title="Buscar en Pinterest"><img src="./pinterest.png" alt="Pinterest"></button>
       </div>
       <datalist id="favoriteSearches"></datalist>
-      <div class="search-hint">Tus búsquedas recientes aparecen abajo. ★ las guarda como favoritas y quedan disponibles para autocompletar.</div>
+      <div class="search-hint">Historial sin límite artificial. ★ guarda búsquedas como favoritas y las deja disponibles para autocompletar.</div>
       <div id="wordHistory" class="word-history"></div>
     </div>
   </div>
@@ -830,14 +830,225 @@ document.querySelectorAll('.control-tab').forEach(tab=>{
 });
 
 const SEARCH_HISTORY_KEY='silueta-studio-search-history-v1';
-const SEARCH_HISTORY_LIMIT=8;
-function readSearchHistory(){try{const data=JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY)||'[]');return Array.isArray(data)?data.filter(x=>x&&typeof x.word==='string'):[];}catch{return[];}}
-function writeSearchHistory(items){localStorage.setItem(SEARCH_HISTORY_KEY,JSON.stringify(items));}
-function renderSearchHistory(){const items=readSearchHistory();els.wordHistory.innerHTML='';const favorites=items.filter(x=>x.favorite);els.favoriteSearches.innerHTML=favorites.map(x=>`<option value="${esc(x.word)}"></option>`).join('');if(!items.length){els.wordHistory.innerHTML='<div class="history-empty">Aún no hay búsquedas.</div>';return;}items.forEach((item)=>{const row=document.createElement('div');row.className='history-word'+(item.favorite?' favorite':'');const text=document.createElement('span');text.className='history-word-text';text.textContent=item.word;text.title='Volver a buscar';text.onclick=()=>{els.pinterestSearch.value=item.word;openPinterestSearch(item.word);};const star=document.createElement('button');star.type='button';star.className='star-btn'+(item.favorite?' active':'');star.textContent=item.favorite?'★':'☆';star.title=item.favorite?'Quitar de favoritos':'Guardar como favorito';star.onclick=()=>{const next=readSearchHistory();const found=next.find(x=>x.word===item.word);if(found){found.favorite=!found.favorite;writeSearchHistory(next);renderSearchHistory();}};const del=document.createElement('button');del.type='button';del.className='delete-word';del.textContent='×';del.title='Borrar búsqueda';del.onclick=()=>{if(!confirm(`¿Estás seguro de que quieres borrar “${item.word}” del historial?`))return;const next=readSearchHistory().filter(x=>x.word!==item.word);writeSearchHistory(next);renderSearchHistory();};row.append(text,star,del);els.wordHistory.appendChild(row);});}
-function saveSearchWord(word){word=word.trim();if(!word)return;let items=readSearchHistory();const existing=items.find(x=>x.word.toLowerCase()===word.toLowerCase());if(existing){existing.word=word;existing.created=Date.now();}else items.unshift({word,created:Date.now(),favorite:false});items.sort((a,b)=>b.created-a.created);while(items.length>SEARCH_HISTORY_LIMIT){const idx=items.findIndex(x=>!x.favorite);if(idx<0)break;items.splice(idx,1);}writeSearchHistory(items);renderSearchHistory();}
-function openPinterestSearch(word){word=word.trim();if(!word)return;saveSearchWord(word);window.open('https://www.pinterest.com/search/pins/?q='+encodeURIComponent(word),'_blank','noopener');}
-els.pinterestBtn.onclick=()=>openPinterestSearch(els.pinterestSearch.value);els.pinterestSearch.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();openPinterestSearch(els.pinterestSearch.value);}});renderSearchHistory();
 
+/*
+  Historial sin límite artificial.
+  Se conserva el mismo localStorage para no perder favoritos
+  ni búsquedas que ya estaban guardadas.
+*/
+function readSearchHistory(){
+  try{
+    const data=JSON.parse(
+      localStorage.getItem(SEARCH_HISTORY_KEY)||'[]'
+    );
+
+    return Array.isArray(data)
+      ? data.filter(
+          x=>
+            x &&
+            typeof x.word==='string' &&
+            x.word.trim()
+        )
+      : [];
+  }catch{
+    return[];
+  }
+}
+
+function writeSearchHistory(items){
+  try{
+    localStorage.setItem(
+      SEARCH_HISTORY_KEY,
+      JSON.stringify(items)
+    );
+    return true;
+  }catch(error){
+    console.error(
+      'No se pudo guardar el historial de Pinterest',
+      error
+    );
+
+    alert(
+      'El navegador no pudo guardar más historial. ' +
+      'Esto solo debería ocurrir si el almacenamiento local está lleno.'
+    );
+
+    return false;
+  }
+}
+
+function renderSearchHistory(){
+  const items=readSearchHistory();
+
+  els.wordHistory.innerHTML='';
+
+  const favorites=
+    items.filter(x=>x.favorite);
+
+  els.favoriteSearches.innerHTML=
+    favorites
+      .map(
+        x=>
+          `<option value="${esc(x.word)}"></option>`
+      )
+      .join('');
+
+  if(!items.length){
+    els.wordHistory.innerHTML=
+      '<div class="history-empty">Aún no hay búsquedas.</div>';
+    return;
+  }
+
+  items.forEach((item)=>{
+    const row=document.createElement('div');
+
+    row.className=
+      'history-word'+
+      (item.favorite?' favorite':'');
+
+    const text=document.createElement('span');
+    text.className='history-word-text';
+    text.textContent=item.word;
+    text.title='Volver a buscar';
+
+    text.onclick=()=>{
+      els.pinterestSearch.value=item.word;
+      openPinterestSearch(item.word);
+    };
+
+    const star=document.createElement('button');
+    star.type='button';
+    star.className=
+      'star-btn'+
+      (item.favorite?' active':'');
+
+    star.textContent=
+      item.favorite?'★':'☆';
+
+    star.title=
+      item.favorite
+        ? 'Quitar de favoritos'
+        : 'Guardar como favorito';
+
+    star.onclick=()=>{
+      const next=readSearchHistory();
+
+      const found=
+        next.find(
+          x=>
+            x.word.toLowerCase()===
+            item.word.toLowerCase()
+        );
+
+      if(found){
+        found.favorite=!found.favorite;
+        writeSearchHistory(next);
+        renderSearchHistory();
+      }
+    };
+
+    const del=document.createElement('button');
+    del.type='button';
+    del.className='delete-word';
+    del.textContent='×';
+    del.title='Borrar búsqueda';
+
+    del.onclick=()=>{
+      if(
+        !confirm(
+          `¿Estás seguro de que quieres borrar “${item.word}” del historial?`
+        )
+      )return;
+
+      const next=
+        readSearchHistory().filter(
+          x=>
+            x.word.toLowerCase()!==
+            item.word.toLowerCase()
+        );
+
+      writeSearchHistory(next);
+      renderSearchHistory();
+    };
+
+    row.append(text,star,del);
+    els.wordHistory.appendChild(row);
+  });
+}
+
+function saveSearchWord(word){
+  word=word.trim();
+
+  if(!word)return;
+
+  const items=readSearchHistory();
+
+  const existing=
+    items.find(
+      x=>
+        x.word.toLowerCase()===
+        word.toLowerCase()
+    );
+
+  if(existing){
+    existing.word=word;
+    existing.created=Date.now();
+  }else{
+    items.push({
+      word,
+      created:Date.now(),
+      favorite:false
+    });
+  }
+
+  /*
+    Solo ordenamos por búsqueda reciente.
+    NO se borra ninguna entrada por cantidad.
+    Los favoritos y el historial ya no compiten por 8 espacios.
+  */
+  items.sort(
+    (a,b)=>
+      Number(b.created||0)-
+      Number(a.created||0)
+  );
+
+  writeSearchHistory(items);
+  renderSearchHistory();
+}
+
+function openPinterestSearch(word){
+  word=word.trim();
+
+  if(!word)return;
+
+  saveSearchWord(word);
+
+  window.open(
+    'https://www.pinterest.com/search/pins/?q='+
+      encodeURIComponent(word),
+    '_blank',
+    'noopener'
+  );
+}
+
+els.pinterestBtn.onclick=
+  ()=>openPinterestSearch(
+    els.pinterestSearch.value
+  );
+
+els.pinterestSearch.addEventListener(
+  'keydown',
+  e=>{
+    if(e.key==='Enter'){
+      e.preventDefault();
+      openPinterestSearch(
+        els.pinterestSearch.value
+      );
+    }
+  }
+);
+
+renderSearchHistory();
 
 /* ======================== · GALERÍA DE DISEÑOS ======================== */
 function imageToProjectDataUrl(image){
