@@ -12,6 +12,32 @@ html[data-theme=night] body.studio-text,
 html[data-theme=night] body.studio-image,
 html[data-theme=night] body.studio-gallery{background:#100e14!important}
 
+/*
+  Silueta Studio:
+  evita que el contenedor exterior del panel izquierdo conserve
+  el blanco del modo claro cuando está embebido en GitHub Pages.
+*/
+html[data-theme=night]{
+  background:#100e14!important;
+}
+html[data-theme=night] body.studio-silhouette{
+  background:#100e14!important;
+  min-height:100vh!important;
+}
+html[data-theme=night] body.studio-silhouette .workspace,
+html[data-theme=night] body.studio-silhouette .editor-grid{
+  background:#100e14!important;
+}
+html[data-theme=night] body.studio-silhouette aside.panel.controls{
+  background:#17151e!important;
+  border-color:#383341!important;
+}
+html[data-theme=night] body.studio-silhouette .control-tabs,
+html[data-theme=night] body.studio-silhouette .tab-content,
+html[data-theme=night] body.studio-silhouette .tab-panel{
+  background:transparent!important;
+}
+
 /* Superficies más limpias y consistentes */
 .panel,.preview-panel,.control-panel details,.intro-card,.toolbar-card,.gallery-card,.new-card,.preview-wrap,.stage-card{
   border-radius:var(--kaoru-radius)!important;
