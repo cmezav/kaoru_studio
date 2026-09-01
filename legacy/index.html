@@ -500,7 +500,7 @@ html[data-theme=night] .eyedropper-btn{
         <button id="pinterestBtn" class="pinterest-btn" type="button" title="Buscar en Pinterest"><img src="./pinterest.png" alt="Pinterest"></button>
       </div>
       <datalist id="favoriteSearches"></datalist>
-      <div class="search-hint">Historial sin límite artificial. ★ guarda búsquedas como favoritas y las deja disponibles para autocompletar.</div>
+      <div class="search-hint">★ Los favoritos aparecen siempre arriba. El historial no tiene límite artificial y los favoritos quedan disponibles para autocompletar.</div>
       <div id="wordHistory" class="word-history"></div>
     </div>
   </div>
@@ -878,7 +878,25 @@ function writeSearchHistory(items){
 }
 
 function renderSearchHistory(){
-  const items=readSearchHistory();
+  /*
+    Favoritos siempre arriba.
+    Dentro de favoritos y normales, lo más reciente va primero.
+    Este orden es solo visual: no borra ni altera el historial.
+  */
+  const items=readSearchHistory().sort((a,b)=>{
+    const favoriteDiff=
+      Number(!!b.favorite)-
+      Number(!!a.favorite);
+
+    if(favoriteDiff!==0){
+      return favoriteDiff;
+    }
+
+    return (
+      Number(b.created||0)-
+      Number(a.created||0)
+    );
+  });
 
   els.wordHistory.innerHTML='';
 
