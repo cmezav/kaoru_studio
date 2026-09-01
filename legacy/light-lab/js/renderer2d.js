@@ -88,6 +88,186 @@ function renderGroundShadow(ctx, cx, cy, rx, ry, color = '#000000') {
   ctx.restore();
 }
 
+/*
+  Dibuja las luces reales encima del volumen.
+  Antes el preview reducía todas las luces a una sola dirección
+  promedio; por eso azul + naranja terminaba viéndose morado.
+*/
+function renderColoredLights(ctx, drawShape, cx, cy, rx, ry, lighting) {
+  const lights = activeLights(lighting);
+
+  if (!lights.length) return;
+
+  ctx.save();
+  drawShape();
+  ctx.clip();
+
+  lights.slice(0, 8).forEach((light) => {
+    const direction =
+      Number(light.direction || 0) *
+      Math.PI / 180;
+
+    const elevation =
+      Number(light.elevation || 0) *
+      Math.PI / 180;
+
+    const intensity =
+      Math.max(
+        .12,
+        Math.min(
+          1,
+          Number(light.intensity || 0) / 100
+        )
+      );
+
+    const softness =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          Number(light.softness || 0) / 100
+        )
+      );
+
+    /*
+      La dirección determina qué lado recibe el color.
+      Azul + naranja queda físicamente separado.
+    */
+    const lightX =
+      cx +
+      Math.sin(direction) *
+      rx *
+      .92;
+
+    const lightY =
+      cy -
+      Math.sin(elevation) *
+      ry *
+      .62 -
+      Math.cos(direction) *
+      ry *
+      .08;
+
+    const spread =
+      Math.max(rx, ry) *
+      (
+        .30 +
+        softness * .24 +
+        intensity * .12
+      );
+
+    const coreAlpha =
+      Math.min(
+        .88,
+        .44 +
+        intensity * .38
+      );
+
+    const middleAlpha =
+      Math.min(
+        .52,
+        .16 +
+        intensity * .24
+      );
+
+    const glow =
+      ctx.createRadialGradient(
+        lightX,
+        lightY,
+        0,
+        lightX,
+        lightY,
+        spread
+      );
+
+    glow.addColorStop(
+      0,
+      rgba(light.color, coreAlpha)
+    );
+
+    glow.addColorStop(
+      .20,
+      rgba(light.color, middleAlpha)
+    );
+
+    glow.addColorStop(
+      .48,
+      rgba(light.color, middleAlpha * .46)
+    );
+
+    glow.addColorStop(
+      .78,
+      rgba(light.color, middleAlpha * .10)
+    );
+
+    glow.addColorStop(
+      1,
+      rgba(light.color, 0)
+    );
+
+    ctx.fillStyle = glow;
+
+    ctx.fillRect(
+      cx - rx - spread,
+      cy - ry - spread,
+      (rx + spread) * 2,
+      (ry + spread) * 2
+    );
+
+    /*
+      Pequeño brillo de la misma luz para que el color también
+      aparezca en las zonas claras y no solo como una mancha.
+    */
+    const specX =
+      cx +
+      Math.sin(direction) *
+      rx *
+      .58;
+
+    const specY =
+      cy -
+      Math.sin(elevation) *
+      ry *
+      .48;
+
+    const spec =
+      ctx.createRadialGradient(
+        specX,
+        specY,
+        0,
+        specX,
+        specY,
+        spread * .24
+      );
+
+    spec.addColorStop(
+      0,
+      rgba('#FFFFFF', .10 + intensity * .12)
+    );
+
+    spec.addColorStop(
+      .24,
+      rgba(light.color, .18 + intensity * .16)
+    );
+
+    spec.addColorStop(
+      1,
+      rgba(light.color, 0)
+    );
+
+    ctx.fillStyle = spec;
+
+    ctx.fillRect(
+      cx - rx,
+      cy - ry,
+      rx * 2,
+      ry * 2
+    );
+  });
+
+  ctx.restore();
+}
+
 function renderLightGuides(ctx, width, height, lighting) {
   const lights = activeLights(lighting);
   if (!lights.length) return;
@@ -141,46 +321,212 @@ function renderLightGuides(ctx, width, height, lighting) {
   ctx.restore();
 }
 
-function renderSphere(ctx, width, height, colors, lightVector) {
-  const radius = Math.min(width, height) * .29;
+function renderSphere(ctx, width, height, colors, lightingOrVector) {
+  const lighting =
+    lightingOrVector?.lights
+      ? lightingOrVector
+      : null;
+
+  const lightVector =
+    lighting
+      ? dominantLightVector(lighting)
+      : lightingOrVector;
+
+  const radius =
+    Math.min(width, height) * .29;
+
   const cx = width * .5;
   const cy = height * .47;
 
-  renderGroundShadow(ctx, cx, cy + radius * 1.12, radius * .88, radius * .18, shadowColor(colors));
+  renderGroundShadow(
+    ctx,
+    cx,
+    cy + radius * 1.12,
+    radius * .88,
+    radius * .18,
+    shadowColor(colors)
+  );
 
   ctx.save();
-  ctx.shadowColor = rgba(shadowColor(colors), .38);
-  ctx.shadowBlur = radius * .2;
-  ctx.shadowOffsetY = radius * .08;
 
-  const highlightX = cx + lightVector.x * radius * .62;
-  const highlightY = cy + lightVector.y * radius * .62;
-  const gradient = ctx.createRadialGradient(
-    highlightX, highlightY, radius * (.03 + lightVector.softness * .11),
-    cx, cy, radius
+  ctx.shadowColor =
+    rgba(shadowColor(colors), .40);
+
+  ctx.shadowBlur =
+    radius * .20;
+
+  ctx.shadowOffsetY =
+    radius * .08;
+
+  const highlightX =
+    cx +
+    lightVector.x *
+    radius *
+    .62;
+
+  const highlightY =
+    cy +
+    lightVector.y *
+    radius *
+    .62;
+
+  const gradient =
+    ctx.createRadialGradient(
+      highlightX,
+      highlightY,
+      radius *
+        (
+          .025 +
+          lightVector.softness * .09
+        ),
+      cx,
+      cy,
+      radius
+    );
+
+  /*
+    Más colores de la paleta participan en el volumen.
+    Esto evita la esfera plana de solo 4 o 5 tonos.
+  */
+  gradient.addColorStop(
+    0,
+    colorAt(colors, 15, highlightColor(colors))
   );
-  gradient.addColorStop(0, highlightColor(colors));
-  gradient.addColorStop(.16, lightColor(colors));
-  gradient.addColorStop(.43, colorAt(colors, 9, midColor(colors)));
-  gradient.addColorStop(.68, midColor(colors));
-  gradient.addColorStop(.84, colorAt(colors, 3, shadowColor(colors)));
-  gradient.addColorStop(1, shadowColor(colors));
+
+  gradient.addColorStop(
+    .08,
+    colorAt(colors, 13, highlightColor(colors))
+  );
+
+  gradient.addColorStop(
+    .18,
+    colorAt(colors, 12, lightColor(colors))
+  );
+
+  gradient.addColorStop(
+    .31,
+    colorAt(colors, 11, lightColor(colors))
+  );
+
+  gradient.addColorStop(
+    .44,
+    colorAt(colors, 9, midColor(colors))
+  );
+
+  gradient.addColorStop(
+    .58,
+    colorAt(colors, 7, midColor(colors))
+  );
+
+  gradient.addColorStop(
+    .70,
+    colorAt(colors, 5, midColor(colors))
+  );
+
+  gradient.addColorStop(
+    .80,
+    colorAt(colors, 3, shadowColor(colors))
+  );
+
+  gradient.addColorStop(
+    .91,
+    colorAt(colors, 1, shadowColor(colors))
+  );
+
+  gradient.addColorStop(
+    1,
+    shadowColor(colors)
+  );
 
   ctx.fillStyle = gradient;
+
   ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.arc(
+    cx,
+    cy,
+    radius,
+    0,
+    Math.PI * 2
+  );
   ctx.fill();
 
-  ctx.shadowColor = 'transparent';
-  const rim = ctx.createLinearGradient(cx - radius, 0, cx + radius, 0);
-  rim.addColorStop(0, rgba(rimColor(colors), lightVector.x > 0 ? .12 : .7));
-  rim.addColorStop(.18, 'transparent');
-  rim.addColorStop(.82, 'transparent');
-  rim.addColorStop(1, rgba(rimColor(colors), lightVector.x > 0 ? .7 : .12));
+  ctx.restore();
+
+  /*
+    Aquí está el cambio importante:
+    cada luz conserva su HEX y su lado.
+  */
+  renderColoredLights(
+    ctx,
+    () => {
+      ctx.beginPath();
+      ctx.arc(
+        cx,
+        cy,
+        radius,
+        0,
+        Math.PI * 2
+      );
+    },
+    cx,
+    cy,
+    radius * .96,
+    radius * .96,
+    lighting
+  );
+
+  ctx.save();
+
+  const rim =
+    ctx.createLinearGradient(
+      cx - radius,
+      0,
+      cx + radius,
+      0
+    );
+
+  rim.addColorStop(
+    0,
+    rgba(
+      rimColor(colors),
+      lightVector.x > 0
+        ? .12
+        : .72
+    )
+  );
+
+  rim.addColorStop(
+    .16,
+    'transparent'
+  );
+
+  rim.addColorStop(
+    .84,
+    'transparent'
+  );
+
+  rim.addColorStop(
+    1,
+    rgba(
+      bounceColor(colors),
+      lightVector.x > 0
+        ? .72
+        : .12
+    )
+  );
+
   ctx.fillStyle = rim;
+
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * .99, 0, Math.PI * 2);
+  ctx.arc(
+    cx,
+    cy,
+    radius * .99,
+    0,
+    Math.PI * 2
+  );
   ctx.fill();
+
   ctx.restore();
 }
 
@@ -275,61 +621,213 @@ function renderPlane(ctx, width, height, colors, lightVector) {
   ctx.restore();
 }
 
-function renderSkin(ctx, width, height, colors, lightVector) {
+function renderSkin(ctx, width, height, colors, lightingOrVector) {
+  const lighting =
+    lightingOrVector?.lights
+      ? lightingOrVector
+      : null;
+
+  const lightVector =
+    lighting
+      ? dominantLightVector(lighting)
+      : lightingOrVector;
+
   const x = width * .20;
   const y = height * .17;
   const w = width * .60;
   const h = height * .64;
-  const cx = x + w * .5;
-  const cy = y + h * .5;
 
-  renderGroundShadow(ctx, cx, y + h + 24, w * .38, 30, shadowColor(colors));
+  const cx =
+    x + w * .5;
+
+  const cy =
+    y + h * .5;
+
+  const corner =
+    Math.min(w, h) * .20;
+
+  renderGroundShadow(
+    ctx,
+    cx,
+    y + h + 24,
+    w * .38,
+    30,
+    shadowColor(colors)
+  );
 
   ctx.save();
-  ctx.shadowColor = rgba(shadowColor(colors), .26);
+
+  ctx.shadowColor =
+    rgba(shadowColor(colors), .28);
+
   ctx.shadowBlur = 34;
   ctx.shadowOffsetY = 16;
 
-  const gradient = ctx.createRadialGradient(
-    cx + lightVector.x * w * .22,
-    cy + lightVector.y * h * .25,
-    8,
-    cx, cy, w * .58
+  const gradient =
+    ctx.createRadialGradient(
+      cx +
+        lightVector.x *
+        w *
+        .22,
+      cy +
+        lightVector.y *
+        h *
+        .25,
+      8,
+      cx,
+      cy,
+      w * .58
+    );
+
+  gradient.addColorStop(
+    0,
+    colorAt(colors, 15, highlightColor(colors))
   );
-  gradient.addColorStop(0, highlightColor(colors));
-  gradient.addColorStop(.24, lightColor(colors));
-  gradient.addColorStop(.56, midColor(colors));
-  gradient.addColorStop(.78, colorAt(colors, 3, shadowColor(colors)));
-  gradient.addColorStop(1, shadowColor(colors));
-  roundedRect(ctx, x, y, w, h, Math.min(w, h) * .20);
+
+  gradient.addColorStop(
+    .12,
+    colorAt(colors, 13, highlightColor(colors))
+  );
+
+  gradient.addColorStop(
+    .26,
+    colorAt(colors, 11, lightColor(colors))
+  );
+
+  gradient.addColorStop(
+    .42,
+    colorAt(colors, 9, lightColor(colors))
+  );
+
+  gradient.addColorStop(
+    .58,
+    colorAt(colors, 7, midColor(colors))
+  );
+
+  gradient.addColorStop(
+    .73,
+    colorAt(colors, 5, midColor(colors))
+  );
+
+  gradient.addColorStop(
+    .86,
+    colorAt(colors, 2, shadowColor(colors))
+  );
+
+  gradient.addColorStop(
+    1,
+    shadowColor(colors)
+  );
+
+  roundedRect(
+    ctx,
+    x,
+    y,
+    w,
+    h,
+    corner
+  );
+
   ctx.fillStyle = gradient;
   ctx.fill();
 
-  ctx.shadowColor = 'transparent';
+  ctx.restore();
 
-  const blush = ctx.createRadialGradient(cx - w * .16, cy + h * .04, 0, cx - w * .16, cy + h * .04, w * .18);
-  blush.addColorStop(0, rgba(bounceColor(colors), .42));
-  blush.addColorStop(1, rgba(bounceColor(colors), 0));
+  renderColoredLights(
+    ctx,
+    () => {
+      roundedRect(
+        ctx,
+        x,
+        y,
+        w,
+        h,
+        corner
+      );
+    },
+    cx,
+    cy,
+    w * .54,
+    h * .46,
+    lighting
+  );
+
+  ctx.save();
+
+  const blush =
+    ctx.createRadialGradient(
+      cx - w * .16,
+      cy + h * .04,
+      0,
+      cx - w * .16,
+      cy + h * .04,
+      w * .18
+    );
+
+  blush.addColorStop(
+    0,
+    rgba(
+      bounceColor(colors),
+      .34
+    )
+  );
+
+  blush.addColorStop(
+    1,
+    rgba(
+      bounceColor(colors),
+      0
+    )
+  );
+
   ctx.fillStyle = blush;
-  roundedRect(ctx, x, y, w, h, Math.min(w, h) * .20);
+
+  roundedRect(
+    ctx,
+    x,
+    y,
+    w,
+    h,
+    corner
+  );
+
   ctx.fill();
 
-  const cool = ctx.createRadialGradient(cx + w * .24, cy + h * .18, 0, cx + w * .24, cy + h * .18, w * .23);
-  cool.addColorStop(0, rgba(rimColor(colors), .28));
-  cool.addColorStop(1, rgba(rimColor(colors), 0));
-  ctx.fillStyle = cool;
-  roundedRect(ctx, x, y, w, h, Math.min(w, h) * .20);
-  ctx.fill();
+  ctx.globalAlpha = .20;
+  ctx.fillStyle =
+    highlightColor(colors);
 
-  ctx.globalAlpha = .22;
-  ctx.fillStyle = highlightColor(colors);
   for (let i = 0; i < 20; i++) {
-    const px = x + w * (.12 + ((i * 37) % 76) / 100);
-    const py = y + h * (.14 + ((i * 53) % 70) / 100);
+    const px =
+      x +
+      w *
+      (
+        .12 +
+        ((i * 37) % 76) / 100
+      );
+
+    const py =
+      y +
+      h *
+      (
+        .14 +
+        ((i * 53) % 70) / 100
+      );
+
     ctx.beginPath();
-    ctx.arc(px, py, 1.2 + (i % 3) * .4, 0, Math.PI * 2);
+
+    ctx.arc(
+      px,
+      py,
+      1.2 +
+      (i % 3) * .4,
+      0,
+      Math.PI * 2
+    );
+
     ctx.fill();
   }
+
   ctx.restore();
 }
 
@@ -587,7 +1085,7 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
       renderPlane(ctx, width, height, safeColors, lightVector);
       break;
     case 'skin':
-      renderSkin(ctx, width, height, safeColors, lightVector);
+      renderSkin(ctx, width, height, safeColors, lighting || lightVector);
       break;
     case 'metal':
     case 'band':
@@ -612,7 +1110,7 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
       renderFacetedHead(ctx, width, height, safeColors, lightVector, true);
       break;
     default:
-      renderSphere(ctx, width, height, safeColors, lightVector);
+      renderSphere(ctx, width, height, safeColors, lighting || lightVector);
       break;
   }
 
