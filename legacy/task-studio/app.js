@@ -17,7 +17,7 @@ if(EMBEDDED)document.documentElement.classList.add('kaoru-embedded');
 
 const $=id=>document.getElementById(id);
 const els={
-  pendingBadge:$('pendingBadge'),scheduleBtn:$('scheduleBtn'),notificationBtn:$('notificationBtn'),settingsBtn:$('settingsBtn'),themeBtn:$('themeBtn'),newTaskBtn:$('newTaskBtn'),
+  pendingBadge:$('pendingBadge'),mobileHomeBtn:$('mobileHomeBtn'),scheduleBtn:$('scheduleBtn'),notificationBtn:$('notificationBtn'),settingsBtn:$('settingsBtn'),themeBtn:$('themeBtn'),newTaskBtn:$('newTaskBtn'),
   courseSidebar:document.querySelector('.course-sidebar'),sideAddCourseBtn:$('sideAddCourseBtn'),closeCoursesBtn:$('closeCoursesBtn'),courseFilters:$('courseFilters'),completedFilterBtn:$('completedFilterBtn'),allCourseCount:$('allCourseCount'),completedCount:$('completedCount'),
   listTitle:$('listTitle'),listSubtitle:$('listSubtitle'),mobileCourseBtn:$('mobileCourseBtn'),pendingViewBtn:$('pendingViewBtn'),historyViewBtn:$('historyViewBtn'),historyCountInline:$('historyCountInline'),overdueCount:$('overdueCount'),todayCount:$('todayCount'),weekCount:$('weekCount'),pendingCount:$('pendingCount'),
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
@@ -137,7 +137,7 @@ function counts(){
   return{pending,completed,overdue,today,week};
 }
 function updateCounts(){
-  const c=counts();els.pendingBadge.textContent=`${c.pending.length} pendiente${c.pending.length===1?'':'s'}`;els.pendingCount.textContent=c.pending.length;els.overdueCount.textContent=c.overdue.length;els.todayCount.textContent=c.today.length;els.weekCount.textContent=c.week.length;els.allCourseCount.textContent=c.pending.length;els.completedCount.textContent=c.completed.length;if(els.historyCountInline)els.historyCountInline.textContent=c.completed.length;
+  const c=counts();els.pendingBadge.textContent=`${c.pending.length}\u00A0pendiente${c.pending.length===1?'':'s'}`;els.pendingCount.textContent=c.pending.length;els.overdueCount.textContent=c.overdue.length;els.todayCount.textContent=c.today.length;els.weekCount.textContent=c.week.length;els.allCourseCount.textContent=c.pending.length;els.completedCount.textContent=c.completed.length;if(els.historyCountInline)els.historyCountInline.textContent=c.completed.length;
   document.title=c.pending.length?`(${c.pending.length}) Kaoru — Task Studio`:`Kaoru — Task Studio`;
   if(EMBEDDED)window.parent.postMessage({type:'kaoru:task-count',count:c.pending.length},'*');
 }
@@ -366,6 +366,15 @@ function closeMobileCourses(){els.courseSidebar?.classList.remove('mobile-open')
 document.querySelector('.course-filter[data-course="all"]')?.addEventListener('click',()=>selectCourseFilter('all'));els.completedFilterBtn.addEventListener('click',()=>selectCourseFilter('completed'));els.pendingViewBtn.addEventListener('click',()=>selectCourseFilter('all'));els.historyViewBtn.addEventListener('click',()=>selectCourseFilter('completed'));
 document.querySelectorAll('.type-chip').forEach(btn=>btn.addEventListener('click',()=>{state.kindFilter=btn.dataset.kind;state.quickFilter='all';document.querySelectorAll('.type-chip').forEach(b=>b.classList.toggle('active',b===btn));renderTaskList();}));document.querySelectorAll('.summary-card').forEach(btn=>btn.addEventListener('click',()=>{state.quickFilter=btn.dataset.quick||'all';state.courseFilter=state.courseFilter==='completed'?'all':state.courseFilter;renderTaskList();}));els.taskSearch.addEventListener('input',()=>{state.search=els.taskSearch.value;renderTaskList();});
 
+
+function goTaskHome(){
+  if(EMBEDDED){
+    window.parent.postMessage({type:'kaoru:navigate',studio:'home'},'*');
+    return;
+  }
+  window.location.href='../../#home';
+}
+els.mobileHomeBtn?.addEventListener('click',goTaskHome);
 function installNavigationShortcuts(){document.addEventListener('keydown',e=>{if(!e.altKey||e.ctrlKey||e.metaKey||e.shiftKey)return;const map={'1':'silhouette','2':'text','3':'image','4':'light','5':'3d','6':'combiner','7':'gallery','8':'reader','9':'tasks'};const target=map[e.key];if(!target)return;e.preventDefault();if(EMBEDDED)window.parent.postMessage({type:'kaoru:navigate',studio:target},'*');else window.location.href=`../../#${target}`;});}
 
 async function init(){

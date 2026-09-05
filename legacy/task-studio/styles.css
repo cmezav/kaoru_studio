@@ -243,3 +243,138 @@ button{cursor:pointer}
     font-size:8px;
   }
 }
+/* Task Studio v3: compact summary + mobile readability */
+.summary-grid{
+  gap:4px!important;
+  margin-bottom:8px!important;
+}
+.summary-card{
+  padding:7px 8px!important;
+}
+.pending-badge{
+  word-spacing:1px;
+}
+.mobile-home-btn{
+  display:none;
+  width:34px;
+  height:34px;
+  flex:0 0 auto;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-2);
+  color:var(--text);
+  font-size:25px;
+  line-height:1;
+  align-items:center;
+  justify-content:center;
+}
+.mobile-home-btn:hover{
+  color:var(--accent);
+  border-color:var(--accent);
+}
+
+@media(max-width:900px){
+  .mobile-home-btn{
+    display:inline-flex;
+  }
+  .task-brand{
+    gap:7px;
+  }
+  .dashboard-head h1{
+    font-size:25px!important;
+  }
+  .dashboard-head p{
+    font-size:11.5px!important;
+    line-height:1.45;
+  }
+  .mini-kicker{
+    font-size:9px;
+  }
+  .summary-grid{
+    gap:3px!important;
+  }
+  .summary-card{
+    padding:8px 7px!important;
+  }
+  .summary-card span{
+    font-size:9px!important;
+  }
+  .summary-card strong{
+    font-size:18px!important;
+  }
+  .view-chip,
+  .type-chip{
+    font-size:10px!important;
+    min-height:32px;
+  }
+  .search-box{
+    min-height:33px;
+  }
+  .search-box input{
+    font-size:10.5px!important;
+  }
+  .task-card{
+    padding-top:12px!important;
+    padding-bottom:11px!important;
+  }
+  .task-course-name{
+    font-size:9.5px!important;
+  }
+  .task-kind{
+    font-size:8.5px!important;
+  }
+  .task-card-title{
+    font-size:13.5px!important;
+    line-height:1.38!important;
+  }
+  .task-card-bottom{
+    font-size:10px!important;
+  }
+  .detail-meta-line{
+    font-size:9.5px!important;
+  }
+  .detail-title-copy h2{
+    font-size:22px!important;
+  }
+  .professor-line{
+    font-size:11px!important;
+  }
+  .due-line{
+    font-size:10.5px!important;
+  }
+  .dock-head strong{
+    font-size:12px!important;
+  }
+  .notes-head h3{
+    font-size:18px!important;
+  }
+}
+
+@media(max-width:520px){
+  .task-logo{
+    display:none;
+  }
+  .task-brand strong{
+    font-size:16px!important;
+  }
+  .mobile-home-btn{
+    width:36px;
+    height:36px;
+  }
+  .summary-card span{
+    font-size:8.5px!important;
+  }
+  .summary-card strong{
+    font-size:18px!important;
+  }
+  .view-chip,
+  .type-chip{
+    font-size:9.5px!important;
+  }
+  .task-card-title{
+    font-size:14px!important;
+  }
+  .task-card-bottom{
+    font-size:10px!important;
+  }
+}
