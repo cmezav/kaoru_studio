@@ -44,12 +44,44 @@ function sanitizeTask(task){
   if(Array.isArray(copy.notes)){
     copy.notes=copy.notes.map(note=>{
       const next={...note};
+
       if(typeof next.html==='string'){
-        next.html=next.html.replace(
-          /<img\b[^>]*\bsrc=(["'])data:image\/[^"']+\1[^>]*>/gi,
-          '<span data-kaoru-cloud-image-pending="1">🖼 Imagen disponible en el dispositivo original</span>'
-        );
+        const template=document.createElement('template');
+        template.innerHTML=next.html;
+
+        /*
+          Las imagenes administradas por Kaoru se sincronizan por Storage.
+          El src local puede ser blob: o data:, por lo que JAMAS debe viajar
+          dentro del JSON de la tarea.
+        */
+        template.content
+          .querySelectorAll('img[data-kaoru-image-id]')
+          .forEach(img=>{
+            const src=img.getAttribute('src')||'';
+            if(/^(?:blob:|data:image\/)/i.test(src)){
+              img.removeAttribute('src');
+            }
+          });
+
+        /*
+          Compatibilidad con notas viejas: si todavia queda una imagen Base64
+          sin migrar, no mandamos megabytes al registro remoto.
+        */
+        template.content
+          .querySelectorAll('img:not([data-kaoru-image-id])')
+          .forEach(img=>{
+            const src=img.getAttribute('src')||'';
+            if(/^data:image\//i.test(src)){
+              const placeholder=document.createElement('span');
+              placeholder.dataset.kaoruCloudImagePending='1';
+              placeholder.textContent='🖼 Imagen pendiente de migrar desde el dispositivo original';
+              img.replaceWith(placeholder);
+            }
+          });
+
+        next.html=template.innerHTML;
       }
+
       return next;
     });
   }
@@ -383,6 +415,44 @@ function scheduleFilePath(fileRecord){
     safePathPart(fileRecord?.name,'horario')
   ].join('/');
 }
+function noteImagePath(taskId,noteId,imageId,fileRecord){
+  if(!session?.user?.id)throw new Error('Inicia sesión para usar Kaoru Storage.');
+  return [
+    session.user.id,
+    'tasks',
+    safePathPart(taskId,'task'),
+    'notes',
+    safePathPart(noteId,'note'),
+    safePathPart(imageId,'image'),
+    safePathPart(fileRecord?.name,'imagen')
+  ].join('/');
+}
+async function uploadNoteImage(taskId,noteId,imageId,fileRecord){
+  if(!client||!session)throw new Error('Inicia sesión para sincronizar imagenes de notas.');
+  if(!navigator.onLine)throw new Error('Sin conexión. La imagen permanece guardada en este dispositivo.');
+
+  const blob=fileRecord?.blob;
+  if(!(blob instanceof Blob))throw new Error('La imagen local ya no está disponible.');
+
+  const path=noteImagePath(taskId,noteId,imageId,fileRecord);
+
+  const {data,error}=await client.storage
+    .from(BUCKET)
+    .upload(path,blob,{
+      upsert:true,
+      contentType:fileRecord?.type||blob.type||'image/png',
+      cacheControl:'3600'
+    });
+
+  if(error)throw error;
+
+  return{
+    path:data?.path||path,
+    name:fileRecord?.name||'imagen',
+    mime:fileRecord?.type||blob.type||'image/png',
+    size:Number(fileRecord?.size||blob.size||0)
+  };
+}
 async function uploadScheduleFile(fileRecord){
   if(!client||!session)throw new Error('Inicia sesión para sincronizar el horario.');
   if(!navigator.onLine)throw new Error('Sin conexión. El horario permanece guardado en este dispositivo.');
@@ -594,6 +664,7 @@ window.KaoruTaskCloud={
   queueStorageDelete,
   uploadTaskFile,
   uploadScheduleFile,
+  uploadNoteImage,
   downloadTaskFile,
   flush:async()=>{
     await adapter?.syncSchedule?.();

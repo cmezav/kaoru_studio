@@ -300,6 +300,9 @@ els.deleteTaskBtn.addEventListener('click',async()=>{
       await dbDelete(FILE_STORE,doc.fileId).catch(()=>{});
     }
   }
+
+  await cleanupTaskNoteImages(task);
+
   await dbDelete(TASK_STORE,task.id);state.tasks=state.tasks.filter(t=>t.id!==task.id);state.selectedTaskId=null;renderTaskList();renderDetail();closeMobileDetail();
 });
 
@@ -369,6 +372,13 @@ async function syncTaskFilesToCloud(){
     return{uploaded:0,pending:0};
   }
 
+  /*
+    Antes de subir cualquier cosa migramos imagenes antiguas incrustadas
+    como Base64. Se convierten en Blob dentro de IndexedDB y la nota pasa
+    a guardar solo un identificador liviano.
+  */
+  await migrateLegacyNoteImages();
+
   let uploaded=0;
   let pending=0;
 
@@ -406,6 +416,10 @@ async function syncTaskFilesToCloud(){
       if(state.selectedTaskId===task.id)renderDocs(task);
     }
   }
+
+  const noteImages=await syncNoteImagesToCloud();
+  uploaded+=Number(noteImages.uploaded||0);
+  pending+=Number(noteImages.pending||0);
 
   return{uploaded,pending};
 }
@@ -476,25 +490,654 @@ async function removeDoc(taskId,docId){
 }
 
 const noteSaveTimers=new Map();
-function renderNoteThread(task){
-  els.noteThread.innerHTML='';const notes=task.notes||[];if(!notes.length){els.noteThread.innerHTML='<div class="notes-empty">Tu hilo está vacío. Pulsa “＋ Nueva nota” para ir registrando avances, ideas o información.</div>';return;}
-  notes.forEach(note=>{const card=document.createElement('article');card.className='note-card';card.dataset.bg=note.bg||'default';card.dataset.noteId=note.id;const head=document.createElement('div');head.className='note-headline';head.innerHTML=`<span class="note-time">${esc(noteDate(note.createdAt))}</span><span class="note-spacer"></span>`;const bg=document.createElement('select');bg.className='note-bg-select';[['default','Normal'],['lavender','Lavanda'],['rose','Rosa'],['blue','Azul'],['mint','Menta'],['sand','Crema']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;if((note.bg||'default')===v)o.selected=true;bg.appendChild(o);});bg.addEventListener('change',async()=>{note.bg=bg.value;note.updatedAt=now();card.dataset.bg=note.bg;await dbPut(TASK_STORE,task);});const del=document.createElement('button');del.type='button';del.className='note-delete';del.textContent='×';del.title='Eliminar nota';del.addEventListener('click',()=>deleteNote(task.id,note.id));head.append(bg,del);const editor=document.createElement('div');editor.className='note-editor';editor.contentEditable='true';editor.dataset.noteId=note.id;editor.innerHTML=note.html||'';editor.addEventListener('focus',()=>{state.activeEditor=editor;saveSelection();});editor.addEventListener('keyup',saveSelection);editor.addEventListener('mouseup',saveSelection);editor.addEventListener('input',()=>scheduleNoteSave(task,note,editor));editor.addEventListener('blur',()=>saveNoteNow(task,note,editor));card.append(head,editor);els.noteThread.appendChild(card);});
-}
-els.addNoteBtn.addEventListener('click',async()=>{
-  const task=taskById(state.selectedTaskId);if(!task)return;task.notes=task.notes||[];const note={id:uid('note'),html:'',bg:'default',createdAt:now(),updatedAt:now()};task.notes.push(note);task.updatedAt=now();await dbPut(TASK_STORE,task);renderNoteThread(task);setTimeout(()=>{const editor=els.noteThread.querySelector(`[data-note-id="${note.id}"].note-editor`);editor?.focus();editor?.scrollIntoView({behavior:'smooth',block:'center'});},30);
-});
-function scheduleNoteSave(task,note,editor){clearTimeout(noteSaveTimers.get(note.id));noteSaveTimers.set(note.id,setTimeout(()=>saveNoteNow(task,note,editor),320));}
-async function saveNoteNow(task,note,editor){clearTimeout(noteSaveTimers.get(note.id));noteSaveTimers.delete(note.id);note.html=editor.innerHTML;note.updatedAt=now();task.updatedAt=now();await dbPut(TASK_STORE,task);}
-async function deleteNote(taskId,noteId){const task=taskById(taskId);if(!task)return;if(!confirm('¿Eliminar esta nota del hilo?'))return;task.notes=(task.notes||[]).filter(n=>n.id!==noteId);task.updatedAt=now();await dbPut(TASK_STORE,task);renderNoteThread(task);}
-function saveSelection(){const sel=window.getSelection();if(!sel||!sel.rangeCount||!state.activeEditor)return;const range=sel.getRangeAt(0);if(state.activeEditor.contains(range.commonAncestorContainer))state.savedRange=range.cloneRange();}
-function restoreSelection(){if(!state.savedRange||!state.activeEditor)return false;const sel=window.getSelection();sel.removeAllRanges();sel.addRange(state.savedRange);state.activeEditor.focus();return true;}
-function saveActiveEditor(){const task=taskById(state.selectedTaskId);if(!task||!state.activeEditor)return;const note=(task.notes||[]).find(n=>n.id===state.activeEditor.dataset.noteId);if(note)saveNoteNow(task,note,state.activeEditor);}
-function execRich(cmd,value=null){if(!state.activeEditor)return;restoreSelection();document.execCommand(cmd,false,value);saveSelection();saveActiveEditor();}
-els.richToolbar.querySelectorAll('button[data-cmd]').forEach(btn=>{btn.addEventListener('mousedown',e=>e.preventDefault());btn.addEventListener('click',()=>execRich(btn.dataset.cmd));});
-els.blockFormat.addEventListener('change',()=>{execRich('formatBlock',`<${els.blockFormat.value}>`);});els.fontSizeSelect.addEventListener('change',()=>execRich('fontSize',els.fontSizeSelect.value));els.fontSelect.addEventListener('change',()=>{if(els.fontSelect.value)execRich('fontName',els.fontSelect.value);});els.textColorInput.addEventListener('input',()=>execRich('foreColor',els.textColorInput.value));els.highlightColorInput.addEventListener('input',()=>{if(!state.activeEditor)return;restoreSelection();try{document.execCommand('hiliteColor',false,els.highlightColorInput.value);}catch(_){document.execCommand('backColor',false,els.highlightColorInput.value);}saveSelection();saveActiveEditor();});
-els.insertNoteImageBtn.addEventListener('mousedown',e=>e.preventDefault());els.insertNoteImageBtn.addEventListener('click',()=>{if(!state.activeEditor){alert('Primero toca dentro de una nota.');return;}saveSelection();els.noteImageInput.click();});els.noteImageInput.addEventListener('change',()=>{const file=els.noteImageInput.files?.[0];if(!file||!state.activeEditor)return;const reader=new FileReader();reader.onload=()=>{restoreSelection();document.execCommand('insertImage',false,reader.result);saveSelection();saveActiveEditor();};reader.readAsDataURL(file);els.noteImageInput.value='';});
 
-document.addEventListener('selectionchange',()=>{const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const node=sel.anchorNode;const editor=node&&(node.nodeType===1?node:node.parentElement)?.closest?.('.note-editor');if(editor){state.activeEditor=editor;saveSelection();}});
+function noteImageExtension(mime){
+  const map={
+    'image/jpeg':'jpg',
+    'image/png':'png',
+    'image/gif':'gif',
+    'image/webp':'webp',
+    'image/svg+xml':'svg',
+    'image/avif':'avif'
+  };
+  return map[String(mime||'').toLowerCase()]||'img';
+}
+
+function dataUrlToBlob(dataUrl){
+  const match=String(dataUrl||'').match(/^data:([^;,]+)?(;base64)?,(.*)$/s);
+  if(!match)throw new Error('Imagen Base64 no valida.');
+
+  const mime=match[1]||'application/octet-stream';
+  const isBase64=!!match[2];
+  const payload=match[3]||'';
+  const binary=isBase64
+    ?atob(payload)
+    :decodeURIComponent(payload);
+
+  const bytes=new Uint8Array(binary.length);
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+
+  return new Blob([bytes],{type:mime});
+}
+
+function serializeNoteHtml(editor){
+  const cloneEditor=editor.cloneNode(true);
+
+  cloneEditor
+    .querySelectorAll('img[data-kaoru-image-id]')
+    .forEach(img=>{
+      /*
+        El src es solo de presentacion local. Puede ser blob: y deja de ser
+        valido al cerrar la pagina. Persistimos únicamente data-kaoru-image-id.
+      */
+      img.removeAttribute('src');
+      img.removeAttribute('data-kaoru-runtime');
+    });
+
+  return cloneEditor.innerHTML;
+}
+
+async function migrateLegacyNoteImages(){
+  let changedTasks=0;
+
+  for(const task of state.tasks){
+    let taskChanged=false;
+
+    for(const note of(task.notes||[])){
+      note.images=Array.isArray(note.images)?note.images:[];
+      if(typeof note.html!=='string'||!note.html.includes('data:image/'))continue;
+
+      const template=document.createElement('template');
+      template.innerHTML=note.html;
+
+      const legacyImages=[
+        ...template.content.querySelectorAll(
+          'img:not([data-kaoru-image-id])'
+        )
+      ];
+
+      for(const img of legacyImages){
+        const src=img.getAttribute('src')||'';
+        if(!/^data:image\//i.test(src))continue;
+
+        try{
+          const blob=dataUrlToBlob(src);
+          const imageId=uid('noteimg');
+          const ext=noteImageExtension(blob.type);
+          const name=`imagen-nota-${imageId}.${ext}`;
+
+          await dbPut(FILE_STORE,{
+            id:imageId,
+            kind:'note-image',
+            taskId:task.id,
+            noteId:note.id,
+            name,
+            type:blob.type||'image/png',
+            size:blob.size,
+            blob,
+            createdAt:now()
+          });
+
+          note.images.push({
+            id:imageId,
+            fileId:imageId,
+            name,
+            mime:blob.type||'image/png',
+            size:blob.size,
+            createdAt:now()
+          });
+
+          img.dataset.kaoruImageId=imageId;
+          img.alt=img.alt||'Imagen de nota';
+          img.removeAttribute('src');
+
+          taskChanged=true;
+        }catch(err){
+          console.warn('No se pudo migrar una imagen antigua de una nota',err);
+        }
+      }
+
+      if(taskChanged){
+        note.html=template.innerHTML;
+        note.updatedAt=now();
+      }
+    }
+
+    if(taskChanged){
+      task.updatedAt=now();
+      await dbPut(TASK_STORE,task);
+      changedTasks++;
+    }
+  }
+
+  return changedTasks;
+}
+
+async function hydrateNoteImages(task,note,editor){
+  note.images=Array.isArray(note.images)?note.images:[];
+
+  const imgs=[
+    ...editor.querySelectorAll('img[data-kaoru-image-id]')
+  ];
+
+  for(const img of imgs){
+    const imageId=img.dataset.kaoruImageId;
+    const meta=note.images.find(item=>item.id===imageId);
+
+    if(!meta){
+      img.alt='Imagen de nota no disponible';
+      continue;
+    }
+
+    let rec=await dbGet(FILE_STORE,meta.fileId||meta.id).catch(()=>null);
+
+    if(
+      !rec?.blob&&
+      meta.storagePath&&
+      navigator.onLine&&
+      window.KaoruTaskCloud?.currentUser?.()&&
+      window.KaoruTaskCloud?.downloadTaskFile
+    ){
+      try{
+        const blob=await window.KaoruTaskCloud.downloadTaskFile(
+          meta.storagePath
+        );
+
+        rec={
+          id:meta.fileId||meta.id,
+          kind:'note-image',
+          taskId:task.id,
+          noteId:note.id,
+          name:meta.name||'imagen',
+          type:meta.mime||blob.type||'image/png',
+          size:Number(meta.size||blob.size||0),
+          blob,
+          cloudPath:meta.storagePath,
+          createdAt:meta.createdAt||now(),
+          cachedAt:now()
+        };
+
+        await dbPut(FILE_STORE,rec);
+      }catch(err){
+        console.warn('No se pudo descargar una imagen de nota',err);
+      }
+    }
+
+    if(rec?.blob){
+      const url=URL.createObjectURL(rec.blob);
+      img.dataset.kaoruRuntime='1';
+      img.src=url;
+      img.addEventListener(
+        'load',
+        ()=>URL.revokeObjectURL(url),
+        {once:true}
+      );
+    }else{
+      img.removeAttribute('src');
+      img.alt=meta.storagePath
+        ?'Imagen disponible al conectarte a Internet'
+        :'Imagen guardada en el dispositivo original';
+    }
+  }
+}
+
+async function syncNoteImagesToCloud(){
+  if(
+    !navigator.onLine||
+    !window.KaoruTaskCloud?.currentUser?.()||
+    !window.KaoruTaskCloud?.uploadNoteImage
+  ){
+    return{uploaded:0,pending:0};
+  }
+
+  let uploaded=0;
+  let pending=0;
+
+  for(const task of state.tasks){
+    let taskChanged=false;
+
+    for(const note of(task.notes||[])){
+      note.images=Array.isArray(note.images)?note.images:[];
+
+      for(const meta of note.images){
+        if(meta.storagePath)continue;
+
+        const rec=await dbGet(
+          FILE_STORE,
+          meta.fileId||meta.id
+        ).catch(()=>null);
+
+        if(!rec?.blob){
+          pending++;
+          continue;
+        }
+
+        try{
+          const cloudImage=await window.KaoruTaskCloud.uploadNoteImage(
+            task.id,
+            note.id,
+            meta.id,
+            rec
+          );
+
+          meta.fileId=meta.fileId||meta.id;
+          meta.storagePath=cloudImage.path;
+          meta.name=meta.name||cloudImage.name||rec.name||'imagen';
+          meta.mime=meta.mime||cloudImage.mime||rec.type||'image/png';
+          meta.size=Number(meta.size||cloudImage.size||rec.size||0);
+          meta.cloudStoredAt=now();
+
+          note.updatedAt=now();
+          taskChanged=true;
+          uploaded++;
+        }catch(err){
+          pending++;
+          console.warn('No se pudo subir una imagen de nota todavía',err);
+        }
+      }
+    }
+
+    if(taskChanged){
+      task.updatedAt=now();
+      await dbPut(TASK_STORE,task);
+      if(state.selectedTaskId===task.id)renderNoteThread(task);
+    }
+  }
+
+  return{uploaded,pending};
+}
+
+async function cleanupNoteImages(note){
+  for(const meta of(note?.images||[])){
+    if(meta.storagePath){
+      window.KaoruTaskCloud?.queueStorageDelete?.(meta.storagePath);
+    }
+    await dbDelete(FILE_STORE,meta.fileId||meta.id).catch(()=>{});
+  }
+}
+
+async function cleanupTaskNoteImages(task){
+  for(const note of(task?.notes||[])){
+    await cleanupNoteImages(note);
+  }
+}
+
+async function cleanupRemovedNoteImages(note,editor){
+  note.images=Array.isArray(note.images)?note.images:[];
+
+  const activeIds=new Set(
+    [...editor.querySelectorAll('img[data-kaoru-image-id]')]
+      .map(img=>img.dataset.kaoruImageId)
+      .filter(Boolean)
+  );
+
+  const removed=note.images.filter(meta=>!activeIds.has(meta.id));
+
+  for(const meta of removed){
+    if(meta.storagePath){
+      window.KaoruTaskCloud?.queueStorageDelete?.(meta.storagePath);
+    }
+    await dbDelete(FILE_STORE,meta.fileId||meta.id).catch(()=>{});
+  }
+
+  if(removed.length){
+    note.images=note.images.filter(meta=>activeIds.has(meta.id));
+  }
+}
+
+function renderNoteThread(task){
+  els.noteThread.innerHTML='';
+
+  const notes=task.notes||[];
+
+  if(!notes.length){
+    els.noteThread.innerHTML='<div class="notes-empty">Tu hilo está vacío. Pulsa “＋ Nueva nota” para ir registrando avances, ideas o información.</div>';
+    return;
+  }
+
+  notes.forEach(note=>{
+    note.images=Array.isArray(note.images)?note.images:[];
+
+    const card=document.createElement('article');
+    card.className='note-card';
+    card.dataset.bg=note.bg||'default';
+    card.dataset.noteId=note.id;
+
+    const head=document.createElement('div');
+    head.className='note-headline';
+    head.innerHTML=`<span class="note-time">${esc(noteDate(note.createdAt))}</span><span class="note-spacer"></span>`;
+
+    const bg=document.createElement('select');
+    bg.className='note-bg-select';
+
+    [
+      ['default','Normal'],
+      ['lavender','Lavanda'],
+      ['rose','Rosa'],
+      ['blue','Azul'],
+      ['mint','Menta'],
+      ['sand','Crema']
+    ].forEach(([v,l])=>{
+      const o=document.createElement('option');
+      o.value=v;
+      o.textContent=l;
+      if((note.bg||'default')===v)o.selected=true;
+      bg.appendChild(o);
+    });
+
+    bg.addEventListener('change',async()=>{
+      note.bg=bg.value;
+      note.updatedAt=now();
+      card.dataset.bg=note.bg;
+      await dbPut(TASK_STORE,task);
+    });
+
+    const del=document.createElement('button');
+    del.type='button';
+    del.className='note-delete';
+    del.textContent='×';
+    del.title='Eliminar nota';
+    del.addEventListener('click',()=>deleteNote(task.id,note.id));
+
+    head.append(bg,del);
+
+    const editor=document.createElement('div');
+    editor.className='note-editor';
+    editor.contentEditable='true';
+    editor.dataset.noteId=note.id;
+    editor.innerHTML=note.html||'';
+
+    editor.addEventListener('focus',()=>{
+      state.activeEditor=editor;
+      saveSelection();
+    });
+    editor.addEventListener('keyup',saveSelection);
+    editor.addEventListener('mouseup',saveSelection);
+    editor.addEventListener(
+      'input',
+      ()=>scheduleNoteSave(task,note,editor)
+    );
+    editor.addEventListener(
+      'blur',
+      ()=>saveNoteNow(task,note,editor)
+    );
+
+    card.append(head,editor);
+    els.noteThread.appendChild(card);
+
+    hydrateNoteImages(task,note,editor).catch(err=>{
+      console.warn('Kaoru note image hydrate',err);
+    });
+  });
+}
+
+els.addNoteBtn.addEventListener('click',async()=>{
+  const task=taskById(state.selectedTaskId);
+  if(!task)return;
+
+  task.notes=task.notes||[];
+
+  const note={
+    id:uid('note'),
+    html:'',
+    bg:'default',
+    images:[],
+    createdAt:now(),
+    updatedAt:now()
+  };
+
+  task.notes.push(note);
+  task.updatedAt=now();
+
+  await dbPut(TASK_STORE,task);
+  renderNoteThread(task);
+
+  setTimeout(()=>{
+    const editor=els.noteThread.querySelector(
+      `[data-note-id="${note.id}"].note-editor`
+    );
+    editor?.focus();
+    editor?.scrollIntoView({behavior:'smooth',block:'center'});
+  },30);
+});
+
+function scheduleNoteSave(task,note,editor){
+  clearTimeout(noteSaveTimers.get(note.id));
+  noteSaveTimers.set(
+    note.id,
+    setTimeout(()=>saveNoteNow(task,note,editor),320)
+  );
+}
+
+async function saveNoteNow(task,note,editor){
+  clearTimeout(noteSaveTimers.get(note.id));
+  noteSaveTimers.delete(note.id);
+
+  await cleanupRemovedNoteImages(note,editor);
+
+  note.html=serializeNoteHtml(editor);
+  note.updatedAt=now();
+  task.updatedAt=now();
+
+  await dbPut(TASK_STORE,task);
+}
+
+async function deleteNote(taskId,noteId){
+  const task=taskById(taskId);
+  if(!task)return;
+  if(!confirm('¿Eliminar esta nota del hilo?'))return;
+
+  const note=(task.notes||[]).find(item=>item.id===noteId);
+  if(note)await cleanupNoteImages(note);
+
+  task.notes=(task.notes||[]).filter(n=>n.id!==noteId);
+  task.updatedAt=now();
+
+  await dbPut(TASK_STORE,task);
+  renderNoteThread(task);
+}
+
+function saveSelection(){
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount||!state.activeEditor)return;
+
+  const range=sel.getRangeAt(0);
+  if(state.activeEditor.contains(range.commonAncestorContainer)){
+    state.savedRange=range.cloneRange();
+  }
+}
+
+function restoreSelection(){
+  if(!state.savedRange||!state.activeEditor)return false;
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(state.savedRange);
+  state.activeEditor.focus();
+  return true;
+}
+
+function saveActiveEditor(){
+  const task=taskById(state.selectedTaskId);
+  if(!task||!state.activeEditor)return;
+
+  const note=(task.notes||[]).find(
+    n=>n.id===state.activeEditor.dataset.noteId
+  );
+
+  if(note)saveNoteNow(task,note,state.activeEditor);
+}
+
+function execRich(cmd,value=null){
+  if(!state.activeEditor)return;
+  restoreSelection();
+  document.execCommand(cmd,false,value);
+  saveSelection();
+  saveActiveEditor();
+}
+
+els.richToolbar
+  .querySelectorAll('button[data-cmd]')
+  .forEach(btn=>{
+    btn.addEventListener('mousedown',e=>e.preventDefault());
+    btn.addEventListener('click',()=>execRich(btn.dataset.cmd));
+  });
+
+els.blockFormat.addEventListener(
+  'change',
+  ()=>execRich('formatBlock',`<${els.blockFormat.value}>`)
+);
+
+els.fontSizeSelect.addEventListener(
+  'change',
+  ()=>execRich('fontSize',els.fontSizeSelect.value)
+);
+
+els.fontSelect.addEventListener('change',()=>{
+  if(els.fontSelect.value)execRich('fontName',els.fontSelect.value);
+});
+
+els.textColorInput.addEventListener(
+  'input',
+  ()=>execRich('foreColor',els.textColorInput.value)
+);
+
+els.highlightColorInput.addEventListener('input',()=>{
+  if(!state.activeEditor)return;
+  restoreSelection();
+
+  try{
+    document.execCommand(
+      'hiliteColor',
+      false,
+      els.highlightColorInput.value
+    );
+  }catch(_){
+    document.execCommand(
+      'backColor',
+      false,
+      els.highlightColorInput.value
+    );
+  }
+
+  saveSelection();
+  saveActiveEditor();
+});
+
+els.insertNoteImageBtn.addEventListener(
+  'mousedown',
+  e=>e.preventDefault()
+);
+
+els.insertNoteImageBtn.addEventListener('click',()=>{
+  if(!state.activeEditor){
+    alert('Primero toca dentro de una nota.');
+    return;
+  }
+
+  saveSelection();
+  els.noteImageInput.click();
+});
+
+els.noteImageInput.addEventListener('change',async()=>{
+  const file=els.noteImageInput.files?.[0];
+  const editor=state.activeEditor;
+  const task=taskById(state.selectedTaskId);
+
+  els.noteImageInput.value='';
+
+  if(!file||!editor||!task)return;
+
+  if(!String(file.type||'').startsWith('image/')){
+    alert('Selecciona un archivo de imagen.');
+    return;
+  }
+
+  const note=(task.notes||[]).find(
+    item=>item.id===editor.dataset.noteId
+  );
+
+  if(!note)return;
+
+  note.images=Array.isArray(note.images)?note.images:[];
+
+  const imageId=uid('noteimg');
+  const ext=noteImageExtension(file.type);
+  const name=file.name||`imagen-nota-${imageId}.${ext}`;
+
+  await dbPut(FILE_STORE,{
+    id:imageId,
+    kind:'note-image',
+    taskId:task.id,
+    noteId:note.id,
+    name,
+    type:file.type||'image/png',
+    size:file.size,
+    blob:file,
+    createdAt:now()
+  });
+
+  note.images.push({
+    id:imageId,
+    fileId:imageId,
+    name,
+    mime:file.type||'image/png',
+    size:file.size,
+    createdAt:now()
+  });
+
+  restoreSelection();
+
+  const img=document.createElement('img');
+  img.dataset.kaoruImageId=imageId;
+  img.alt=name;
+  img.style.maxWidth='100%';
+  img.style.height='auto';
+
+  const url=URL.createObjectURL(file);
+  img.dataset.kaoruRuntime='1';
+  img.src=url;
+  img.addEventListener(
+    'load',
+    ()=>URL.revokeObjectURL(url),
+    {once:true}
+  );
+
+  const sel=window.getSelection();
+
+  if(sel&&sel.rangeCount&&editor.contains(sel.getRangeAt(0).commonAncestorContainer)){
+    const range=sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(img);
+    range.setStartAfter(img);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    state.savedRange=range.cloneRange();
+  }else{
+    editor.appendChild(img);
+  }
+
+  await saveNoteNow(task,note,editor);
+
+  syncTaskFilesToCloud()
+    .then(()=>window.KaoruTaskCloud?.flush?.())
+    .catch(err=>console.warn('Kaoru note image sync',err));
+});
+
+document.addEventListener('selectionchange',()=>{
+  const sel=window.getSelection();
+  if(!sel||!sel.rangeCount)return;
+
+  const node=sel.anchorNode;
+  const editor=node&&
+    (node.nodeType===1?node:node.parentElement)
+      ?.closest?.('.note-editor');
+
+  if(editor){
+    state.activeEditor=editor;
+    saveSelection();
+  }
+});
 
 const loadedFontIds=new Set();
 async function loadTaskFonts(){
@@ -715,7 +1358,7 @@ els.deleteScheduleBtn.addEventListener('click',async()=>{
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=23');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=24');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
@@ -964,7 +1607,7 @@ function installNavigationShortcuts(){document.addEventListener('keydown',e=>{if
 
 async function init(){
   try{
-    state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();
+    state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await migrateLegacyNoteImages();await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();
     if(EMBEDDED)window.parent.postMessage({type:'kaoru:studio-ready',studio:'tasks',theme:document.documentElement.dataset.theme||'day'},'*');
     ensureServiceWorker();checkNotifications();setInterval(checkNotifications,60000);
   }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para más detalles.');}
