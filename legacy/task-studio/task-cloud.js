@@ -350,24 +350,46 @@ async function init(nextAdapter){
     }
   });
 
+  /*
+    IMPORTANTE:
+    Supabase puede bloquear llamadas posteriores si hacemos operaciones
+    async del propio cliente dentro de onAuthStateChange. El callback
+    solo actualiza estado y difiere cualquier sincronizacion al siguiente
+    turno del event loop.
+  */
   client.auth.onAuthStateChange((event,nextSession)=>{
-    if(event==='SIGNED_OUT'){
-      activateSession(null).catch(()=>{});
-      return;
-    }
-    if(
-      event==='SIGNED_IN'||
-      event==='TOKEN_REFRESHED'||
-      event==='INITIAL_SESSION'
-    ){
-      activateSession(nextSession).catch(err=>{
-        console.warn('Kaoru Cloud auth',err);
-        emit('error',err?.message||'No se pudo iniciar la sincronización.');
-      });
-    }
+    session=nextSession||null;
+
+    /*
+      INITIAL_SESSION ya se procesa abajo mediante getSession().
+      Ignorarlo aqui evita arrancar dos reconciliaciones al recargar.
+    */
+    if(event==='INITIAL_SESSION')return;
+
+    setTimeout(()=>{
+      if(event==='SIGNED_OUT'){
+        activateSession(null).catch(()=>{});
+        return;
+      }
+
+      if(
+        event==='SIGNED_IN'||
+        event==='TOKEN_REFRESHED'||
+        event==='USER_UPDATED'
+      ){
+        activateSession(nextSession).catch(err=>{
+          console.warn('Kaoru Cloud auth',err);
+          emit(
+            'error',
+            err?.message||'No se pudo iniciar la sincronización.'
+          );
+        });
+      }
+    },0);
   });
 
-  const {data}=await client.auth.getSession();
+  const {data,error}=await client.auth.getSession();
+  if(error)throw error;
   await activateSession(data?.session||null);
 
   window.addEventListener('online',async()=>{

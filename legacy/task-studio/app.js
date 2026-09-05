@@ -375,7 +375,7 @@ els.scheduleBtn.addEventListener('click',()=>showModal('scheduleModal'));els.sch
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=20');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=21');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
@@ -453,26 +453,45 @@ async function refreshTaskStateFromDb(){
 }
 async function initTaskCloud(){
   if(!window.KaoruTaskCloud){
-    setCloudUi({state:'offline',message:'Kaoru Cloud no pudo cargar. Tus datos locales siguen disponibles.'});
+    setCloudUi({
+      state:'offline',
+      message:'Kaoru Cloud no pudo cargar. Tus datos locales siguen disponibles.'
+    });
     return;
   }
 
-  await window.KaoruTaskCloud.init({
-    listLocal:async type=>dbGetAll(type==='course'?COURSE_STORE:TASK_STORE),
-    getLocal:async(type,id)=>dbGet(type==='course'?COURSE_STORE:TASK_STORE,id),
-    putLocal:async(type,value)=>dbPut(type==='course'?COURSE_STORE:TASK_STORE,value),
-    deleteLocal:async(type,id)=>dbDelete(type==='course'?COURSE_STORE:TASK_STORE,id),
-    refresh:refreshTaskStateFromDb,
-    onStatus:setCloudUi
-  });
+  try{
+    await window.KaoruTaskCloud.init({
+      listLocal:async type=>dbGetAll(type==='course'?COURSE_STORE:TASK_STORE),
+      getLocal:async(type,id)=>dbGet(type==='course'?COURSE_STORE:TASK_STORE,id),
+      putLocal:async(type,value)=>dbPut(type==='course'?COURSE_STORE:TASK_STORE,value),
+      deleteLocal:async(type,id)=>dbDelete(type==='course'?COURSE_STORE:TASK_STORE,id),
+      refresh:refreshTaskStateFromDb,
+      onStatus:setCloudUi
+    });
 
-  setCloudUi({
-    state:window.KaoruTaskCloud.currentUser?.()?'synced':'local',
-    user:window.KaoruTaskCloud.currentUser?.()||null,
-    message:window.KaoruTaskCloud.currentUser?.()
-      ?'Sincronización automática activa.'
-      :'Inicia sesión para sincronizar automáticamente.'
-  });
+    setCloudUi({
+      state:window.KaoruTaskCloud.currentUser?.()?'synced':'local',
+      user:window.KaoruTaskCloud.currentUser?.()||null,
+      message:window.KaoruTaskCloud.currentUser?.()
+        ?'Sincronización automática activa.'
+        :'Inicia sesión para sincronizar automáticamente.'
+    });
+  }catch(err){
+    /*
+      Task Studio es local-first. Una caida de Supabase, un token
+      temporalmente invalido o cualquier error de red NO debe impedir
+      abrir tus tareas.
+    */
+    console.error('Kaoru Cloud no pudo iniciar; continuando en local.',err);
+    setCloudUi({
+      state:navigator.onLine?'error':'offline',
+      user:window.KaoruTaskCloud.currentUser?.()||null,
+      message:navigator.onLine
+        ?'Cloud no pudo iniciar. Task Studio sigue disponible localmente.'
+        :'Sin conexión. Task Studio sigue disponible localmente.'
+    });
+  }
 }
 
 els.cloudBtn.addEventListener('click',()=>{

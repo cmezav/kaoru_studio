@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-20';
+const CACHE_NAME = 'kaoru-archive-reader-shell-21';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
