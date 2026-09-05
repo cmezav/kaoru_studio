@@ -100,6 +100,15 @@ export async function putProgress(progress) {
   const tx = db.transaction(PROGRESS_STORE, 'readwrite');
   tx.objectStore(PROGRESS_STORE).put(progress);
   await txPromise(tx);
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent('kaoru:reader-progress-saved', {
+        detail: { ...progress }
+      })
+    );
+  } catch (_) {}
+
   return progress;
 }
 
