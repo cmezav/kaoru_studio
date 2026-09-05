@@ -19,14 +19,14 @@ const $=id=>document.getElementById(id);
 const els={
   pendingBadge:$('pendingBadge'),scheduleBtn:$('scheduleBtn'),notificationBtn:$('notificationBtn'),settingsBtn:$('settingsBtn'),themeBtn:$('themeBtn'),newTaskBtn:$('newTaskBtn'),
   courseSidebar:document.querySelector('.course-sidebar'),sideAddCourseBtn:$('sideAddCourseBtn'),closeCoursesBtn:$('closeCoursesBtn'),courseFilters:$('courseFilters'),completedFilterBtn:$('completedFilterBtn'),allCourseCount:$('allCourseCount'),completedCount:$('completedCount'),
-  listTitle:$('listTitle'),listSubtitle:$('listSubtitle'),mobileCourseBtn:$('mobileCourseBtn'),overdueCount:$('overdueCount'),todayCount:$('todayCount'),weekCount:$('weekCount'),pendingCount:$('pendingCount'),
+  listTitle:$('listTitle'),listSubtitle:$('listSubtitle'),mobileCourseBtn:$('mobileCourseBtn'),pendingViewBtn:$('pendingViewBtn'),historyViewBtn:$('historyViewBtn'),historyCountInline:$('historyCountInline'),overdueCount:$('overdueCount'),todayCount:$('todayCount'),weekCount:$('weekCount'),pendingCount:$('pendingCount'),
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
-  detailPane:$('detailPane'),detailEmpty:$('detailEmpty'),taskDetail:$('taskDetail'),closeDetailBtn:$('closeDetailBtn'),detailCompleteBtn:$('detailCompleteBtn'),detailCourseDot:$('detailCourseDot'),detailCourse:$('detailCourse'),detailKind:$('detailKind'),detailTitle:$('detailTitle'),detailProfessor:$('detailProfessor'),detailDue:$('detailDue'),editTaskBtn:$('editTaskBtn'),deleteTaskBtn:$('deleteTaskBtn'),
+  detailPane:$('detailPane'),detailEmpty:$('detailEmpty'),taskDetail:$('taskDetail'),closeDetailBtn:$('closeDetailBtn'),detailCompleteBtn:$('detailCompleteBtn'),detailCourseDot:$('detailCourseDot'),detailCourse:$('detailCourse'),detailKind:$('detailKind'),detailTitle:$('detailTitle'),detailProfessor:$('detailProfessor'),detailDue:$('detailDue'),restoreTaskBtn:$('restoreTaskBtn'),editTaskBtn:$('editTaskBtn'),deleteTaskBtn:$('deleteTaskBtn'),
   addLinkBtn:$('addLinkBtn'),addFileBtn:$('addFileBtn'),taskFileInput:$('taskFileInput'),taskDocs:$('taskDocs'),linkForm:$('linkForm'),linkLabel:$('linkLabel'),linkUrl:$('linkUrl'),cancelLinkBtn:$('cancelLinkBtn'),
   addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSelect:$('fontSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
-  settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
+  settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
   requestNotificationBtn:$('requestNotificationBtn'),notificationStatus:$('notificationStatus'),summaryIntervalSelect:$('summaryIntervalSelect')
 };
 
@@ -137,7 +137,7 @@ function counts(){
   return{pending,completed,overdue,today,week};
 }
 function updateCounts(){
-  const c=counts();els.pendingBadge.textContent=`${c.pending.length} pendiente${c.pending.length===1?'':'s'}`;els.pendingCount.textContent=c.pending.length;els.overdueCount.textContent=c.overdue.length;els.todayCount.textContent=c.today.length;els.weekCount.textContent=c.week.length;els.allCourseCount.textContent=c.pending.length;els.completedCount.textContent=c.completed.length;
+  const c=counts();els.pendingBadge.textContent=`${c.pending.length} pendiente${c.pending.length===1?'':'s'}`;els.pendingCount.textContent=c.pending.length;els.overdueCount.textContent=c.overdue.length;els.todayCount.textContent=c.today.length;els.weekCount.textContent=c.week.length;els.allCourseCount.textContent=c.pending.length;els.completedCount.textContent=c.completed.length;if(els.historyCountInline)els.historyCountInline.textContent=c.completed.length;
   document.title=c.pending.length?`(${c.pending.length}) Kaoru — Task Studio`:`Kaoru — Task Studio`;
   if(EMBEDDED)window.parent.postMessage({type:'kaoru:task-count',count:c.pending.length},'*');
 }
@@ -145,7 +145,17 @@ function updateCounts(){
 function coursePendingCounts(course){
   const list=state.tasks.filter(t=>!t.completed&&t.courseId===course.id);return{all:list.length,theory:list.filter(t=>t.kind==='theory').length,lab:list.filter(t=>t.kind==='lab').length};
 }
-function selectCourseFilter(id){state.courseFilter=id;state.quickFilter='all';document.querySelectorAll('.course-filter').forEach(b=>b.classList.toggle('active',b.dataset.course===id));els.completedFilterBtn.classList.toggle('active',id==='completed');renderMobileCourseChips();renderTaskList();closeMobileCourses();}
+function selectCourseFilter(id){
+  state.courseFilter=id;
+  state.quickFilter='all';
+  document.querySelectorAll('.course-filter').forEach(b=>b.classList.toggle('active',b.dataset.course===id));
+  els.completedFilterBtn.classList.toggle('active',id==='completed');
+  els.pendingViewBtn?.classList.toggle('active',id!=='completed');
+  els.historyViewBtn?.classList.toggle('active',id==='completed');
+  renderMobileCourseChips();
+  renderTaskList();
+  closeMobileCourses();
+}
 function renderCourseFilters(){
   els.courseFilters.innerHTML='';
   state.courses.forEach(course=>{
@@ -187,13 +197,34 @@ function selectTask(id){state.selectedTaskId=id;renderTaskList();renderDetail();
 function closeMobileDetail(){els.detailPane.classList.remove('mobile-open');}
 els.closeDetailBtn.addEventListener('click',closeMobileDetail);
 
-async function toggleComplete(id){const task=taskById(id);if(!task)return;task.completed=!task.completed;task.completedAt=task.completed?now():null;task.updatedAt=now();await dbPut(TASK_STORE,task);renderTaskList();if(state.selectedTaskId===id)renderDetail();}
+async function toggleComplete(id){
+  const task=taskById(id);
+  if(!task)return;
+
+  const restoring=!!task.completed;
+  task.completed=!task.completed;
+  task.completedAt=task.completed?now():null;
+  task.updatedAt=now();
+
+  await dbPut(TASK_STORE,task);
+
+  /*
+    Si una tarea se recupera desde el Historial, vuelve inmediatamente
+    a Pendientes para que quede claro que no se perdió.
+  */
+  if(restoring&&state.courseFilter==='completed'){
+    state.courseFilter='all';
+  }
+
+  renderTaskList();
+  if(state.selectedTaskId===id)renderDetail();
+}
 
 function renderDetail(){
   const task=taskById(state.selectedTaskId);if(!task){els.detailEmpty.classList.remove('hidden');els.taskDetail.classList.add('hidden');return;}
-  const ctx=taskContext(task);els.detailEmpty.classList.add('hidden');els.taskDetail.classList.remove('hidden');els.detailCourse.textContent=ctx.courseName;els.detailCourseDot.style.background=ctx.color;els.detailKind.textContent=kindName(task.kind);els.detailTitle.textContent=task.title;els.detailProfessor.textContent=ctx.professor;els.detailDue.textContent=`${task.completed?'Completada · ':'Entrega · '}${formatDue(task.dueAt)}`;els.detailDue.className='due-line '+dueClass(task);els.detailCompleteBtn.classList.toggle('done',!!task.completed);els.detailCompleteBtn.style.setProperty('--course-color',ctx.color);renderDocs(task);renderNoteThread(task);
+  const ctx=taskContext(task);els.detailEmpty.classList.add('hidden');els.taskDetail.classList.remove('hidden');els.detailCourse.textContent=ctx.courseName;els.detailCourseDot.style.background=ctx.color;els.detailKind.textContent=kindName(task.kind);els.detailTitle.textContent=task.title;els.detailProfessor.textContent=ctx.professor;els.detailDue.textContent=`${task.completed?'Completada · ':'Entrega · '}${formatDue(task.dueAt)}`;els.detailDue.className='due-line '+dueClass(task);els.detailCompleteBtn.classList.toggle('done',!!task.completed);els.detailCompleteBtn.style.setProperty('--course-color',ctx.color);els.detailCompleteBtn.title=task.completed?'Volver a Pendientes':'Marcar como completada';els.detailCompleteBtn.setAttribute('aria-label',task.completed?'Volver a Pendientes':'Marcar como completada');els.restoreTaskBtn.classList.toggle('hidden',!task.completed);renderDocs(task);renderNoteThread(task);
 }
-els.detailCompleteBtn.addEventListener('click',()=>state.selectedTaskId&&toggleComplete(state.selectedTaskId));
+els.detailCompleteBtn.addEventListener('click',()=>state.selectedTaskId&&toggleComplete(state.selectedTaskId));els.restoreTaskBtn.addEventListener('click',()=>state.selectedTaskId&&toggleComplete(state.selectedTaskId));
 
 function populateTaskCourseSelect(selectedId){
   els.taskCourseSelect.innerHTML=state.courses.length?state.courses.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join(''):'<option value="">Primero agrega un curso</option>';
@@ -235,21 +266,21 @@ els.deleteTaskBtn.addEventListener('click',async()=>{
 
 function openSettings(startCourseForm=false){renderCourseSettings();syncNotificationUI();showModal('settingsModal');if(startCourseForm)setTimeout(()=>startNewCourse(),60);}
 els.settingsBtn.addEventListener('click',()=>openSettings(false));els.sideAddCourseBtn.addEventListener('click',()=>openSettings(true));els.newCourseInlineBtn.addEventListener('click',startNewCourse);els.cancelCourseBtn.addEventListener('click',()=>els.courseForm.classList.add('hidden'));
-function resetCourseForm(){els.courseIdInput.value='';els.courseNameInput.value='';els.courseColorInput.value=COURSE_COLORS[state.courses.length%COURSE_COLORS.length];els.theoryProfessorInput.value='';els.hasLabInput.checked=true;els.sameProfessorInput.checked=false;els.labProfessorInput.value='';syncLabFields();}
+function resetCourseForm(){els.courseIdInput.value='';els.courseNameInput.value='';els.courseColorInput.value=COURSE_COLORS[state.courses.length%COURSE_COLORS.length];els.theoryProfessorInput.value='';els.hasLabInput.checked=true;els.sameProfessorInput.checked=false;els.labProfessorInput.value='';els.courseNotesInput.value='';syncLabFields();}
 function startNewCourse(){resetCourseForm();els.courseForm.classList.remove('hidden');els.courseNameInput.focus();}
-function editCourse(id){const c=courseById(id);if(!c)return;els.courseIdInput.value=c.id;els.courseNameInput.value=c.name;els.courseColorInput.value=c.color||'#7C3AED';els.theoryProfessorInput.value=c.theoryProfessor||'';els.hasLabInput.checked=!!c.hasLab;els.sameProfessorInput.checked=!!c.sameProfessor;els.labProfessorInput.value=c.sameProfessor?(c.theoryProfessor||''):(c.labProfessor||'');syncLabFields();els.courseForm.classList.remove('hidden');els.courseNameInput.focus();}
+function editCourse(id){const c=courseById(id);if(!c)return;els.courseIdInput.value=c.id;els.courseNameInput.value=c.name;els.courseColorInput.value=c.color||'#7C3AED';els.theoryProfessorInput.value=c.theoryProfessor||'';els.hasLabInput.checked=!!c.hasLab;els.sameProfessorInput.checked=!!c.sameProfessor;els.labProfessorInput.value=c.sameProfessor?(c.theoryProfessor||''):(c.labProfessor||'');els.courseNotesInput.value=c.generalNotes||'';syncLabFields();els.courseForm.classList.remove('hidden');els.courseNameInput.focus();}
 function syncLabFields(){els.labProfessorGroup.classList.toggle('hidden',!els.hasLabInput.checked);els.labProfessorInput.disabled=!els.hasLabInput.checked||els.sameProfessorInput.checked;if(els.sameProfessorInput.checked)els.labProfessorInput.value=els.theoryProfessorInput.value;}
 els.hasLabInput.addEventListener('change',syncLabFields);els.sameProfessorInput.addEventListener('change',syncLabFields);els.theoryProfessorInput.addEventListener('input',()=>{if(els.sameProfessorInput.checked)els.labProfessorInput.value=els.theoryProfessorInput.value;});
 els.courseForm.addEventListener('submit',async e=>{
-  e.preventDefault();const id=els.courseIdInput.value||uid('course');let c=courseById(id);const theory=els.theoryProfessorInput.value.trim();const same=els.hasLabInput.checked&&els.sameProfessorInput.checked;const data={id,name:els.courseNameInput.value.trim(),color:els.courseColorInput.value||'#7C3AED',hasLab:!!els.hasLabInput.checked,theoryProfessor:theory,sameProfessor:same,labProfessor:els.hasLabInput.checked?(same?theory:els.labProfessorInput.value.trim()):'',updatedAt:now()};if(!data.name)return;
+  e.preventDefault();const id=els.courseIdInput.value||uid('course');let c=courseById(id);const theory=els.theoryProfessorInput.value.trim();const same=els.hasLabInput.checked&&els.sameProfessorInput.checked;const data={id,name:els.courseNameInput.value.trim(),color:els.courseColorInput.value||'#7C3AED',hasLab:!!els.hasLabInput.checked,theoryProfessor:theory,sameProfessor:same,labProfessor:els.hasLabInput.checked?(same?theory:els.labProfessorInput.value.trim()):'',generalNotes:els.courseNotesInput.value.trim(),updatedAt:now()};if(!data.name)return;
   if(c)Object.assign(c,data);else{c={...data,createdAt:now()};state.courses.push(c);}await dbPut(COURSE_STORE,c);els.courseForm.classList.add('hidden');renderCourseSettings();renderTaskList();renderDetail();
 });
 function renderCourseSettings(){
   els.courseSettingsList.innerHTML='';if(!state.courses.length){els.courseSettingsList.innerHTML='<div class="notes-empty">Todavía no hay cursos. Agrega el primero para empezar a organizar tus tareas.</div>';return;}
-  state.courses.forEach(c=>{const row=document.createElement('div');row.className='course-setting-row';row.style.setProperty('--course-color',c.color);const labText=c.hasLab?` · Lab: ${c.sameProfessor?'mismo docente':(c.labProfessor||'sin registrar')}`:' · Sin laboratorio';row.innerHTML=`<span class="course-dot"></span><div class="course-setting-copy"><strong>${esc(c.name)}</strong><small>Teoría: ${esc(c.theoryProfessor||'sin registrar')}${esc(labText)}</small></div><div class="course-setting-actions"><button type="button" class="edit-course">Editar</button><button type="button" class="delete-course">Eliminar</button></div>`;row.querySelector('.edit-course').addEventListener('click',()=>editCourse(c.id));row.querySelector('.delete-course').addEventListener('click',()=>deleteCourse(c.id));els.courseSettingsList.appendChild(row);});
+  state.courses.forEach(c=>{const row=document.createElement('div');row.className='course-setting-row';row.style.setProperty('--course-color',c.color);const labText=c.hasLab?` · Lab: ${c.sameProfessor?'mismo docente':(c.labProfessor||'sin registrar')}`:' · Sin laboratorio';const noteText=(c.generalNotes||'').trim();row.innerHTML=`<span class="course-dot"></span><div class="course-setting-copy"><strong>${esc(c.name)}</strong><small>Teoría: ${esc(c.theoryProfessor||'sin registrar')}${esc(labText)}</small>${noteText?`<p class="course-note-preview">${esc(noteText)}</p>`:''}</div><div class="course-setting-actions"><button type="button" class="edit-course">Editar</button><button type="button" class="delete-course">Eliminar</button></div>`;row.querySelector('.edit-course').addEventListener('click',()=>editCourse(c.id));row.querySelector('.delete-course').addEventListener('click',()=>deleteCourse(c.id));els.courseSettingsList.appendChild(row);});
 }
 async function deleteCourse(id){
-  const c=courseById(id);if(!c)return;const related=state.tasks.filter(t=>t.courseId===id);const extra=related.length?`\n\n${related.length} tarea(s) conservarán el nombre del curso y docente como referencia, pero quedarán fuera de la configuración del curso.`:'';if(!confirm(`¿Estás segura de eliminar el curso “${c.name}”?${extra}`))return;
+  const c=courseById(id);if(!c)return;const related=state.tasks.filter(t=>t.courseId===id);const extra=related.length?`\n\n${related.length} tarea(s) conservarán el nombre del curso y docente como referencia, pero quedarán fuera de la configuración del curso.`:'';const notesExtra=(c.generalNotes||'').trim()?'\n\nTambién se eliminarán las notas generales guardadas de este curso.':'';if(!confirm(`¿Estás segura de eliminar el curso “${c.name}”?${extra}${notesExtra}`))return;
   for(const t of related){const professor=t.kind==='lab'?(c.labProfessor||c.theoryProfessor):(c.theoryProfessor||'');t.courseNameSnapshot=c.name;t.courseColorSnapshot=c.color;t.professorSnapshot=professor||'';t.courseId=null;t.updatedAt=now();await dbPut(TASK_STORE,t);}await dbDelete(COURSE_STORE,id);state.courses=state.courses.filter(x=>x.id!==id);if(state.courseFilter===id)state.courseFilter='all';renderCourseSettings();renderTaskList();renderDetail();
 }
 
@@ -313,7 +344,7 @@ els.scheduleBtn.addEventListener('click',()=>showModal('scheduleModal'));els.sch
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=17');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=18');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
@@ -330,9 +361,9 @@ async function checkNotifications(){
   writeNotificationLog(log);
 }
 
-els.mobileCourseBtn.addEventListener('click',()=>els.courseSidebar?.classList.add('mobile-open'));els.closeCoursesBtn.addEventListener('click',closeMobileCourses);
+els.mobileCourseBtn.addEventListener('click',()=>openSettings(false));els.closeCoursesBtn.addEventListener('click',closeMobileCourses);
 function closeMobileCourses(){els.courseSidebar?.classList.remove('mobile-open');}
-document.querySelector('.course-filter[data-course="all"]')?.addEventListener('click',()=>selectCourseFilter('all'));els.completedFilterBtn.addEventListener('click',()=>selectCourseFilter('completed'));
+document.querySelector('.course-filter[data-course="all"]')?.addEventListener('click',()=>selectCourseFilter('all'));els.completedFilterBtn.addEventListener('click',()=>selectCourseFilter('completed'));els.pendingViewBtn.addEventListener('click',()=>selectCourseFilter('all'));els.historyViewBtn.addEventListener('click',()=>selectCourseFilter('completed'));
 document.querySelectorAll('.type-chip').forEach(btn=>btn.addEventListener('click',()=>{state.kindFilter=btn.dataset.kind;state.quickFilter='all';document.querySelectorAll('.type-chip').forEach(b=>b.classList.toggle('active',b===btn));renderTaskList();}));document.querySelectorAll('.summary-card').forEach(btn=>btn.addEventListener('click',()=>{state.quickFilter=btn.dataset.quick||'all';state.courseFilter=state.courseFilter==='completed'?'all':state.courseFilter;renderTaskList();}));els.taskSearch.addEventListener('input',()=>{state.search=els.taskSearch.value;renderTaskList();});
 
 function installNavigationShortcuts(){document.addEventListener('keydown',e=>{if(!e.altKey||e.ctrlKey||e.metaKey||e.shiftKey)return;const map={'1':'silhouette','2':'text','3':'image','4':'light','5':'3d','6':'combiner','7':'gallery','8':'reader','9':'tasks'};const target=map[e.key];if(!target)return;e.preventDefault();if(EMBEDDED)window.parent.postMessage({type:'kaoru:navigate',studio:target},'*');else window.location.href=`../../#${target}`;});}

@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=task-studio-1">
+<link rel="stylesheet" href="./styles.css?cache=task-studio-2">
 <script>
 (function(){
   try{
@@ -66,7 +66,7 @@
           <h1 id="listTitle">Pendientes</h1>
           <p id="listSubtitle">Lo más urgente aparece primero.</p>
         </div>
-        <button id="mobileCourseBtn" class="mobile-course-btn" type="button">Cursos</button>
+        <button id="mobileCourseBtn" class="mobile-course-btn" type="button">⚙ Mis cursos</button>
       </div>
 
       <section class="summary-grid" aria-label="Resumen de tareas">
@@ -77,6 +77,10 @@
       </section>
 
       <div class="task-toolbar">
+        <div class="view-filters" role="group" aria-label="Vista de tareas">
+          <button id="pendingViewBtn" class="view-chip active" type="button">Pendientes</button>
+          <button id="historyViewBtn" class="view-chip" type="button">Historial <span id="historyCountInline">0</span></button>
+        </div>
         <div class="type-filters" role="group" aria-label="Tipo de tarea">
           <button class="type-chip active" data-kind="all" type="button">Todas</button>
           <button class="type-chip" data-kind="theory" type="button">Teoría</button>
@@ -112,6 +116,7 @@
               <div id="detailDue" class="due-line"></div>
             </div>
             <div class="detail-actions">
+              <button id="restoreTaskBtn" class="restore-task-btn hidden" type="button" title="Volver esta tarea a Pendientes">↩ Recuperar</button>
               <button id="editTaskBtn" class="icon-button" type="button" title="Editar tarea">✎</button>
               <button id="deleteTaskBtn" class="icon-button danger-icon" type="button" title="Eliminar tarea">×</button>
             </div>
@@ -226,6 +231,11 @@
             <label class="check-field"><input id="sameProfessorInput" type="checkbox"><span>El profesor de laboratorio es el mismo</span></label>
             <label class="field"><span>Profesor de laboratorio</span><input id="labProfessorInput" type="text" maxlength="120" placeholder="Nombre del profesor de laboratorio"></label>
           </div>
+          <label class="field full course-notes-field">
+            <span>Notas generales del curso</span>
+            <textarea id="courseNotesInput" rows="4" maxlength="4000" placeholder="Notas simples: indicaciones del profesor, modalidad, grupos, enlaces que recuerdes, observaciones, etc."></textarea>
+            <small>Texto simple, sin formato. Se guarda junto con este curso.</small>
+          </label>
           <div class="form-actions full"><button id="cancelCourseBtn" type="button" class="small-ghost">Cancelar</button><button type="submit" class="small-primary">Guardar curso</button></div>
         </form>
         <div id="courseSettingsList" class="course-settings-list"></div>
@@ -249,6 +259,6 @@
   </section>
 </div>
 
-<script src="./app.js?cache=task-studio-1"></script>
+<script src="./app.js?cache=task-studio-2"></script>
 </body>
 </html>

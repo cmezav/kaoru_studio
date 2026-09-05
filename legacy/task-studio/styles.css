@@ -87,3 +87,159 @@ button{cursor:pointer}
   .task-brand .task-eyebrow{display:none}.task-brand strong{font-size:15px}.task-topbar{padding-inline:8px}.top-btn{width:34px;padding:0;font-size:15px}.top-btn span{display:none!important}.schedule-btn,.top-btn.primary{width:38px}.summary-card span{font-size:7px}.type-chip{padding-inline:6px}.search-box{padding-left:6px}.search-box input{width:60px}.detail-title-row{grid-template-columns:30px 22px minmax(0,1fr)}.detail-actions{grid-column:3;grid-row:2;justify-self:end}.detail-title-copy{grid-column:3}.complete-circle{grid-column:2}.mobile-back{grid-column:1}.dock-head{display:block}.dock-actions{margin-top:7px}.task-docs{margin-top:2px}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+/* Task Studio v2: cursos bajo demanda */
+.course-sidebar{
+  display:none!important;
+}
+.task-workspace{
+  grid-template-columns:minmax(360px,460px) minmax(0,1fr);
+}
+.mobile-course-btn{
+  display:inline-flex;
+  height:32px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-2);
+  align-items:center;
+  padding:0 9px;
+  font-size:9px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.mobile-course-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.mobile-course-chips{
+  display:none!important;
+}
+.task-toolbar{
+  flex-wrap:wrap;
+}
+.view-filters{
+  display:flex;
+  gap:4px;
+  padding-right:7px;
+  margin-right:1px;
+  border-right:1px solid var(--line);
+}
+.view-chip{
+  height:30px;
+  border:1px solid transparent;
+  border-radius:8px;
+  padding:0 8px;
+  background:transparent;
+  color:var(--muted);
+  font-size:8.5px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.view-chip:hover{
+  background:var(--surface-2);
+  color:var(--text);
+}
+.view-chip.active{
+  background:var(--accent-soft);
+  color:var(--accent);
+  border-color:color-mix(in srgb,var(--accent) 20%,var(--line));
+}
+#historyCountInline{
+  display:inline-grid;
+  place-items:center;
+  min-width:17px;
+  height:17px;
+  margin-left:3px;
+  padding:0 4px;
+  border-radius:999px;
+  background:var(--surface);
+  border:1px solid var(--line);
+  font-size:7px;
+}
+.restore-task-btn{
+  min-height:32px;
+  border:1px solid color-mix(in srgb,var(--good) 45%,var(--line));
+  border-radius:9px;
+  padding:0 9px;
+  background:color-mix(in srgb,var(--good) 10%,var(--surface));
+  color:var(--good);
+  font-size:8.5px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.restore-task-btn:hover{
+  border-color:var(--good);
+  background:color-mix(in srgb,var(--good) 16%,var(--surface));
+}
+.course-notes-field textarea{
+  width:100%;
+  min-height:92px;
+  resize:vertical;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-2);
+  color:var(--text);
+  padding:9px 10px;
+  outline:none;
+  font:inherit;
+  font-size:10px;
+  line-height:1.5;
+}
+.course-notes-field textarea:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 10%,transparent);
+}
+.course-notes-field small{
+  display:block;
+  margin-top:5px;
+  color:var(--muted);
+  font-size:8px;
+  line-height:1.4;
+}
+.course-setting-copy{
+  min-width:0;
+}
+.course-note-preview{
+  margin:6px 0 0;
+  padding:7px 8px;
+  border-radius:8px;
+  background:var(--surface-2);
+  color:var(--muted);
+  font-size:8.5px;
+  line-height:1.45;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+
+@media(max-width:1100px) and (min-width:901px){
+  .task-workspace{
+    grid-template-columns:minmax(330px,400px) minmax(0,1fr);
+  }
+  .view-filters{
+    width:100%;
+    border-right:0;
+    padding-right:0;
+  }
+}
+@media(max-width:900px){
+  .task-workspace{
+    display:block;
+  }
+  .mobile-course-btn{
+    display:inline-flex;
+  }
+  .view-filters{
+    width:100%;
+    border-right:0;
+    padding-right:0;
+  }
+  .view-chip{
+    flex:1;
+  }
+}
+@media(max-width:520px){
+  .restore-task-btn{
+    min-height:30px;
+    padding:0 7px;
+    font-size:8px;
+  }
+}
