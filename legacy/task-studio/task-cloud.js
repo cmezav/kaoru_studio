@@ -8,7 +8,10 @@ const TABLE='kaoru_records';
 const BUCKET='kaoru-files';
 const QUEUE_KEY='kaoru.task-cloud.queue.v1';
 const FILE_DELETE_QUEUE_KEY='kaoru.task-cloud.file-delete-queue.v1';
+const CONFLICT_KEY='kaoru.task-cloud.conflicts.v1';
+const RECENT_WRITE_KEY='kaoru.task-cloud.recent-writes.v1';
 const DEVICE_KEY='kaoru.cloud.device-id.v1';
+const RECENT_WRITE_WINDOW=15000;
 
 let adapter=null;
 let client=null;
@@ -97,6 +100,148 @@ function preparePayload(type,payload){
   if(type==='schedule')return sanitizeSchedule(payload);
   return clone(payload);
 }
+function jsonEqual(a,b){
+  try{return JSON.stringify(a)===JSON.stringify(b);}catch(_){return false;}
+}
+function conflictRead(){
+  try{
+    const value=JSON.parse(localStorage.getItem(CONFLICT_KEY)||'[]');
+    return Array.isArray(value)?value:[];
+  }catch(_){return[];}
+}
+function conflictWrite(items){
+  try{localStorage.setItem(CONFLICT_KEY,JSON.stringify(items.slice(-30)));}catch(_){}
+}
+function rememberConflict(entityType,entityId,reason,local,remote){
+  const items=conflictRead();
+  items.push({
+    id:uid(),
+    entityType,
+    entityId:String(entityId||''),
+    reason:String(reason||'conflict'),
+    at:Date.now(),
+    local:preparePayload(entityType,local||{}),
+    remote:preparePayload(entityType,remote||{})
+  });
+  conflictWrite(items);
+}
+function recentWritesRead(){
+  try{
+    const value=JSON.parse(localStorage.getItem(RECENT_WRITE_KEY)||'{}');
+    return value&&typeof value==='object'?value:{};
+  }catch(_){return{};}
+}
+function recentWritesWrite(value){
+  try{localStorage.setItem(RECENT_WRITE_KEY,JSON.stringify(value));}catch(_){}
+}
+function entityKey(type,id){return `${type}:${id}`;}
+function markRecentWrite(type,id){
+  if(!type||!id)return;
+  const writes=recentWritesRead();
+  const current=Date.now();
+
+  for(const [key,at] of Object.entries(writes)){
+    if(current-Number(at||0)>RECENT_WRITE_WINDOW*4)delete writes[key];
+  }
+
+  writes[entityKey(type,id)]=current;
+  recentWritesWrite(writes);
+}
+function isRecentWrite(type,id){
+  const at=Number(recentWritesRead()[entityKey(type,id)]||0);
+  return at>0&&(Date.now()-at)<=RECENT_WRITE_WINDOW;
+}
+function hasPendingEntity(type,id){
+  const key=entityKey(type,id);
+  return queueForCurrentUser().some(op=>queueKey(op)===key);
+}
+function hasActiveLocalWrite(type,id){
+  return hasPendingEntity(type,id)||isRecentWrite(type,id);
+}
+function mergeArrayById(localItems,remoteItems){
+  const result=new Map();
+
+  for(const item of Array.isArray(remoteItems)?remoteItems:[]){
+    if(!item?.id)continue;
+    result.set(String(item.id),clone(item));
+  }
+
+  for(const item of Array.isArray(localItems)?localItems:[]){
+    if(!item?.id)continue;
+
+    const key=String(item.id);
+    const other=result.get(key);
+
+    if(!other){
+      result.set(key,clone(item));
+      continue;
+    }
+
+    const localTs=localUpdated(item);
+    const remoteTs=localUpdated(other);
+
+    /*
+      Una nota o adjunto es una sub-entidad con su propio updatedAt.
+      La version mas nueva gana SOLO para ese item, no para toda la tarea.
+    */
+    if(localTs>=remoteTs)result.set(key,clone(item));
+  }
+
+  return [...result.values()];
+}
+function mergeTaskConflict(local,remote,remoteTs){
+  const localTs=localUpdated(local);
+  const remotePayload=clone(remote||{});
+
+  /*
+    Para campos simples mantenemos la version global mas nueva.
+    Para notes/docs hacemos union por ID para evitar que editar el titulo
+    en un dispositivo borre una nota creada en el otro.
+  */
+  const newer=remoteTs>localTs?remotePayload:clone(local);
+  const older=remoteTs>localTs?clone(local):remotePayload;
+  const merged={...older,...newer};
+
+  merged.id=local?.id||remotePayload?.id;
+  merged.notes=mergeArrayById(local?.notes,remotePayload?.notes);
+  merged.docs=mergeArrayById(local?.docs,remotePayload?.docs);
+  merged.createdAt=Math.min(
+    Number(local?.createdAt||Infinity),
+    Number(remotePayload?.createdAt||Infinity)
+  );
+
+  if(!Number.isFinite(merged.createdAt)){
+    merged.createdAt=Number(local?.createdAt||remotePayload?.createdAt||Date.now());
+  }
+
+  merged.updatedAt=Math.max(localTs,remoteTs,Date.now());
+  return merged;
+}
+function mergeCourseConflict(local,remote,remoteTs){
+  const localTs=localUpdated(local);
+
+  /*
+    Si existe una escritura local activa, priorizamos esos datos para no
+    borrar lo que el usuario acaba de escribir. La siguiente sincronizacion
+    vuelve a publicar esta version con un timestamp nuevo.
+  */
+  const chosen=localTs>=remoteTs?clone(local):clone(remote||{});
+
+  if(hasActiveLocalWrite('course',local?.id||remote?.id)){
+    Object.assign(chosen,clone(local||{}));
+  }
+
+  chosen.updatedAt=Math.max(localTs,remoteTs,Date.now());
+  return chosen;
+}
+function mergeConflictEntity(type,local,remote,remoteTs){
+  if(type==='task')return mergeTaskConflict(local,remote,remoteTs);
+  if(type==='course')return mergeCourseConflict(local,remote,remoteTs);
+  return localUpdated(local)>=remoteTs?clone(local):clone(remote||{});
+}
+function recentConflicts(){
+  return conflictRead().slice().reverse();
+}
 function queueRead(){
   try{
     const value=JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]');
@@ -157,18 +302,26 @@ function putQueue(op){
 }
 function queueUpsert(entityType,payload){
   if(!payload?.id)return;
+
+  const updatedAt=localUpdated(payload)||Date.now();
+
+  markRecentWrite(entityType,payload.id);
+
   putQueue({
     kind:'upsert',
     entityType,
     entityId:String(payload.id),
     payload:preparePayload(entityType,payload),
-    updatedAt:Math.max(localUpdated(payload),Date.now()),
+    updatedAt,
     userId:session?.user?.id||null,
     deviceId:DEVICE_ID
   });
 }
 function queueDelete(entityType,entityId,updatedAt=Date.now()){
   if(!entityId)return;
+
+  markRecentWrite(entityType,entityId);
+
   putQueue({
     kind:'delete',
     entityType,
@@ -229,22 +382,103 @@ async function listLocal(type){
 }
 async function applyRemote(row){
   if(!row||row.module!==MODULE)return false;
-  const local=await getLocal(row.entity_type,row.entity_id);
+
+  const type=row.entity_type;
+  const id=row.entity_id;
+  const local=await getLocal(type,id);
   const localTs=localUpdated(local);
   const remoteTs=Number(row.client_updated_at)||0;
+  const activeLocal=local&&hasActiveLocalWrite(type,id);
+
+  /*
+    Conflicto borrar vs editar:
+    si este dispositivo tiene una escritura activa, NO destruimos ese
+    trabajo silenciosamente. Conservamos local y lo reenviamos.
+    Si el usuario realmente queria borrar, puede volver a borrar despues.
+  */
+  if(row.deleted&&local&&activeLocal){
+    rememberConflict(
+      type,
+      id,
+      'remote-delete-vs-local-edit',
+      local,
+      {id,deleted:true,updatedAt:remoteTs}
+    );
+
+    const revived={
+      ...clone(local),
+      updatedAt:Math.max(localTs,remoteTs,Date.now())
+    };
+
+    globalThis.__kaoruCloudApplyingRemote=true;
+    try{
+      await adapter?.putLocal?.(type,revived);
+    }finally{
+      globalThis.__kaoruCloudApplyingRemote=false;
+    }
+
+    queueUpsert(type,revived);
+    emit(
+      'pending',
+      'Detecté un conflicto entre borrar y editar. Conservé tu edición local.'
+    );
+    return true;
+  }
+
+  /*
+    Dos dispositivos editaron el mismo registro casi al mismo tiempo.
+    Para tareas fusionamos notas y adjuntos por ID. Así una edición simple
+    no hace desaparecer contenido creado en el otro dispositivo.
+  */
+  if(
+    local&&
+    !row.deleted&&
+    activeLocal&&
+    !jsonEqual(preparePayload(type,local),row.payload||{})
+  ){
+    const merged=mergeConflictEntity(
+      type,
+      local,
+      row.payload||{},
+      remoteTs
+    );
+
+    rememberConflict(
+      type,
+      id,
+      'simultaneous-edit',
+      local,
+      row.payload||{}
+    );
+
+    globalThis.__kaoruCloudApplyingRemote=true;
+    try{
+      await adapter?.putLocal?.(type,merged);
+    }finally{
+      globalThis.__kaoruCloudApplyingRemote=false;
+    }
+
+    queueUpsert(type,merged);
+    emit(
+      'pending',
+      'Cambios simultáneos combinados. Sincronizando la versión protegida…'
+    );
+    return true;
+  }
 
   if(local&&localTs>remoteTs)return false;
 
   globalThis.__kaoruCloudApplyingRemote=true;
   try{
     if(row.deleted){
-      if(local)await adapter?.deleteLocal?.(row.entity_type,row.entity_id);
+      if(local)await adapter?.deleteLocal?.(type,id);
     }else{
-      await adapter?.putLocal?.(row.entity_type,clone(row.payload||{}));
+      await adapter?.putLocal?.(type,clone(row.payload||{}));
     }
   }finally{
     globalThis.__kaoruCloudApplyingRemote=false;
   }
+
   return true;
 }
 async function reconcile(){
@@ -269,7 +503,9 @@ async function reconcile(){
     const remoteTs=Number(row.client_updated_at)||0;
 
     if(row.deleted){
-      if(local&&remoteTs>=localTs){
+      if(local&&hasActiveLocalWrite(row.entity_type,row.entity_id)){
+        changed=(await applyRemote(row))||changed;
+      }else if(local&&remoteTs>=localTs){
         changed=(await applyRemote(row))||changed;
       }else if(local&&localTs>remoteTs){
         queueUpsert(row.entity_type,local);
@@ -277,7 +513,16 @@ async function reconcile(){
       continue;
     }
 
-    if(!local||remoteTs>localTs){
+    if(
+      local&&
+      hasActiveLocalWrite(row.entity_type,row.entity_id)&&
+      !jsonEqual(
+        preparePayload(row.entity_type,local),
+        row.payload||{}
+      )
+    ){
+      changed=(await applyRemote(row))||changed;
+    }else if(!local||remoteTs>localTs){
       changed=(await applyRemote(row))||changed;
     }else if(localTs>remoteTs){
       queueUpsert(row.entity_type,local);
@@ -659,6 +904,7 @@ window.KaoruTaskCloud={
   init,
   available,
   currentUser,
+  recentConflicts,
   queueUpsert,
   queueDelete,
   queueStorageDelete,
