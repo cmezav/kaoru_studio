@@ -1,7 +1,7 @@
 declare const React: any;
 declare const ReactDOM: any;
 
-type StudioId = 'home' | 'silhouette' | 'text' | 'image' | 'light' | '3d' | 'combiner' | 'gallery' | 'reader';
+type StudioId = 'home' | 'silhouette' | 'text' | 'image' | 'light' | '3d' | 'combiner' | 'gallery' | 'reader' | 'tasks';
 type Theme = 'day' | 'night';
 type Studio = { id: StudioId; name: string; short: string; subtitle: string; src: string; accent: string; icon: any; hotkey: string };
 
@@ -19,7 +19,7 @@ function Icon(props:{name:string}) {
     three:[h('path',{d:'M12 2 20 6.5v9L12 20l-8-4.5v-9L12 2Z'}),h('path',{d:'m4 6.5 8 4.5 8-4.5M12 11v9'}),h('path',{d:'M8.5 8.7 12 6.8l3.5 1.9'})],
     combine:[h('rect',{x:4,y:5,width:11,height:11,rx:2}),h('rect',{x:9,y:8,width:11,height:11,rx:2}),h('path',{d:'M7 12l2-2 3 3 2-2 3 3'})],
     gallery:[h('rect',{x:4,y:4,width:6,height:6,rx:1}),h('rect',{x:14,y:4,width:6,height:6,rx:1}),h('rect',{x:4,y:14,width:6,height:6,rx:1}),h('rect',{x:14,y:14,width:6,height:6,rx:1})],
-    reader:[h('path',{d:'M5 4.5A3.5 3.5 0 0 1 8.5 2H12v18H8.5A3.5 3.5 0 0 0 5 23.5v-19Z'}),h('path',{d:'M19 4.5A3.5 3.5 0 0 0 15.5 2H12v18h3.5a3.5 3.5 0 0 1 3.5 3.5v-19Z'})],
+    tasks:[h('rect',{x:4,y:4,width:16,height:16,rx:3}),h('path',{d:'M8 9l1.5 1.5L12 8M8 14l1.5 1.5L12 13M14 9h3M14 14h3'})],    reader:[h('path',{d:'M5 4.5A3.5 3.5 0 0 1 8.5 2H12v18H8.5A3.5 3.5 0 0 0 5 23.5v-19Z'}),h('path',{d:'M19 4.5A3.5 3.5 0 0 0 15.5 2H12v18h3.5a3.5 3.5 0 0 1 3.5 3.5v-19Z'})],
     moon:[h('path',{d:'M20.2 14.2A8 8 0 0 1 9.8 3.8 8.5 8.5 0 1 0 20.2 14.2Z'})],
     sun:[h('circle',{cx:12,cy:12,r:4}),h('path',{d:'M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41'})],
     chevron:[h('path',{d:'m9 18 6-6-6-6'})],
@@ -37,7 +37,7 @@ const studios:Studio[]=[
   {id:'3d',name:'3D Lighting Studio',short:'3D',subtitle:'Modelos, anatomia y luces 3D',src:'./legacy/3d-lighting/index.html?embed=1',accent:'indigo',icon:h(Icon,{name:'three'}),hotkey:'Alt+5'},
   {id:'combiner',name:'Image Combiner Studio',short:'Combiner',subtitle:'Lienzos, capas y composiciones de imagen',src:'./legacy/image-combiner/index.html?embed=1',accent:'coral',icon:h(Icon,{name:'combine'}),hotkey:'Alt+6'},
   {id:'gallery',name:'Galería',short:'Galería',subtitle:'Diseños, proyectos y plantillas',src:'./legacy/gallery/index.html?embed=1',accent:'amber',icon:h(Icon,{name:'gallery'}),hotkey:'Alt+7'},
-  {id:'reader',name:'Archive Reader',short:'Reader',subtitle:'Lectura EPUB offline',src:'./legacy/reader/index.html?embed=1',accent:'reader',icon:h(Icon,{name:'reader'}),hotkey:'Alt+8'}
+  {id:'tasks',name:'Task Studio',short:'Tareas',subtitle:'Cursos, tareas, notas y entregas',src:'./legacy/task-studio/index.html?embed=1',accent:'mint',icon:h(Icon,{name:'tasks'}),hotkey:'Alt+9'},  {id:'reader',name:'Archive Reader',short:'Reader',subtitle:'Lectura EPUB offline',src:'./legacy/reader/index.html?embed=1',accent:'reader',icon:h(Icon,{name:'reader'}),hotkey:'Alt+8'}
 ];
 
 function readTheme():Theme{try{return localStorage.getItem(THEME_KEY)==='night'?'night':'day'}catch(_){return'day'}}
@@ -54,7 +54,9 @@ function shouldOpenReaderStandalone(){
 function readerStandaloneUrl(){
   return './legacy/reader/index.html?entry=library&standalone=1&visit='+Date.now();
 }
-class Logo extends React.Component<any,{failed:boolean}>{
+function tasksStandaloneUrl(){
+  return './legacy/task-studio/index.html?standalone=1&visit='+Date.now();
+}class Logo extends React.Component<any,{failed:boolean}>{
   constructor(props:any){super(props);this.state={failed:false}}
   render(){return h('div',{className:'brand-logo-wrap'},
     !this.state.failed&&h('img',{className:'brand-logo',src:'./logo.png',alt:"Kaoru's Studio",onError:()=>this.setState({failed:true})}),
@@ -78,7 +80,10 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   }
   componentDidMount(){
     if(this.state.active==='reader'&&shouldOpenReaderStandalone()){window.location.assign(readerStandaloneUrl());return;}
-    window.addEventListener('keydown',this.onKeyBound);
+    if(this.state.active==='tasks'&&shouldOpenReaderStandalone()){
+      window.location.assign(tasksStandaloneUrl());
+      return;
+    }    window.addEventListener('keydown',this.onKeyBound);
     window.addEventListener('message',this.onMessageBound);
     window.addEventListener('hashchange',this.onHashBound);
     this.applyTheme(this.state.theme,false);
@@ -91,7 +96,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   onHash(){const id=hashStudio();if(id!==this.state.active)this.navigate(id,false)}
   onKey(e:KeyboardEvent){
     if(!e.altKey||e.ctrlKey||e.metaKey||e.shiftKey)return;
-    const map:any={'1':'silhouette','2':'text','3':'image','4':'light','5':'3d','6':'combiner','7':'gallery','8':'reader'};
+    const map:any={'1':'silhouette','2':'text','3':'image','4':'light','5':'3d','6':'combiner','7':'gallery','8':'reader','9':'tasks'};
     if(!map[e.key])return;e.preventDefault();this.navigate(map[e.key]);
   }
   onMessage(e:MessageEvent){
@@ -99,6 +104,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
     if(data.type==='kaoru:navigate'&&studios.some(s=>s.id===data.studio))this.navigate(data.studio);
     else if(data.type==='kaoru:studio-ready'&&studios.some(s=>s.id===data.studio))this.setState({active:data.studio});
     else if(data.type==='kaoru:theme'&&(data.theme==='day'||data.theme==='night'))this.setTheme(data.theme);
+    else if(data.type==='kaoru:task-count'){const count=Number(data.count)||0;document.title=count>0?'('+count+') kaoru\'s studio':'kaoru\'s studio';}
   }
   setTheme(theme:Theme){this.setState({theme:theme},()=>this.applyTheme(theme,true))}
   applyTheme(theme:Theme,save:boolean){
@@ -114,9 +120,15 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
       return;
     }
 
+    if(id==='tasks'&&shouldOpenReaderStandalone()){
+      window.location.assign(tasksStandaloneUrl());
+      return;
+    }
     const nextSrc=id==='reader'
       ? target.src+'&entry=library&visit='+Date.now()
-      : target.src;
+      : id==='tasks'
+        ? target.src+'&visit='+Date.now()
+        : target.src;
 
     this.setState({active:id,frameSrc:nextSrc});
 
@@ -156,7 +168,7 @@ class App extends React.Component<any,{active:StudioId;theme:Theme;frameSrc:stri
   openRemoveBg(){window.open('https://www.remove.bg/es','_blank','noopener,noreferrer')}
   render(){
     const activeStudio=studios.find(s=>s.id===this.state.active)||studios[0];
-    return h('div',{className:'kaoru-app'+(this.state.active==='reader'?' is-reader':'')+(this.state.active==='home'?' is-home':'')},
+    return h('div',{className:'kaoru-app'+(this.state.active==='reader'?' is-reader':'')+(this.state.active==='tasks'?' is-tasks':'')+(this.state.active==='home'?' is-home':'')},
       h('aside',{className:'rail'},
         h('div',{className:'rail-brand'},h(Logo,{})),
         h('nav',{className:'rail-nav','aria-label':'Studios'},...studios.map(studio=>h('button',{

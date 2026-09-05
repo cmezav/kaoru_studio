@@ -78,3 +78,15 @@ html[data-theme=night]{--bg:#0e0c12;--surface:rgba(23,20,29,.92);--surface-solid
     font-size:9px;
   }
 }
+
+/* Task Studio */
+.accent-mint.is-active{color:#2f9b68}
+.rail-nav{min-height:0;overflow-y:auto;scrollbar-width:none}
+.rail-nav::-webkit-scrollbar{display:none}
+@media(max-width:800px){
+  .kaoru-app.is-tasks{display:block}
+  .kaoru-app.is-tasks .rail,.kaoru-app.is-tasks .appbar{display:none}
+  .kaoru-app.is-tasks .main-shell{display:block;height:100%;min-height:0}
+  .kaoru-app.is-tasks .frame-shell{height:100%;padding:0;background:var(--bg)}
+  .kaoru-app.is-tasks .studio-frame{height:100%;border:0;border-radius:0;box-shadow:none;background:var(--bg)}
+}

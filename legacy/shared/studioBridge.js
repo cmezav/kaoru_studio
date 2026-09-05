@@ -39,7 +39,7 @@
   function studioUrl(studio) {
     if (window.KAORU_PATHS && window.KAORU_PATHS[studio]) return new URL(window.KAORU_PATHS[studio], location.href).href;
     const current = document.body && document.body.dataset.studio;
-    const folders = { text: 'text-studio', image: 'image-studio', light: 'light-lab', '3d': '3d-lighting', combiner: 'image-combiner', gallery: 'gallery' };
+    const folders = { text: 'text-studio', image: 'image-studio', light: 'light-lab', '3d': '3d-lighting', combiner: 'image-combiner', gallery: 'gallery', tasks: 'task-studio' };
     if (current === 'silhouette') {
       if (studio === 'silhouette') return new URL('./index.html', location.href).href;
       return new URL(`./${folders[studio] || 'gallery'}/index.html`, location.href).href;
@@ -52,7 +52,7 @@
   function installNavigationShortcuts() {
     document.addEventListener('keydown', (event) => {
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-      const target = event.key === '1' ? 'silhouette' : event.key === '2' ? 'text' : event.key === '3' ? 'image' : event.key === '4' ? 'light' : event.key === '5' ? '3d' : event.key === '6' ? 'combiner' : event.key === '7' ? 'gallery' : null;
+      const target = event.key === '1' ? 'silhouette' : event.key === '2' ? 'text' : event.key === '3' ? 'image' : event.key === '4' ? 'light' : event.key === '5' ? '3d' : event.key === '6' ? 'combiner' : event.key === '7' ? 'gallery' : event.key === '8' ? 'reader' : event.key === '9' ? 'tasks' : null;
       if (!target) return;
       event.preventDefault();
       if (EMBEDDED) {

@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Kaoru's Studio — Task Studio</title>
+<link rel="icon" href="../../logo.png" type="image/png">
+<link rel="stylesheet" href="./styles.css?cache=task-studio-1">
+<script>
+(function(){
+  try{
+    if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');
+    const saved=localStorage.getItem('siluetaStudioTheme');
+    document.documentElement.dataset.theme=saved==='night'?'night':'day';
+  }catch(_){document.documentElement.dataset.theme='day';}
+}());
+</script>
+</head>
+<body data-studio="tasks">
+<div class="task-app">
+  <header class="task-topbar">
+    <div class="task-brand">
+      <img src="../../logo.png" alt="" class="task-logo">
+      <div>
+        <span class="task-eyebrow">ING. DE SISTEMAS</span>
+        <strong>Task Studio</strong>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="pendingBadge" class="pending-badge">0 pendientes</span>
+      <button id="scheduleBtn" class="top-btn schedule-btn" type="button">🗓 <span>Horario</span></button>
+      <button id="notificationBtn" class="top-btn" type="button" title="Activar o revisar notificaciones">🔔 <span>Avisos</span></button>
+      <button id="settingsBtn" class="top-btn" type="button">⚙ <span>Cursos</span></button>
+      <button id="themeBtn" class="top-btn theme-btn" type="button" title="Cambiar tema">☾</button>
+      <button id="newTaskBtn" class="top-btn primary" type="button">＋ <span>Nueva tarea</span></button>
+    </div>
+  </header>
+
+  <main class="task-workspace">
+    <aside class="course-sidebar">
+      <div class="side-heading">
+        <div>
+          <span class="mini-kicker">ORGANIZAR</span>
+          <h2>Mis cursos</h2>
+        </div>
+        <div class="side-head-actions"><button id="sideAddCourseBtn" class="icon-button" type="button" title="Agregar curso">＋</button><button id="closeCoursesBtn" class="icon-button mobile-close-courses" type="button" title="Cerrar">×</button></div>
+      </div>
+      <button class="course-filter active" data-course="all" type="button">
+        <span class="course-dot all-dot"></span>
+        <span class="course-filter-main"><strong>Todas las tareas</strong><small>Ordenadas por entrega</small></span>
+        <b id="allCourseCount">0</b>
+      </button>
+      <div id="courseFilters" class="course-filters"></div>
+      <button id="completedFilterBtn" class="course-filter completed-filter" type="button">
+        <span class="course-dot done-dot">✓</span>
+        <span class="course-filter-main"><strong>Completadas</strong><small>Historial de entregas</small></span>
+        <b id="completedCount">0</b>
+      </button>
+    </aside>
+
+    <section class="task-list-pane">
+      <div class="dashboard-head">
+        <div>
+          <span class="mini-kicker">PRÓXIMAS ENTREGAS</span>
+          <h1 id="listTitle">Pendientes</h1>
+          <p id="listSubtitle">Lo más urgente aparece primero.</p>
+        </div>
+        <button id="mobileCourseBtn" class="mobile-course-btn" type="button">Cursos</button>
+      </div>
+
+      <section class="summary-grid" aria-label="Resumen de tareas">
+        <button class="summary-card danger" data-quick="overdue" type="button"><span>Atrasadas</span><strong id="overdueCount">0</strong></button>
+        <button class="summary-card today" data-quick="today" type="button"><span>Hoy</span><strong id="todayCount">0</strong></button>
+        <button class="summary-card week" data-quick="week" type="button"><span>7 días</span><strong id="weekCount">0</strong></button>
+        <button class="summary-card total" data-quick="all" type="button"><span>Pendientes</span><strong id="pendingCount">0</strong></button>
+      </section>
+
+      <div class="task-toolbar">
+        <div class="type-filters" role="group" aria-label="Tipo de tarea">
+          <button class="type-chip active" data-kind="all" type="button">Todas</button>
+          <button class="type-chip" data-kind="theory" type="button">Teoría</button>
+          <button class="type-chip" data-kind="lab" type="button">Laboratorio</button>
+        </div>
+        <label class="search-box">⌕<input id="taskSearch" type="search" placeholder="Buscar tarea…" autocomplete="off"></label>
+      </div>
+
+      <div id="mobileCourseChips" class="mobile-course-chips"></div>
+      <div id="taskList" class="task-list"></div>
+      <div id="taskEmpty" class="task-empty hidden">
+        <div class="empty-symbol">✓</div>
+        <strong>No hay tareas aquí</strong>
+        <span>Agrega una nueva tarea o cambia los filtros.</span>
+      </div>
+    </section>
+
+    <section id="detailPane" class="detail-pane">
+      <div id="detailEmpty" class="detail-empty">
+        <div class="detail-empty-icon">☑</div>
+        <strong>Selecciona una tarea</strong>
+        <span>Aquí tendrás el profesor, documentos y tu hilo de notas siempre a mano.</span>
+      </div>
+      <article id="taskDetail" class="task-detail hidden">
+        <div class="detail-sticky">
+          <div class="detail-title-row">
+            <button id="closeDetailBtn" class="mobile-back" type="button">‹</button>
+            <button id="detailCompleteBtn" class="complete-circle" type="button" aria-label="Marcar como completada"></button>
+            <div class="detail-title-copy">
+              <div class="detail-meta-line"><span id="detailCourseDot" class="meta-dot"></span><span id="detailCourse"></span><span id="detailKind" class="kind-pill"></span></div>
+              <h2 id="detailTitle"></h2>
+              <div class="professor-line">Docente: <strong id="detailProfessor">—</strong></div>
+              <div id="detailDue" class="due-line"></div>
+            </div>
+            <div class="detail-actions">
+              <button id="editTaskBtn" class="icon-button" type="button" title="Editar tarea">✎</button>
+              <button id="deleteTaskBtn" class="icon-button danger-icon" type="button" title="Eliminar tarea">×</button>
+            </div>
+          </div>
+
+          <section class="docs-dock">
+            <div class="dock-head">
+              <div><span class="mini-kicker">SIEMPRE A MANO</span><strong>Doc de la tarea</strong></div>
+              <div class="dock-actions">
+                <button id="addLinkBtn" type="button">＋ Enlace</button>
+                <button id="addFileBtn" type="button">＋ Archivo</button>
+                <input id="taskFileInput" type="file" multiple hidden>
+              </div>
+            </div>
+            <div id="taskDocs" class="task-docs"></div>
+            <form id="linkForm" class="link-form hidden">
+              <input id="linkLabel" type="text" placeholder="Nombre del enlace" maxlength="80">
+              <input id="linkUrl" type="url" placeholder="https://…" required>
+              <button type="submit" class="small-primary">Agregar</button>
+              <button id="cancelLinkBtn" type="button" class="small-ghost">Cancelar</button>
+            </form>
+          </section>
+        </div>
+
+        <section class="notes-section">
+          <div class="notes-head">
+            <div><span class="mini-kicker">BLOC DE NOTAS</span><h3>Hilo de avance</h3></div>
+            <button id="addNoteBtn" class="note-add" type="button">＋ Nueva nota</button>
+          </div>
+
+          <div id="richToolbar" class="rich-toolbar">
+            <button type="button" data-cmd="bold" title="Negrita"><b>B</b></button>
+            <button type="button" data-cmd="italic" title="Itálica"><i>I</i></button>
+            <button type="button" data-cmd="underline" title="Subrayado"><u>U</u></button>
+            <button type="button" data-cmd="insertUnorderedList" title="Lista">• Lista</button>
+            <button type="button" data-cmd="insertOrderedList" title="Lista numerada">1. Lista</button>
+            <select id="blockFormat" title="Formato">
+              <option value="p">Texto</option>
+              <option value="h3">Subtítulo</option>
+              <option value="h2">Título</option>
+            </select>
+            <select id="fontSizeSelect" title="Tamaño">
+              <option value="2">12</option>
+              <option value="3" selected>16</option>
+              <option value="4">18</option>
+              <option value="5">24</option>
+              <option value="6">32</option>
+            </select>
+            <select id="fontSelect" title="Tipografía"><option value="">Tipografía</option></select>
+            <button id="refreshFontsBtn" type="button" title="Actualizar fuentes desde Text Studio">↻ Fuentes</button>
+            <label class="color-tool" title="Color de texto">A<input id="textColorInput" type="color" value="#7c3aed"></label>
+            <label class="color-tool highlight-tool" title="Resaltado">▰<input id="highlightColorInput" type="color" value="#fff1a8"></label>
+            <button id="insertNoteImageBtn" type="button" title="Insertar imagen">▧ Imagen</button>
+            <input id="noteImageInput" type="file" accept="image/*" hidden>
+          </div>
+
+          <div id="noteThread" class="note-thread"></div>
+        </section>
+      </article>
+    </section>
+  </main>
+</div>
+
+<!-- HORARIO -->
+<div id="scheduleModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="scheduleTitle">
+  <section class="modal-card schedule-modal-card">
+    <header class="modal-head"><div><span class="mini-kicker">REFERENCIA RÁPIDA</span><h2 id="scheduleTitle">Mi horario</h2></div><button class="modal-close" data-close="scheduleModal" type="button">×</button></header>
+    <div id="scheduleEmpty" class="schedule-empty">
+      <strong>Sube una foto de tu horario</strong><span>Quedará guardada solo en este navegador.</span>
+      <label class="upload-schedule">＋ Elegir imagen<input id="scheduleInput" type="file" accept="image/*" hidden></label>
+    </div>
+    <div id="scheduleViewer" class="schedule-viewer hidden">
+      <div class="schedule-scroll"><img id="scheduleImage" alt="Horario"></div>
+      <div class="schedule-controls">
+        <label>Zoom <input id="scheduleZoom" type="range" min="50" max="220" value="100"><span id="scheduleZoomValue">100%</span></label>
+        <label class="small-primary">Cambiar imagen<input id="scheduleReplaceInput" type="file" accept="image/*" hidden></label>
+        <button id="deleteScheduleBtn" class="small-danger" type="button">Eliminar</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- NUEVA / EDITAR TAREA -->
+<div id="taskModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+  <section class="modal-card form-modal-card">
+    <header class="modal-head"><div><span class="mini-kicker">TAREA</span><h2 id="taskModalTitle">Nueva tarea</h2></div><button class="modal-close" data-close="taskModal" type="button">×</button></header>
+    <form id="taskForm" class="form-grid">
+      <label class="field full"><span>Nombre de la tarea</span><input id="taskTitleInput" type="text" required maxlength="180" placeholder="Ej. Terminar informe del laboratorio"></label>
+      <label class="field"><span>Curso</span><select id="taskCourseSelect" required></select></label>
+      <label class="field"><span>Tipo</span><select id="taskKindSelect"><option value="theory">Teoría</option><option value="lab">Laboratorio</option></select></label>
+      <label class="field full"><span>Fecha y hora de entrega</span><input id="taskDueInput" type="datetime-local"></label>
+      <div class="teacher-preview full">Docente de esta tarea: <strong id="taskTeacherPreview">—</strong></div>
+      <div class="form-actions full"><button type="button" class="small-ghost" data-close="taskModal">Cancelar</button><button type="submit" class="small-primary">Guardar tarea</button></div>
+    </form>
+  </section>
+</div>
+
+<!-- CONFIGURACIÓN -->
+<div id="settingsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <section class="modal-card settings-modal-card">
+    <header class="modal-head"><div><span class="mini-kicker">CONFIGURACIÓN</span><h2 id="settingsTitle">Cursos y avisos</h2></div><button class="modal-close" data-close="settingsModal" type="button">×</button></header>
+    <div class="settings-grid">
+      <section class="settings-section">
+        <div class="settings-section-head"><div><span class="mini-kicker">CURSOS</span><h3>Teoría y laboratorio</h3></div><button id="newCourseInlineBtn" class="small-primary" type="button">＋ Curso</button></div>
+        <form id="courseForm" class="course-form hidden">
+          <input id="courseIdInput" type="hidden">
+          <label class="field"><span>Nombre del curso</span><input id="courseNameInput" type="text" required maxlength="100" placeholder="Ej. Calidad de Software"></label>
+          <label class="field color-field"><span>Color</span><input id="courseColorInput" type="color" value="#7c3aed"></label>
+          <label class="field full"><span>Profesor de teoría</span><input id="theoryProfessorInput" type="text" maxlength="120" placeholder="Nombre del profesor"></label>
+          <label class="check-field full"><input id="hasLabInput" type="checkbox" checked><span>Este curso tiene laboratorio</span></label>
+          <div id="labProfessorGroup" class="lab-professor-group full">
+            <label class="check-field"><input id="sameProfessorInput" type="checkbox"><span>El profesor de laboratorio es el mismo</span></label>
+            <label class="field"><span>Profesor de laboratorio</span><input id="labProfessorInput" type="text" maxlength="120" placeholder="Nombre del profesor de laboratorio"></label>
+          </div>
+          <div class="form-actions full"><button id="cancelCourseBtn" type="button" class="small-ghost">Cancelar</button><button type="submit" class="small-primary">Guardar curso</button></div>
+        </form>
+        <div id="courseSettingsList" class="course-settings-list"></div>
+      </section>
+
+      <section class="settings-section notification-settings">
+        <span class="mini-kicker">NOTIFICACIONES</span>
+        <h3>Recordatorios externos</h3>
+        <p>Mientras Kaoru esté abierto, puede mostrar avisos del sistema aunque estés en otra pestaña.</p>
+        <button id="requestNotificationBtn" class="notification-permission-btn" type="button">🔔 Activar notificaciones</button>
+        <div id="notificationStatus" class="notification-status"></div>
+        <label class="field"><span>Resumen de pendientes</span><select id="summaryIntervalSelect"><option value="1">Cada 1 hora</option><option value="3" selected>Cada 3 horas</option><option value="6">Cada 6 horas</option><option value="12">Cada 12 horas</option></select></label>
+        <div class="thresholds">
+          <strong>Avisarme antes del plazo</strong>
+          <label><input type="checkbox" data-threshold="24" checked> 24 horas antes</label>
+          <label><input type="checkbox" data-threshold="3" checked> 3 horas antes</label>
+          <label><input type="checkbox" data-threshold="1" checked> 1 hora antes</label>
+        </div>
+      </section>
+    </div>
+  </section>
+</div>
+
+<script src="./app.js?cache=task-studio-1"></script>
+</body>
+</html>

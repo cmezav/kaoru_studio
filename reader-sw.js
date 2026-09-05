@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-16';
+const CACHE_NAME = 'kaoru-archive-reader-shell-17';
 
 const CORE = [
   './',
@@ -9,6 +9,9 @@ const CORE = [
   './app/dist/app.css',
   './app/dist/app.js',
   './legacy/home/index.html',
+  './legacy/task-studio/index.html',
+  './legacy/task-studio/styles.css',
+  './legacy/task-studio/app.js',
   './legacy/reader/index.html',
   './legacy/reader/reader.css',
   './legacy/reader/reader.js',
@@ -69,6 +72,7 @@ function isReaderShell(path) {
     path === 'app/dist/app.css' ||
     path === 'app/dist/app.js' ||
     path.startsWith('legacy/home/') ||
+    path.startsWith('legacy/task-studio/') ||
     path.startsWith('legacy/reader/')
   );
 }
@@ -114,9 +118,18 @@ self.addEventListener('fetch', (event) => {
         } catch (_) {
           const cache = await caches.open(CACHE_NAME);
 
+          if (path && path.startsWith('legacy/task-studio/')) {
+            return cache.match(
+              './legacy/task-studio/index.html',
+              { ignoreSearch: true }
+            );
+          }
           if (path && path.startsWith('legacy/reader/')) {
             return cache.match(
-              './legacy/reader/index.html',
+              './legacy/task-studio/index.html',
+  './legacy/task-studio/styles.css',
+  './legacy/task-studio/app.js',
+  './legacy/reader/index.html',
               { ignoreSearch: true }
             );
           }
@@ -140,4 +153,20 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(networkFirst(event.request));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL('./#tasks', self.registration.scope).href;
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
+      for (const client of windows) {
+        if ('navigate' in client) {
+          try { await client.navigate(target); } catch (_) {}
+        }
+        if ('focus' in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(target);
+    })
+  );
 });
