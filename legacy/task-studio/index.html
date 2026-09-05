@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=task-studio-note-viewer-1">
+<link rel="stylesheet" href="./styles.css?cache=kaoru-cloud-ui-2">
 <script>
 (function(){
   try{
@@ -189,13 +189,13 @@
 <div id="cloudModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cloudTitle">
   <section class="modal-card cloud-modal-card">
     <header class="modal-head">
-      <div><span class="mini-kicker">KAORU CLOUD</span><h2 id="cloudTitle">Tu cuenta</h2></div>
+      <div><span class="mini-kicker">KAORU CLOUD</span><h2 id="cloudTitle">Kaoru Account</h2></div>
       <button class="modal-close" data-close="cloudModal" type="button">×</button>
     </header>
 
     <div class="cloud-account-body">
-      <div id="cloudStateCard" class="cloud-state-card" data-state="local">
-        <span class="cloud-state-icon">☁</span>
+      <div id="cloudStateCard" class="cloud-state-card" data-state="local" role="status" aria-live="polite">
+        <span class="cloud-state-icon" aria-hidden="true">☁</span>
         <div>
           <strong id="cloudStateText">Solo local</strong>
           <small id="cloudStateDetail">Inicia sesión para sincronizar automáticamente.</small>
@@ -203,7 +203,7 @@
       </div>
 
       <div id="cloudSignedOut">
-        <p class="cloud-help">La misma cuenta servirá para Task Studio y, en la siguiente fase, Archive Reader. No tendrás que pulsar un botón de sincronizar.</p>
+        <p class="cloud-help">Una sola cuenta conecta Task Studio y Archive Reader. Los cambios se guardan localmente primero y se sincronizan automáticamente cuando hay Internet.</p>
         <form id="cloudAuthForm" class="cloud-auth-form">
           <label class="field full"><span>Correo</span><input id="cloudEmailInput" type="email" autocomplete="email" required placeholder="tu-correo@ejemplo.com"></label>
           <label class="field full"><span>Contraseña</span><input id="cloudPasswordInput" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>
@@ -222,15 +222,18 @@
           <small>Los cambios se envían y reciben automáticamente cuando hay conexión.</small>
         </div>
         <div class="cloud-sync-info">
-          <span>Estado</span><strong id="cloudSyncText">Sincronizado</strong>
+          <span>Sincronización</span><strong id="cloudSyncText">Sincronizado</strong>
           <span>Cambios pendientes</span><strong id="cloudQueueCount">0</strong>
+          <span>Cobertura</span><strong>Task Studio + Reader</strong>
         </div>
         <button id="cloudSignOutBtn" type="button" class="small-danger">Cerrar sesión</button>
       </div>
 
-      <div class="cloud-phase-note">
-        <strong>Fase 1</strong>
-        <span>Sincroniza cursos, profesores, notas generales, tareas, fechas, estados, links y notas de texto. Los archivos adjuntos e imágenes incrustadas se conectarán al Storage privado en la siguiente fase.</span>
+      <div class="cloud-scope-grid" aria-label="Contenido sincronizado">
+        <div><span>✓</span><strong>Tareas y cursos</strong><small>Fechas, estados, profesores y horario.</small></div>
+        <div><span>✓</span><strong>Notas y archivos</strong><small>Texto, imágenes y adjuntos privados.</small></div>
+        <div><span>✓</span><strong>Archive Reader</strong><small>Libros, PDF y progreso exacto.</small></div>
+        <div><span>✓</span><strong>Modo offline</strong><small>Trabaja localmente y sincroniza al volver.</small></div>
       </div>
     </div>
   </section>
@@ -352,6 +355,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=kaoru-cloud-conflicts-1"></script>
-<script src="./app.js?cache=task-studio-cloud-7"></script>
+<script src="./app.js?cache=task-studio-cloud-ui-8"></script>
 </body>
 </html>

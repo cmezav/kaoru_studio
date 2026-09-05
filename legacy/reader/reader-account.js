@@ -6,8 +6,8 @@
   Task Studio. Supabase persiste la sesion por proyecto/origen, por lo
   que una sesion iniciada en Task Studio aparece aqui automaticamente.
 
-  Este paso SOLO conecta la cuenta.
-  La sincronizacion de progreso se activa en el siguiente paso.
+  Libros, archivos y progreso usan esta misma sesion.
+  Reader sigue funcionando localmente cuando no hay Internet.
 */
 
 const SUPABASE_URL='https://jnuovipdqlprxufdmxar.supabase.co';
@@ -82,7 +82,7 @@ async function activateSession(nextSession){
   if(!session){
     emit(
       'signed-out',
-      'Reader sigue siendo local. Inicia sesión para preparar la sincronización entre dispositivos.'
+      'Reader sigue disponible en local. Inicia sesión para sincronizar entre dispositivos.'
     );
     return;
   }
@@ -97,7 +97,7 @@ async function activateSession(nextSession){
 
   emit(
     'signed-in',
-    'Misma Kaoru Account que Task Studio. Reader está listo para sincronizar progreso en el siguiente paso.'
+    'Sincronización automática activa para libros, archivos y progreso.'
   );
 }
 
@@ -233,6 +233,9 @@ function ui(){
     details:byId('readerAccountDetails'),
     summary:byId('readerAccountSummary'),
     badge:byId('readerAccountBadge'),
+    stateCard:byId('readerCloudStateCard'),
+    stateText:byId('readerCloudStateText'),
+    stateDetail:byId('readerCloudStateDetail'),
     signedOut:byId('readerAccountSignedOut'),
     signedIn:byId('readerAccountSignedIn'),
     form:byId('readerAccountForm'),
@@ -263,6 +266,38 @@ function renderAccountUi(info={}){
     elements.userEmail.textContent=user?.email||'—';
   }
 
+  const cloudState=
+    state==='signed-in'?'synced':
+    state==='offline'?'offline':
+    state==='error'?'error':
+    state==='unavailable'?'error':
+    state==='confirmation'?'pending':
+    'local';
+
+  if(elements.stateCard){
+    elements.stateCard.dataset.state=cloudState;
+  }
+
+  const labels={
+    synced:'Sincronizado',
+    offline:'Sin conexión',
+    error:'Problema de sincronización',
+    pending:'Confirmación pendiente',
+    local:'Solo local'
+  };
+
+  if(elements.stateText){
+    elements.stateText.textContent=labels[cloudState]||'Kaoru Cloud';
+  }
+
+  if(elements.stateDetail){
+    elements.stateDetail.textContent=info.message||(
+      user
+        ?'La sincronización automática está activa.'
+        :'Inicia sesión para sincronizar automáticamente.'
+    );
+  }
+
   if(elements.summary){
     elements.summary.textContent=user
       ?user.email||'Sesión iniciada'
@@ -271,12 +306,16 @@ function renderAccountUi(info={}){
 
   if(elements.badge){
     elements.badge.textContent=
-      state==='signed-in'?'Cuenta':
-      state==='offline'&&user?'Offline':
+      state==='signed-in'?'Sincronizado':
+      state==='offline'&&user?'Sin conexión':
       state==='error'?'Error':
-      state==='confirmation'?'Correo':
+      state==='confirmation'?'Pendiente':
       state==='unavailable'?'Local':
-      'Entrar';
+      'Solo local';
+    elements.badge.classList.toggle(
+      'is-online',
+      state==='signed-in'&&navigator.onLine
+    );
   }
 
   if(elements.status){

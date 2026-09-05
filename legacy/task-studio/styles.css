@@ -378,7 +378,7 @@ button{cursor:pointer}
     font-size:10px!important;
   }
 }
-/* Kaoru Cloud Fase 1 */
+/* Kaoru Cloud unificado */
 .cloud-btn{position:relative}
 .cloud-dot{
   width:7px;height:7px;border-radius:50%;display:inline-block;
@@ -403,6 +403,10 @@ button{cursor:pointer}
 .cloud-state-card strong{font-size:12px}
 .cloud-state-card small{margin-top:3px;color:var(--muted);font-size:9px;line-height:1.45}
 .cloud-state-card[data-state="synced"] .cloud-state-icon{color:var(--good)}
+.cloud-state-card[data-state="syncing"] .cloud-state-icon,
+.cloud-state-card[data-state="pending"] .cloud-state-icon{color:var(--warn)}
+.cloud-state-card[data-state="offline"] .cloud-state-icon,
+.cloud-state-card[data-state="local"] .cloud-state-icon{color:var(--muted)}
 .cloud-state-card[data-state="error"] .cloud-state-icon{color:var(--danger)}
 .cloud-help{margin:0 0 12px;color:var(--muted);font-size:9.5px;line-height:1.55}
 .cloud-auth-form{display:grid;grid-template-columns:1fr;gap:9px}
@@ -419,13 +423,19 @@ button{cursor:pointer}
 }
 .cloud-sync-info span{font-size:8.5px;color:var(--muted)}
 .cloud-sync-info strong{font-size:9px}
-.cloud-phase-note{
-  margin-top:15px;padding:10px 11px;border:1px dashed var(--line-strong);
+.cloud-scope-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:15px}
+.cloud-scope-grid>div{
+  position:relative;min-width:0;padding:10px 10px 10px 34px;border:1px solid var(--line);
   border-radius:11px;background:var(--surface-2)
 }
-.cloud-phase-note strong,.cloud-phase-note span{display:block}
-.cloud-phase-note strong{font-size:9px;color:var(--accent)}
-.cloud-phase-note span{margin-top:4px;color:var(--muted);font-size:8.5px;line-height:1.5}
+.cloud-scope-grid>div>span{
+  position:absolute;left:10px;top:10px;width:16px;height:16px;border-radius:50%;
+  display:grid;place-items:center;background:color-mix(in srgb,var(--good) 15%,transparent);
+  color:var(--good);font-size:8px;font-weight:900
+}
+.cloud-scope-grid strong,.cloud-scope-grid small{display:block}
+.cloud-scope-grid strong{font-size:9px}
+.cloud-scope-grid small{margin-top:3px;color:var(--muted);font-size:8px;line-height:1.4}
 .cloud-image-placeholder{
   display:inline-block;padding:5px 7px;border-radius:7px;background:var(--surface-3);
   color:var(--muted);font-size:.85em
@@ -441,6 +451,7 @@ button{cursor:pointer}
   .cloud-dot{position:absolute;right:4px;bottom:4px}
   .cloud-auth-actions{display:grid;grid-template-columns:1fr 1fr}
   .cloud-auth-actions>*{width:100%}
+  .cloud-scope-grid{grid-template-columns:1fr}
 }
 /* Kaoru note image viewer v1 */
 .note-editor img[data-kaoru-image-id]{
