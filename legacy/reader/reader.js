@@ -930,6 +930,12 @@ async function importReaderFile(file) {
 
     await putBook(book);
 
+    try {
+      await window.KaoruReaderFileCloud?.storeImportedFile?.(file, book);
+    } catch (cloudError) {
+      console.warn('Preparacion de archivo para Kaoru Cloud', cloudError);
+    }
+
     setStatus(
       `${book.title} guardado en este dispositivo.`
     );
@@ -1292,6 +1298,16 @@ window.addEventListener('kaoru:reader-progress-applied', async () => {
       await renderLibrary();
     } catch (error) {
       console.warn('Actualizacion visual de progreso', error);
+    }
+  }
+});
+
+window.addEventListener('kaoru:reader-library-changed', async () => {
+  if (!document.body.classList.contains('is-reading')) {
+    try {
+      await renderLibrary();
+    } catch (error) {
+      console.warn('Actualizacion visual de biblioteca', error);
     }
   }
 });
