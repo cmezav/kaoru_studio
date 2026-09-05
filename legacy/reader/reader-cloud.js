@@ -498,8 +498,12 @@ function bookUpdatedAt(book) {
   );
 }
 
-async function loadVault(client, password, savedSalt = '') {
+async function loadVault(client, password, savedSalt = '', allowCreate = true) {
   let remote = await client.getFile(VAULT_PATH);
+
+  if (!remote && !allowCreate) {
+    throw new Error('No se encontro un backup antiguo de Reader en este repositorio.');
+  }
 
   if (!remote) {
     const salt = bytesToBase64(randomBytes(16));
@@ -630,7 +634,9 @@ export async function connectCloud({
 
   const { vault, keys } = await loadVault(
     client,
-    password
+    password,
+    '',
+    false
   );
 
   const tokenEnvelope = await encryptedToken(
@@ -1276,6 +1282,275 @@ async function saveStateIfNeeded(state, stateSha, beforeJson) {
     'reader: sincronizar estado',
     stateSha
   );
+}
+
+async function recoverLegacyBooks(state) {
+  const remoteFiles = await cloud.client.listDir(
+    `${VAULT_ROOT}/books`
+  );
+  const localMap = new Map(
+    (await listBooks()).map((book) => [book.id, book])
+  );
+  let pulled = 0;
+
+  for (const item of remoteFiles) {
+    if (
+      item.type !== 'file' ||
+      !String(item.name || '').endsWith('.enc')
+    ) {
+      continue;
+    }
+
+    const file = await cloud.client.getFile(item.path);
+    if (!file) continue;
+
+    let payload = null;
+
+    try {
+      payload = await decryptJson(
+        file.text,
+        cloud.keys.aes
+      );
+    } catch (_) {
+      throw new Error('Hay una obra cifrada que no puede abrirse con esta clave.');
+    }
+
+    const remoteBook = payload?.kind === 'book'
+      ? payload.book
+      : null;
+
+    if (!remoteBook?.id) continue;
+
+    const deletedAt = Number(
+      state.deleted?.[remoteBook.id] || 0
+    );
+
+    if (
+      deletedAt &&
+      bookUpdatedAt(remoteBook) <= deletedAt
+    ) {
+      continue;
+    }
+
+    const local = localMap.get(remoteBook.id);
+
+    if (
+      local &&
+      bookUpdatedAt(local) >= bookUpdatedAt(remoteBook)
+    ) {
+      continue;
+    }
+
+    await putBook({
+      ...remoteBook,
+      lastOpenedAt: local?.lastOpenedAt || 0
+    });
+
+    localMap.set(remoteBook.id, remoteBook);
+    pulled += 1;
+  }
+
+  return { pulled };
+}
+
+async function recoverLegacyPdfAssets(state) {
+  const books = (await listBooks()).filter(
+    (book) =>
+      String(book?.format || '').toLowerCase() === 'pdf' &&
+      !state.deleted?.[book.id]
+  );
+  const localAssets = (await listAssets()).filter(
+    (asset) => String(asset?.id || '').startsWith(PDF_ASSET_PREFIX)
+  );
+  const localMap = new Map(
+    localAssets.map((asset) => [
+      String(asset.id).slice(PDF_ASSET_PREFIX.length),
+      asset
+    ])
+  );
+  let pulled = 0;
+
+  for (const book of books) {
+    const remoteMeta = state.pdfs?.[book.id] || null;
+    if (!remoteMeta) continue;
+
+    const local = localMap.get(book.id);
+
+    if (
+      local &&
+      Number(local.updatedAt || 0) >=
+      Number(remoteMeta.updatedAt || 0)
+    ) {
+      continue;
+    }
+
+    const file = await cloud.client.getFile(
+      await pdfPath(book.id)
+    );
+
+    if (!file) continue;
+
+    const bytes = await decryptBinary(
+      file.text,
+      cloud.keys.aes
+    );
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    );
+
+    await putAsset({
+      id: `${PDF_ASSET_PREFIX}${book.id}`,
+      name: book.fileName || `${book.title}.pdf`,
+      mime: 'application/pdf',
+      size: bytes.byteLength,
+      updatedAt: Number(remoteMeta.updatedAt || Date.now()),
+      bytes: buffer
+    });
+
+    pulled += 1;
+  }
+
+  return { pulled };
+}
+
+async function recoverLegacyProgress(state) {
+  const remote = await readEncryptedJson(
+    PROGRESS_PATH,
+    {
+      version: 1,
+      items: {}
+    }
+  );
+  let pulled = 0;
+
+  for (const [bookId, remoteProgress] of Object.entries(
+    remote.value.items || {}
+  )) {
+    if (state.deleted?.[bookId]) continue;
+
+    const local = await getProgress(bookId);
+
+    if (
+      local &&
+      Number(local.updatedAt || 0) >=
+      Number(remoteProgress.updatedAt || 0)
+    ) {
+      continue;
+    }
+
+    await putProgress(remoteProgress);
+    pulled += 1;
+  }
+
+  return { pulled };
+}
+
+async function recoverLegacyFont() {
+  const remoteFile = await cloud.client.getFile(
+    FONT_PATH
+  );
+
+  if (!remoteFile) {
+    return {
+      changed: false,
+      direction: 'none'
+    };
+  }
+
+  const payload = await decryptJson(
+    remoteFile.text,
+    cloud.keys.aes
+  );
+
+  if (
+    payload?.kind !== 'asset' ||
+    payload.id !== READING_FONT_ASSET_ID
+  ) {
+    return {
+      changed: false,
+      direction: 'none'
+    };
+  }
+
+  const remoteAsset = payloadToAsset(payload);
+  const local = await getAsset(
+    READING_FONT_ASSET_ID
+  );
+
+  if (
+    local &&
+    Number(local.updatedAt || 0) >=
+    Number(remoteAsset.updatedAt || 0)
+  ) {
+    return {
+      changed: false,
+      direction: 'none'
+    };
+  }
+
+  await putAsset(remoteAsset);
+
+  return {
+    changed: true,
+    direction: 'pulled'
+  };
+}
+
+export async function recoverLegacyBackup() {
+  if (!cloud) {
+    throw new Error('Abre el backup antiguo primero.');
+  }
+
+  if (!navigator.onLine) {
+    throw new Error('Necesitas Internet para importar el backup antiguo.');
+  }
+
+  if (syncPromise) return syncPromise;
+
+  syncPromise = (async () => {
+    emit(
+      'working',
+      'Importando backup antiguo en modo de solo lectura...'
+    );
+
+    const state = (await loadState()).value;
+    const books = await recoverLegacyBooks(state);
+    const pdfs = await recoverLegacyPdfAssets(state);
+    const progress = await recoverLegacyProgress(state);
+    const font = await recoverLegacyFont();
+
+    const summary = [
+      books.pulled ? `${books.pulled} obra(s)` : '',
+      pdfs.pulled ? `${pdfs.pulled} PDF` : '',
+      progress.pulled ? `${progress.pulled} progreso(s)` : '',
+      font.changed ? 'tipografia' : ''
+    ].filter(Boolean).join(' · ');
+
+    emit(
+      'recovered',
+      summary
+        ? `Backup importado: ${summary}.`
+        : 'El backup antiguo no tiene datos mas nuevos para importar.',
+      {
+        fontChanged: font.changed
+      }
+    );
+
+    return {
+      books,
+      pdfs,
+      progress,
+      font,
+      readOnly: true
+    };
+  })();
+
+  try {
+    return await syncPromise;
+  } finally {
+    syncPromise = null;
+  }
 }
 
 export async function syncCloud() {

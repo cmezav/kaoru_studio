@@ -32,7 +32,8 @@ import {
   connectCloud,
   unlockSavedCloud,
   lockCloud,
-  syncCloud,
+  forgetCloudConfig,
+  recoverLegacyBackup,
   scheduleCloudSync,
   deleteBookEverywhere
 } from './reader-cloud.js?cache=cloud-sync-pdf-2';
@@ -73,6 +74,7 @@ const elements = {
   cloudConnectBtn: document.getElementById('cloudConnectBtn'),
   cloudSyncBtn: document.getElementById('cloudSyncBtn'),
   cloudLockBtn: document.getElementById('cloudLockBtn'),
+  cloudForgetBtn: document.getElementById('cloudForgetBtn'),
   cloudStatus: document.getElementById('cloudStatus'),
   fontImportBtn: document.getElementById('fontImportBtn'),
   fontInput: document.getElementById('fontInput'),
@@ -997,41 +999,46 @@ function setManualCloudIdleUi(message = '') {
   elements.cloudSyncBtn.disabled = true;
   elements.cloudLockBtn.disabled = true;
 
+  if (elements.cloudForgetBtn) {
+    elements.cloudForgetBtn.hidden = !saved;
+    elements.cloudForgetBtn.disabled = false;
+  }
+
   if (saved) {
     elements.cloudOwner.value = saved.owner || 'cmezav';
     elements.cloudRepo.value = saved.repo || 'kaoru-reader-library';
     elements.cloudSummary.textContent =
-      `${saved.owner}/${saved.repo} · sincronización manual`;
-    elements.cloudBadge.textContent = 'Manual';
+      `${saved.owner}/${saved.repo} · solo importacion`;
+    elements.cloudBadge.textContent = 'Backup';
     elements.cloudBadge.classList.remove('is-online');
-    elements.cloudConnectBtn.textContent = 'Sincronizar biblioteca';
+    elements.cloudConnectBtn.textContent = 'Importar backup antiguo';
 
     elements.cloudStatus.textContent =
       message ||
-      'Todo lo local funciona sin contraseña. Escribe tu clave únicamente cuando quieras sincronizar con la nube.';
+      'El acceso antiguo esta guardado en este dispositivo. Escribe la clave solo cuando quieras recuperar datos.';
     return;
   }
 
-  elements.cloudSummary.textContent = 'Solo local';
-  elements.cloudBadge.textContent = 'Local';
+  elements.cloudSummary.textContent = 'Solo importacion · opcional';
+  elements.cloudBadge.textContent = 'Antiguo';
   elements.cloudBadge.classList.remove('is-online');
-  elements.cloudConnectBtn.textContent = 'Configurar y sincronizar';
+  elements.cloudConnectBtn.textContent = 'Importar backup antiguo';
 
   elements.cloudStatus.textContent =
     message ||
-    'La nube es opcional. Puedes importar y leer EPUB/PDF sin configurarla.';
+    'No necesitas configurar esto para usar Kaoru Cloud. Solo sirve para rescatar un backup anterior.';
 }
 
 function applySavedCloudUi() {
   setManualCloudIdleUi();
 }
 
-async function doCloudSync() {
+async function doLegacyRecovery() {
   if (!isCloudUnlocked()) {
-    throw new Error('La nube no está desbloqueada.');
+    throw new Error('El backup antiguo no esta abierto.');
   }
 
-  const result = await syncCloud();
+  const result = await recoverLegacyBackup();
 
   if (result?.font?.changed) {
     const asset = await loadSavedReadingFont();
@@ -1043,22 +1050,34 @@ async function doCloudSync() {
   }
 
   await renderLibrary();
+
+  if (
+    window.KaoruReaderFileCloud?.isSignedIn?.() &&
+    navigator.onLine
+  ) {
+    await window.KaoruReaderFileCloud.reconcile();
+  }
+
   return result;
 }
 
 setCloudStatusListener(async (event) => {
   if (event.connected) {
     elements.cloudBadge.textContent =
-      navigator.onLine ? 'Nube' : 'Offline';
+      navigator.onLine ? 'Lectura' : 'Offline';
     elements.cloudBadge.classList.toggle(
       'is-online',
       navigator.onLine
     );
     elements.cloudSummary.textContent =
-      'Sincronizando biblioteca…';
+      'Backup abierto · solo lectura';
   }
 
-  if (event.type === 'working' || event.type === 'error') {
+  if (
+    event.type === 'working' ||
+    event.type === 'error' ||
+    event.type === 'recovered'
+  ) {
     elements.cloudStatus.textContent = event.message || '';
   }
 
@@ -1083,21 +1102,21 @@ elements.cloudConnectBtn.addEventListener('click', async () => {
 
   if (!navigator.onLine) {
     setManualCloudIdleUi(
-      'Necesitas Internet solo para sincronizar. Tu biblioteca local sigue disponible.'
+      'Necesitas Internet para importar el backup. Tu biblioteca local sigue disponible.'
     );
     return;
   }
 
   if (!password) {
     elements.cloudStatus.textContent =
-      'Escribe tu clave de biblioteca solo para realizar esta sincronización.';
+      'Escribe la clave de cifrado del backup antiguo.';
     elements.cloudPassword.focus();
     return;
   }
 
   elements.cloudConnectBtn.disabled = true;
   elements.cloudStatus.textContent =
-    'Sincronizando biblioteca…';
+    'Importando backup antiguo en modo de solo lectura...';
 
   let finalMessage = '';
 
@@ -1120,14 +1139,19 @@ elements.cloudConnectBtn.addEventListener('click', async () => {
 
     elements.cloudToken.value = '';
 
-    await doCloudSync();
+    const result = await doLegacyRecovery();
+    const imported =
+      Number(result?.books?.pulled || 0) +
+      Number(result?.pdfs?.pulled || 0) +
+      Number(result?.progress?.pulled || 0);
 
-    finalMessage =
-      'Biblioteca sincronizada. La nube vuelve a quedar cerrada; puedes seguir leyendo sin contraseña.';
+    finalMessage = imported || result?.font?.changed
+      ? 'Backup antiguo importado. Kaoru Account continuara la sincronizacion con tus otros dispositivos.'
+      : 'El backup antiguo no tiene datos mas nuevos. GitHub no fue modificado.';
   } catch (error) {
     finalMessage =
       error?.message ||
-      'No se pudo sincronizar la biblioteca.';
+      'No se pudo importar el backup antiguo.';
   } finally {
     if (isCloudUnlocked()) {
       lockCloud();
@@ -1150,6 +1174,15 @@ elements.cloudLockBtn.addEventListener('click', () => {
 
   elements.cloudPassword.value = '';
   setManualCloudIdleUi();
+});
+
+elements.cloudForgetBtn?.addEventListener('click', () => {
+  forgetCloudConfig();
+  elements.cloudToken.value = '';
+  elements.cloudPassword.value = '';
+  setManualCloudIdleUi(
+    'Acceso antiguo eliminado de este dispositivo.'
+  );
 });
 
 elements.fontImportBtn.addEventListener('click', () => {
