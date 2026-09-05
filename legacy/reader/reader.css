@@ -1332,3 +1332,54 @@ body.reader-soft-immersive .pdf-view{
   -webkit-tap-highlight-color:transparent;
   user-select:none;
 }
+
+/* Kaoru Reader Account v1 */
+.reader-account-block{
+  border-color:color-mix(in srgb,#8b5cf6 28%,var(--reader-border,#343039));
+}
+.reader-account-signed-in{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:12px;
+  border:1px solid color-mix(in srgb,#8b5cf6 24%,transparent);
+  border-radius:12px;
+  background:color-mix(in srgb,#8b5cf6 8%,transparent);
+}
+.reader-account-signed-in[hidden]{
+  display:none!important;
+}
+.reader-account-signed-in>div{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.reader-account-signed-in span,
+.reader-account-signed-in small{
+  color:var(--muted,#aaa);
+  font-size:.78rem;
+}
+.reader-account-signed-in strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reader-account-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.reader-account-actions button{
+  flex:1 1 0;
+}
+@media(max-width:700px){
+  .reader-account-signed-in{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .reader-account-signed-in button{
+    width:100%;
+  }
+}

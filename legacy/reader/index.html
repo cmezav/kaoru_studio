@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=pdf-reader-1">
-  <link rel="stylesheet" href="./reader.css?cache=reader-epub-controls-11">
+  <link rel="stylesheet" href="./reader.css?cache=reader-kaoru-account-12">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -72,18 +72,66 @@
         </div>
       </details>
 
+      <details id="readerAccountDetails" class="settings-block reader-account-block" open>
+        <summary>
+          <span>
+            <strong>Kaoru Account</strong>
+            <small id="readerAccountSummary">Misma cuenta que Task Studio</small>
+          </span>
+          <span id="readerAccountBadge" class="status-badge">Entrar</span>
+        </summary>
+
+        <div class="settings-body">
+          <p class="settings-help">
+            Reader usa la misma cuenta de Kaoru que Task Studio. Si ya iniciaste sesión allí,
+            Reader debería reconocerte automáticamente. Tus libros siguen siendo locales por ahora;
+            en el siguiente paso conectaremos el progreso de lectura.
+          </p>
+
+          <div id="readerAccountSignedOut">
+            <form id="readerAccountForm" class="sync-grid reader-account-form">
+              <label class="sync-wide">
+                Correo
+                <input id="readerAccountEmail" type="email" autocomplete="username" placeholder="tu@correo.com" required>
+              </label>
+              <label class="sync-wide">
+                Contraseña
+                <input id="readerAccountPassword" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
+              </label>
+
+              <div class="settings-actions sync-wide reader-account-actions">
+                <button type="submit">Iniciar sesión</button>
+                <button id="readerAccountCreate" class="secondary-action" type="button">Crear cuenta</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="readerAccountSignedIn" class="reader-account-signed-in" hidden>
+            <div>
+              <span>Sesión iniciada como</span>
+              <strong id="readerAccountUserEmail">—</strong>
+              <small>Esta misma sesión se comparte con Task Studio en este dispositivo.</small>
+            </div>
+            <button id="readerAccountSignOut" class="secondary-action" type="button">Cerrar sesión</button>
+          </div>
+
+          <p id="readerAccountStatus" class="settings-status" role="status"></p>
+        </div>
+      </details>
       <details id="cloudDetails" class="settings-block">
         <summary>
           <span>
-            <strong>Sincronización</strong>
-            <small id="cloudSummary">Solo local</small>
+            <strong>Backup GitHub antiguo</strong>
+            <small id="cloudSummary">Manual · opcional</small>
           </span>
           <span id="cloudBadge" class="status-badge">Local</span>
         </summary>
 
         <div class="settings-body">
           <p class="settings-help">
-            La lectura local siempre está disponible y no necesita contraseña. La nube es opcional y manual: solo te pediremos la clave cuando pulses <strong>Sincronizar biblioteca</strong>.
+            Este es el sistema anterior de backup cifrado mediante un repositorio privado de GitHub.
+            Se conserva por compatibilidad y sigue siendo manual. Kaoru Account será la sincronización
+            principal del Reader; decidiremos qué hacer con este backup en el paso 18.
           </p>
 
           <div class="sync-grid">
@@ -245,6 +293,8 @@
   </form>
 </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
+  <script src="./reader-account.js?cache=kaoru-reader-account-1"></script>
   <script type="module" src="./reader.js?cache=reader-progress-anchor-14"></script>
 </body>
 </html>
