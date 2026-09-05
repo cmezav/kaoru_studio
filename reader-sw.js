@@ -1,4 +1,5 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-19';
+const CACHE_NAME = 'kaoru-archive-reader-shell-20';
+const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
   './',
@@ -28,9 +29,37 @@ const CORE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(CORE))
-      .then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+
+      /*
+        El shell local es obligatorio.
+        Supabase se intenta guardar también, pero si el CDN falla
+        momentáneamente no bloqueamos la instalación de Kaoru.
+      */
+      await cache.addAll(CORE);
+
+      try {
+        const response = await fetch(
+          SUPABASE_CDN,
+          { cache: 'no-store' }
+        );
+
+        if (response) {
+          await cache.put(
+            SUPABASE_CDN,
+            response.clone()
+          );
+        }
+      } catch (error) {
+        console.warn(
+          'Kaoru: Supabase no pudo precargarse todavía.',
+          error
+        );
+      }
+
+      await self.skipWaiting();
+    })()
   );
 });
 
@@ -104,8 +133,51 @@ async function networkFirst(request) {
   }
 }
 
+
+async function supabaseNetworkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+
+  try {
+    const response = await fetch(
+      request,
+      { cache: 'no-store' }
+    );
+
+    if (response) {
+      /*
+        También guardamos respuestas opaque. Para un <script> cross-origin
+        son válidas en Cache Storage y permiten el arranque offline.
+      */
+      await cache.put(
+        SUPABASE_CDN,
+        response.clone()
+      );
+    }
+
+    return response;
+  } catch (error) {
+    const cached = await cache.match(
+      SUPABASE_CDN
+    );
+
+    if (cached) return cached;
+    throw error;
+  }
+}
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  /*
+    Aunque Supabase sea cross-origin, las peticiones iniciadas por una
+    página controlada llegan al Service Worker. Primero atendemos ese
+    recurso externo y después seguimos con el shell normal de Kaoru.
+  */
+  if (event.request.url === SUPABASE_CDN) {
+    event.respondWith(
+      supabaseNetworkFirst(event.request)
+    );
+    return;
+  }
 
   const path = relativePath(event.request.url);
 
@@ -127,11 +199,7 @@ self.addEventListener('fetch', (event) => {
           }
           if (path && path.startsWith('legacy/reader/')) {
             return cache.match(
-              './legacy/task-studio/index.html',
-  './legacy/task-studio/styles.css',
-  './legacy/task-studio/app.js',
-  './legacy/task-studio/task-cloud.js',
-  './legacy/reader/index.html',
+              './legacy/reader/index.html',
               { ignoreSearch: true }
             );
           }

@@ -276,11 +276,27 @@ async function startRealtime(){
 }
 async function activateSession(nextSession){
   session=nextSession||null;
+
   if(!session){
     await stopRealtime();
     emit('local','Solo local. Inicia sesión para sincronizar.');
     return;
   }
+
+  /*
+    Si Kaoru arranca durante un viaje sin señal, no intentamos
+    forzar Realtime. La sesión local sigue disponible y Task Studio
+    continúa trabajando con IndexedDB + cola offline.
+  */
+  if(!navigator.onLine){
+    await stopRealtime();
+    emit(
+      'offline',
+      'Sin conexión. Puedes seguir trabajando; sincronizaré automáticamente cuando vuelva Internet.'
+    );
+    return;
+  }
+
   emit('syncing','Conectando Kaoru Cloud…');
   await startRealtime();
   await reconcile();
@@ -354,15 +370,35 @@ async function init(nextAdapter){
   const {data}=await client.auth.getSession();
   await activateSession(data?.session||null);
 
-  window.addEventListener('online',()=>{
-    emit(session?'syncing':'local',session?'Internet volvió. Sincronizando…':'Internet volvió.');
-    if(session)reconcile().catch(err=>emit('error',err?.message||'No se pudo sincronizar.'));
-  });
-  window.addEventListener('offline',()=>emit('offline','Sin conexión. Los cambios se guardarán localmente.'));
+  window.addEventListener('online',async()=>{
+    if(!session){
+      emit('local','Internet volvió. Inicia sesión para sincronizar.');
+      return;
+    }
 
-  if(session&&navigator.onLine){
-    reconcile().catch(err=>emit('error',err?.message||'No se pudo sincronizar.'));
-  }
+    emit('syncing','Internet volvió. Reconectando Kaoru Cloud…');
+
+    try{
+      /*
+        Volvemos a crear el canal Realtime de forma explícita.
+        Así no dependemos de que el WebSocket anterior se recupere solo
+        y no hace falta recargar la página.
+      */
+      await startRealtime();
+      await reconcile();
+      emit('synced','Todo sincronizado después de recuperar la conexión.');
+    }catch(err){
+      emit('error',err?.message||'No se pudo sincronizar al recuperar Internet.');
+    }
+  });
+
+  window.addEventListener('offline',()=>{
+    emit(
+      'offline',
+      'Sin conexión. Los cambios se guardarán en este dispositivo.'
+    );
+    stopRealtime().catch(()=>{});
+  });
 }
 
 window.KaoruTaskCloud={
