@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=task-studio-cloud-1">
+<link rel="stylesheet" href="./styles.css?cache=task-studio-note-viewer-1">
 <script>
 (function(){
   try{
@@ -235,6 +235,42 @@
     </div>
   </section>
 </div>
+<!-- VISOR DE IMAGEN DE NOTA -->
+<div id="noteImageViewerModal" class="modal-overlay hidden note-image-viewer-overlay" role="dialog" aria-modal="true" aria-labelledby="noteImageViewerTitle">
+  <section class="modal-card note-image-viewer-card">
+    <header class="modal-head note-image-viewer-head">
+      <div>
+        <span class="mini-kicker">IMAGEN DE NOTA</span>
+        <h2 id="noteImageViewerTitle">Vista ampliada</h2>
+      </div>
+      <button id="noteImageViewerClose" class="modal-close" data-close="noteImageViewerModal" type="button" aria-label="Cerrar">×</button>
+    </header>
+
+    <div class="note-image-viewer-toolbar">
+      <div class="note-image-zoom-controls">
+        <button id="noteImageZoomOut" class="small-ghost" type="button" title="Alejar">−</button>
+        <strong id="noteImageZoomValue">100%</strong>
+        <button id="noteImageZoomIn" class="small-ghost" type="button" title="Acercar">＋</button>
+        <button id="noteImageZoomReset" class="small-ghost" type="button">100%</button>
+      </div>
+
+      <div class="note-image-file-actions">
+        <button id="noteImageOpenOriginal" class="small-ghost" type="button">↗ Abrir original</button>
+        <button id="noteImageDownload" class="small-primary" type="button">⬇ Descargar</button>
+      </div>
+    </div>
+
+    <div id="noteImageViewerStage" class="note-image-viewer-stage">
+      <div id="noteImageViewerLoading" class="note-image-viewer-loading">Preparando imagen…</div>
+      <img id="noteImageViewerImage" class="note-image-viewer-image hidden" alt="Imagen ampliada" draggable="false">
+    </div>
+
+    <footer class="note-image-viewer-footer">
+      <strong id="noteImageViewerName">Imagen</strong>
+      <span id="noteImageViewerStatus">Rueda del mouse o pellizca para hacer zoom. Arrastra para moverte.</span>
+    </footer>
+  </section>
+</div>
 <!-- HORARIO -->
 <div id="scheduleModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="scheduleTitle">
   <section class="modal-card schedule-modal-card">
@@ -316,6 +352,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=kaoru-cloud-note-images-1"></script>
-<script src="./app.js?cache=task-studio-cloud-6"></script>
+<script src="./app.js?cache=task-studio-cloud-7"></script>
 </body>
 </html>

@@ -442,3 +442,170 @@ button{cursor:pointer}
   .cloud-auth-actions{display:grid;grid-template-columns:1fr 1fr}
   .cloud-auth-actions>*{width:100%}
 }
+/* Kaoru note image viewer v1 */
+.note-editor img[data-kaoru-image-id]{
+  display:block;
+  max-width:100%;
+  height:auto;
+  margin:8px 0;
+  border-radius:10px;
+  cursor:zoom-in;
+  user-select:none;
+  -webkit-user-drag:none;
+  box-shadow:0 5px 16px rgba(0,0,0,.08);
+  transition:transform .14s ease,box-shadow .14s ease;
+}
+.note-editor img[data-kaoru-image-id]:hover{
+  transform:translateY(-1px);
+  box-shadow:0 9px 24px rgba(0,0,0,.13);
+}
+.note-image-viewer-overlay{
+  z-index:1200;
+  padding:18px;
+  background:rgba(10,8,13,.82);
+  backdrop-filter:blur(14px);
+}
+.note-image-viewer-card{
+  width:min(1180px,96vw);
+  height:min(900px,94vh);
+  max-width:none;
+  display:grid;
+  grid-template-rows:auto auto minmax(0,1fr) auto;
+  overflow:hidden;
+  background:var(--surface);
+}
+.note-image-viewer-head{
+  border-bottom:1px solid var(--line);
+}
+.note-image-viewer-toolbar{
+  min-height:48px;
+  padding:8px 12px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:var(--surface-2);
+}
+.note-image-zoom-controls,
+.note-image-file-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.note-image-zoom-controls strong{
+  min-width:52px;
+  text-align:center;
+  font-size:10px;
+  color:var(--muted);
+}
+.note-image-viewer-stage{
+  position:relative;
+  min-height:0;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  background:
+    linear-gradient(45deg,color-mix(in srgb,var(--line) 35%,transparent) 25%,transparent 25%),
+    linear-gradient(-45deg,color-mix(in srgb,var(--line) 35%,transparent) 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,color-mix(in srgb,var(--line) 35%,transparent) 75%),
+    linear-gradient(-45deg,transparent 75%,color-mix(in srgb,var(--line) 35%,transparent) 75%),
+    color-mix(in srgb,var(--surface-3) 78%,#777 4%);
+  background-size:22px 22px;
+  background-position:0 0,0 11px,11px -11px,-11px 0;
+  cursor:default;
+  touch-action:none;
+  overscroll-behavior:contain;
+}
+.note-image-viewer-stage.is-zoomed{
+  cursor:grab;
+}
+.note-image-viewer-stage.is-dragging{
+  cursor:grabbing;
+}
+.note-image-viewer-image{
+  max-width:92%;
+  max-height:92%;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  transform-origin:center center;
+  will-change:transform;
+  user-select:none;
+  -webkit-user-drag:none;
+  pointer-events:none;
+}
+.note-image-viewer-loading{
+  position:absolute;
+  z-index:2;
+  padding:10px 14px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface) 92%,transparent);
+  color:var(--muted);
+  font-size:10px;
+  font-weight:800;
+  box-shadow:var(--shadow);
+}
+.note-image-viewer-footer{
+  min-height:46px;
+  padding:8px 13px;
+  border-top:1px solid var(--line);
+  background:var(--surface-2);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+.note-image-viewer-footer strong{
+  max-width:42%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:10px;
+}
+.note-image-viewer-footer span{
+  margin-left:auto;
+  color:var(--muted);
+  font-size:8.5px;
+  text-align:right;
+}
+@media(max-width:700px){
+  .note-image-viewer-overlay{
+    padding:0;
+  }
+  .note-image-viewer-card{
+    width:100vw;
+    height:100dvh;
+    max-height:none;
+    border-radius:0;
+  }
+  .note-image-viewer-toolbar{
+    align-items:stretch;
+    flex-direction:column;
+  }
+  .note-image-zoom-controls,
+  .note-image-file-actions{
+    width:100%;
+  }
+  .note-image-zoom-controls button,
+  .note-image-file-actions button{
+    flex:1 1 auto;
+  }
+  .note-image-viewer-footer{
+    align-items:flex-start;
+    flex-direction:column;
+    gap:3px;
+  }
+  .note-image-viewer-footer strong{
+    max-width:100%;
+  }
+  .note-image-viewer-footer span{
+    margin-left:0;
+    text-align:left;
+  }
+  .note-image-viewer-image{
+    max-width:96%;
+    max-height:94%;
+  }
+}

@@ -1139,6 +1139,386 @@ document.addEventListener('selectionchange',()=>{
   }
 });
 
+/* Kaoru note image viewer v1 */
+let noteViewerUrl=null;
+let noteViewerBlob=null;
+let noteViewerMeta=null;
+let noteViewerZoom=1;
+let noteViewerX=0;
+let noteViewerY=0;
+let noteViewerDragging=false;
+let noteViewerDragStart=null;
+let noteViewerPinchDistance=0;
+let noteViewerPinchZoom=1;
+const noteViewerPointers=new Map();
+
+function noteViewerEls(){
+  return{
+    modal:$('noteImageViewerModal'),
+    image:$('noteImageViewerImage'),
+    stage:$('noteImageViewerStage'),
+    loading:$('noteImageViewerLoading'),
+    zoomValue:$('noteImageZoomValue'),
+    name:$('noteImageViewerName'),
+    status:$('noteImageViewerStatus'),
+    zoomIn:$('noteImageZoomIn'),
+    zoomOut:$('noteImageZoomOut'),
+    reset:$('noteImageZoomReset'),
+    download:$('noteImageDownload'),
+    openOriginal:$('noteImageOpenOriginal'),
+    close:$('noteImageViewerClose')
+  };
+}
+
+function noteViewerClamp(value,min,max){
+  return Math.min(max,Math.max(min,value));
+}
+
+function noteViewerApplyTransform(){
+  const view=noteViewerEls();
+  if(!view.image||!view.stage)return;
+
+  view.image.style.transform=
+    `translate3d(${noteViewerX}px,${noteViewerY}px,0) scale(${noteViewerZoom})`;
+
+  view.zoomValue.textContent=`${Math.round(noteViewerZoom*100)}%`;
+  view.stage.classList.toggle('is-zoomed',noteViewerZoom>1.01);
+}
+
+function noteViewerSetZoom(next,resetPan=false){
+  const old=noteViewerZoom;
+  noteViewerZoom=noteViewerClamp(Number(next)||1,.25,8);
+
+  if(resetPan||noteViewerZoom<=1){
+    noteViewerX=0;
+    noteViewerY=0;
+  }else if(old>0){
+    const ratio=noteViewerZoom/old;
+    noteViewerX*=ratio;
+    noteViewerY*=ratio;
+  }
+
+  noteViewerApplyTransform();
+}
+
+function noteViewerReset(){
+  noteViewerZoom=1;
+  noteViewerX=0;
+  noteViewerY=0;
+  noteViewerPointers.clear();
+  noteViewerPinchDistance=0;
+  noteViewerPinchZoom=1;
+  noteViewerApplyTransform();
+}
+
+async function getNoteImageRecord(task,note,meta){
+  const fileId=meta.fileId||meta.id;
+  let rec=await dbGet(FILE_STORE,fileId).catch(()=>null);
+
+  if(rec?.blob)return rec;
+
+  if(!meta.storagePath){
+    throw new Error('Esta imagen no tiene una copia disponible en Kaoru Cloud.');
+  }
+
+  if(!navigator.onLine){
+    throw new Error('Esta imagen todavía no fue descargada en este dispositivo. Conéctate a Internet para abrirla por primera vez.');
+  }
+
+  if(!window.KaoruTaskCloud?.downloadTaskFile){
+    throw new Error('Kaoru Cloud no está disponible en este momento.');
+  }
+
+  const blob=await window.KaoruTaskCloud.downloadTaskFile(meta.storagePath);
+
+  rec={
+    id:fileId,
+    kind:'note-image',
+    taskId:task.id,
+    noteId:note.id,
+    name:meta.name||'imagen',
+    type:meta.mime||blob.type||'image/png',
+    size:Number(meta.size||blob.size||0),
+    blob,
+    cloudPath:meta.storagePath,
+    createdAt:meta.createdAt||now(),
+    cachedAt:now()
+  };
+
+  await dbPut(FILE_STORE,rec);
+  return rec;
+}
+
+function releaseNoteViewerUrl(){
+  if(noteViewerUrl){
+    URL.revokeObjectURL(noteViewerUrl);
+    noteViewerUrl=null;
+  }
+}
+
+function closeNoteImageViewer(){
+  const view=noteViewerEls();
+
+  releaseNoteViewerUrl();
+  noteViewerBlob=null;
+  noteViewerMeta=null;
+  noteViewerDragging=false;
+  noteViewerDragStart=null;
+  noteViewerPointers.clear();
+
+  if(view.image){
+    view.image.removeAttribute('src');
+    view.image.classList.add('hidden');
+  }
+
+  if(view.loading){
+    view.loading.textContent='Preparando imagen…';
+    view.loading.classList.remove('hidden');
+  }
+
+  hideModal('noteImageViewerModal');
+}
+
+async function openNoteImageViewer(imageEl){
+  const imageId=imageEl?.dataset?.kaoruImageId;
+  const card=imageEl?.closest?.('.note-card');
+  const noteId=card?.dataset?.noteId;
+  const task=taskById(state.selectedTaskId);
+
+  if(!imageId||!noteId||!task)return;
+
+  const note=(task.notes||[]).find(item=>item.id===noteId);
+  const meta=(note?.images||[]).find(item=>item.id===imageId);
+
+  if(!note||!meta){
+    alert('No pude encontrar la información de esta imagen.');
+    return;
+  }
+
+  const view=noteViewerEls();
+
+  noteViewerReset();
+  noteViewerMeta=meta;
+  view.name.textContent=meta.name||'Imagen';
+  view.status.textContent='Preparando imagen…';
+  view.loading.textContent='Preparando imagen…';
+  view.loading.classList.remove('hidden');
+  view.image.classList.add('hidden');
+
+  showModal('noteImageViewerModal');
+
+  try{
+    const rec=await getNoteImageRecord(task,note,meta);
+
+    noteViewerBlob=rec.blob;
+
+    releaseNoteViewerUrl();
+    noteViewerUrl=URL.createObjectURL(rec.blob);
+
+    view.image.src=noteViewerUrl;
+    view.image.alt=meta.name||'Imagen ampliada';
+    view.image.classList.remove('hidden');
+    view.loading.classList.add('hidden');
+
+    const size=Number(meta.size||rec.size||rec.blob.size||0);
+    const sizeText=size
+      ?size>=1048576
+        ?`${(size/1048576).toFixed(1)} MB`
+        :`${Math.max(1,Math.round(size/1024))} KB`
+      :'';
+
+    view.status.textContent=[
+      sizeText,
+      'Rueda o pellizca para zoom',
+      'arrastra para moverte'
+    ].filter(Boolean).join(' · ');
+  }catch(err){
+    console.warn('No se pudo abrir la imagen de la nota',err);
+    view.loading.textContent=err?.message||'No se pudo abrir la imagen.';
+    view.status.textContent='La imagen no está disponible en este dispositivo.';
+  }
+}
+
+function downloadCurrentNoteImage(){
+  if(!noteViewerBlob||!noteViewerUrl||!noteViewerMeta){
+    alert('La imagen todavía no está disponible para descargar.');
+    return;
+  }
+
+  const link=document.createElement('a');
+  link.href=noteViewerUrl;
+  link.download=noteViewerMeta.name||'imagen';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+function openCurrentNoteImageOriginal(){
+  if(!noteViewerBlob||!noteViewerUrl){
+    alert('La imagen todavía no está disponible.');
+    return;
+  }
+
+  const popup=window.open(noteViewerUrl,'_blank','noopener');
+
+  if(!popup){
+    alert('El navegador bloqueó la nueva pestaña. Puedes usar el botón Descargar.');
+  }
+}
+
+function noteViewerPointerDistance(){
+  const values=[...noteViewerPointers.values()];
+  if(values.length<2)return 0;
+  return Math.hypot(
+    values[1].x-values[0].x,
+    values[1].y-values[0].y
+  );
+}
+
+function setupNoteImageViewer(){
+  const view=noteViewerEls();
+  if(!view.modal||!view.stage)return;
+
+  els.noteThread.addEventListener('click',e=>{
+    const img=e.target?.closest?.('img[data-kaoru-image-id]');
+    if(!img||!els.noteThread.contains(img))return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    openNoteImageViewer(img).catch(err=>{
+      console.warn('Kaoru note viewer',err);
+    });
+  });
+
+  view.zoomIn.addEventListener(
+    'click',
+    ()=>noteViewerSetZoom(noteViewerZoom*1.25)
+  );
+
+  view.zoomOut.addEventListener(
+    'click',
+    ()=>noteViewerSetZoom(noteViewerZoom/1.25)
+  );
+
+  view.reset.addEventListener('click',noteViewerReset);
+  view.download.addEventListener('click',downloadCurrentNoteImage);
+  view.openOriginal.addEventListener('click',openCurrentNoteImageOriginal);
+  view.close.addEventListener('click',closeNoteImageViewer);
+
+  view.stage.addEventListener('wheel',e=>{
+    if(!noteViewerBlob)return;
+    e.preventDefault();
+
+    const factor=e.deltaY<0?1.13:1/1.13;
+    noteViewerSetZoom(noteViewerZoom*factor);
+  },{passive:false});
+
+  view.stage.addEventListener('dblclick',e=>{
+    if(!noteViewerBlob)return;
+    e.preventDefault();
+    noteViewerSetZoom(noteViewerZoom>1.2?1:2.5,true);
+  });
+
+  view.stage.addEventListener('pointerdown',e=>{
+    if(!noteViewerBlob)return;
+
+    view.stage.setPointerCapture?.(e.pointerId);
+    noteViewerPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+
+    if(noteViewerPointers.size===1){
+      noteViewerDragging=true;
+      noteViewerDragStart={
+        x:e.clientX,
+        y:e.clientY,
+        originX:noteViewerX,
+        originY:noteViewerY
+      };
+      view.stage.classList.add('is-dragging');
+    }
+
+    if(noteViewerPointers.size===2){
+      noteViewerPinchDistance=noteViewerPointerDistance();
+      noteViewerPinchZoom=noteViewerZoom;
+      noteViewerDragStart=null;
+    }
+  });
+
+  view.stage.addEventListener('pointermove',e=>{
+    if(!noteViewerPointers.has(e.pointerId))return;
+
+    noteViewerPointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+
+    if(noteViewerPointers.size>=2){
+      const distance=noteViewerPointerDistance();
+
+      if(noteViewerPinchDistance>0&&distance>0){
+        noteViewerSetZoom(
+          noteViewerPinchZoom*(distance/noteViewerPinchDistance)
+        );
+      }
+
+      return;
+    }
+
+    if(
+      noteViewerDragging&&
+      noteViewerDragStart&&
+      noteViewerZoom>1.01
+    ){
+      noteViewerX=
+        noteViewerDragStart.originX+
+        (e.clientX-noteViewerDragStart.x);
+
+      noteViewerY=
+        noteViewerDragStart.originY+
+        (e.clientY-noteViewerDragStart.y);
+
+      noteViewerApplyTransform();
+    }
+  });
+
+  const endPointer=e=>{
+    noteViewerPointers.delete(e.pointerId);
+
+    if(noteViewerPointers.size<2){
+      noteViewerPinchDistance=0;
+      noteViewerPinchZoom=noteViewerZoom;
+    }
+
+    if(noteViewerPointers.size===1){
+      const remaining=[...noteViewerPointers.values()][0];
+      noteViewerDragStart={
+        x:remaining.x,
+        y:remaining.y,
+        originX:noteViewerX,
+        originY:noteViewerY
+      };
+    }else if(noteViewerPointers.size===0){
+      noteViewerDragging=false;
+      noteViewerDragStart=null;
+      view.stage.classList.remove('is-dragging');
+    }
+  };
+
+  view.stage.addEventListener('pointerup',endPointer);
+  view.stage.addEventListener('pointercancel',endPointer);
+  view.stage.addEventListener('lostpointercapture',endPointer);
+
+  view.modal.addEventListener('mousedown',e=>{
+    if(e.target===view.modal){
+      setTimeout(closeNoteImageViewer,0);
+    }
+  });
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'&&noteViewerBlob){
+      setTimeout(closeNoteImageViewer,0);
+    }
+  });
+}
+
+setupNoteImageViewer();
 const loadedFontIds=new Set();
 async function loadTaskFonts(){
   const base=[['system-ui','Sistema'],['Georgia','Georgia'],['"Times New Roman"','Times New Roman'],['Arial','Arial'],['Verdana','Verdana'],['"Courier New"','Courier New']];const old=els.fontSelect.value;els.fontSelect.innerHTML='<option value="">Tipografía</option>';base.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;els.fontSelect.appendChild(o);});
@@ -1358,7 +1738,7 @@ els.deleteScheduleBtn.addEventListener('click',async()=>{
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=24');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=25');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
