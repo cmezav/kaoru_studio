@@ -16,6 +16,7 @@ const ENTITY_TYPE='book';
 const TABLE='kaoru_records';
 const BUCKET='kaoru-files';
 const SOURCE_PREFIX='source:';
+const DELETE_QUEUE_KEY='kaoru.reader.book-delete.queue.v1';
 
 let syncing=false;
 let channel=null;
@@ -37,6 +38,58 @@ function showStatus(message){
   if(target)target.textContent=message||'';
 }
 
+function readDeleteQueue(){
+  try{
+    const parsed=JSON.parse(localStorage.getItem(DELETE_QUEUE_KEY)||'[]');
+    return Array.isArray(parsed)?parsed:[];
+  }catch(_){
+    return [];
+  }
+}
+
+function writeDeleteQueue(items){
+  try{
+    localStorage.setItem(DELETE_QUEUE_KEY,JSON.stringify(items.slice(-200)));
+  }catch(_){}
+}
+
+function queueDelete(bookId,updatedAt=Date.now()){
+  const user=currentUser();
+  if(!user)throw new Error('Inicia sesion para eliminar de todos tus dispositivos.');
+
+  const id=String(bookId||'');
+  if(!id)throw new Error('No se pudo identificar el libro.');
+
+  const items=readDeleteQueue().filter(item=>
+    !(item.bookId===id&&item.userId===user.id)
+  );
+
+  items.push({
+    bookId:id,
+    userId:user.id,
+    updatedAt:Number(updatedAt)||Date.now()
+  });
+
+  writeDeleteQueue(items);
+}
+
+function removeQueuedDelete(item){
+  writeDeleteQueue(readDeleteQueue().filter(current=>
+    !(
+      current.bookId===item.bookId&&
+      current.userId===item.userId&&
+      Number(current.updatedAt)<=Number(item.updatedAt)
+    )
+  ));
+}
+
+async function requestPersistentStorage(){
+  try{
+    if(navigator.storage?.persist){
+      await navigator.storage.persist();
+    }
+  }catch(_){}
+}
 function safePart(value,fallback='file'){
   const clean=String(value||'')
     .normalize('NFKD')
@@ -197,16 +250,16 @@ async function syncBook(book){
   return payload;
 }
 
-async function deleteEverywhere(bookId){
+async function performDelete(item){
   const api=client();
   const user=currentUser();
-  const id=String(bookId||'');
 
-  if(!api||!user)throw new Error('Inicia sesion para eliminar de todos tus dispositivos.');
-  if(!navigator.onLine)throw new Error('Necesitas conexion para eliminar este libro de Kaoru Cloud.');
-  if(!id)throw new Error('No se pudo identificar el libro.');
+  if(!api||!user||!navigator.onLine)return false;
+  if(item.userId!==user.id)return false;
 
-  showStatus('Eliminando libro y progreso de Kaoru Cloud...');
+  const id=String(item.bookId||'');
+  const now=Math.max(Number(item.updatedAt)||0,Date.now());
+  const device=localStorage.getItem('kaoru.reader.device-id.v1')||'reader-device';
 
   const {data:record,error:readError}=await api
     .from(TABLE)
@@ -223,9 +276,6 @@ async function deleteEverywhere(bookId){
     const {error:removeError}=await api.storage.from(BUCKET).remove([path]);
     if(removeError)throw removeError;
   }
-
-  const now=Date.now();
-  const device=localStorage.getItem('kaoru.reader.device-id.v1')||'reader-device';
 
   const {error:bookError}=await api.rpc('kaoru_upsert_record',{
     p_module:MODULE,
@@ -249,12 +299,48 @@ async function deleteEverywhere(bookId){
   });
   if(progressError)throw progressError;
 
+  removeQueuedDelete(item);
+  return true;
+}
+
+async function flushDeletes(){
+  const user=currentUser();
+  if(!user||!navigator.onLine)return 0;
+
+  const pending=readDeleteQueue()
+    .filter(item=>item.userId===user.id)
+    .sort((a,b)=>Number(a.updatedAt)-Number(b.updatedAt));
+  let completed=0;
+
+  for(const item of pending){
+    if(await performDelete(item))completed+=1;
+  }
+
+  return completed;
+}
+
+async function deleteEverywhere(bookId){
+  const user=currentUser();
+  const id=String(bookId||'');
+
+  if(!user)throw new Error('Inicia sesion para eliminar de todos tus dispositivos.');
+  if(!id)throw new Error('No se pudo identificar el libro.');
+
+  const now=Date.now();
+  queueDelete(id,now);
   await deleteBook(id);
 
   window.dispatchEvent(new CustomEvent('kaoru:reader-library-changed',{
-    detail:{bookId:id,source:'delete'}
+    detail:{bookId:id,source:navigator.onLine?'delete':'delete-offline'}
   }));
 
+  if(!navigator.onLine){
+    showStatus('Libro eliminado aqui. La eliminacion se completara en los otros dispositivos al volver Internet.');
+    return;
+  }
+
+  showStatus('Eliminando libro y progreso de Kaoru Cloud...');
+  await flushDeletes();
   showStatus('Libro eliminado de todos tus dispositivos.');
 }
 async function downloadRemoteBook(row){
@@ -345,6 +431,8 @@ async function reconcile(){
   showStatus('Sincronizando biblioteca privada...');
 
   try{
+    await flushDeletes();
+
     const {data,error}=await api
       .from(TABLE)
       .select('user_id,module,entity_type,entity_id,payload,client_updated_at,device_id,deleted,server_updated_at')
@@ -505,8 +593,12 @@ window.KaoruReaderFileCloud={
   syncBook,
   reconcile,
   deleteEverywhere,
+  flushDeletes,
+  pendingDeletes:()=>readDeleteQueue().length,
   isSignedIn:()=>Boolean(currentUser())
 };
+
+requestPersistentStorage();
 
 account()?.ready?.().then(()=>activate()).catch(error=>{
   console.warn('Kaoru Reader files boot',error);
