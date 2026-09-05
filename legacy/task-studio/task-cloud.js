@@ -5,7 +5,9 @@ const SUPABASE_URL='https://jnuovipdqlprxufdmxar.supabase.co';
 const SUPABASE_KEY='sb_publishable__kijO2nJAFyKb2JW4OC6kA_axv_rl7K';
 const MODULE='tasks';
 const TABLE='kaoru_records';
+const BUCKET='kaoru-files';
 const QUEUE_KEY='kaoru.task-cloud.queue.v1';
+const FILE_DELETE_QUEUE_KEY='kaoru.task-cloud.file-delete-queue.v1';
 const DEVICE_KEY='kaoru.cloud.device-id.v1';
 
 let adapter=null;
@@ -70,13 +72,29 @@ function queueForCurrentUser(){
   const current=session?.user?.id||null;
   return queueRead().filter(op=>!op.userId||op.userId===current);
 }
+function fileDeleteQueueRead(){
+  try{
+    const value=JSON.parse(localStorage.getItem(FILE_DELETE_QUEUE_KEY)||'[]');
+    return Array.isArray(value)?value:[];
+  }catch(_){return[];}
+}
+function fileDeleteQueueWrite(items){
+  try{localStorage.setItem(FILE_DELETE_QUEUE_KEY,JSON.stringify(items));}catch(_){}
+}
+function fileDeleteQueueForCurrentUser(){
+  const current=session?.user?.id||null;
+  return fileDeleteQueueRead().filter(item=>item.userId===current);
+}
+function pendingCount(){
+  return queueForCurrentUser().length+fileDeleteQueueForCurrentUser().length;
+}
 function emit(state,message,extra={}){
   try{
     adapter?.onStatus?.({
       state,
       message,
       user:session?.user||null,
-      queue:queueForCurrentUser().length,
+      queue:pendingCount(),
       online:navigator.onLine,
       ...extra
     });
@@ -236,7 +254,18 @@ async function reconcile(){
   }
 
   if(changed)await adapter?.refresh?.();
+
   await flushQueue();
+  const fileResult=await adapter?.syncFiles?.();
+  await flushQueue();
+  await flushStorageDeletes();
+
+  if(Number(fileResult?.pending||0)>0){
+    emit(
+      'pending',
+      `${fileResult.pending} archivo${fileResult.pending===1?'':'s'} pendiente${fileResult.pending===1?'':'s'} de subir.`
+    );
+  }
 }
 async function stopRealtime(){
   if(channel&&client){
@@ -300,6 +329,81 @@ async function activateSession(nextSession){
   emit('syncing','Conectando Kaoru Cloud…');
   await startRealtime();
   await reconcile();
+}
+function safePathPart(value,fallback='file'){
+  const clean=String(value||'')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9._-]+/g,'_')
+    .replace(/^_+|_+$/g,'')
+    .slice(0,120);
+  return clean||fallback;
+}
+function taskFilePath(taskId,fileId,name){
+  if(!session?.user?.id)throw new Error('Inicia sesión para usar Kaoru Storage.');
+  return [
+    session.user.id,
+    'tasks',
+    safePathPart(taskId,'task'),
+    safePathPart(fileId,'file'),
+    safePathPart(name,'archivo')
+  ].join('/');
+}
+async function uploadTaskFile(taskId,fileId,fileRecord){
+  if(!client||!session)throw new Error('Inicia sesión para sincronizar archivos.');
+  if(!navigator.onLine)throw new Error('Sin conexión. El archivo permanece guardado en este dispositivo.');
+  const blob=fileRecord?.blob;
+  if(!(blob instanceof Blob))throw new Error('El archivo local ya no está disponible.');
+  const path=taskFilePath(taskId,fileId,fileRecord?.name||fileId);
+  const {data,error}=await client.storage
+    .from(BUCKET)
+    .upload(path,blob,{
+      upsert:true,
+      contentType:fileRecord?.type||blob.type||'application/octet-stream',
+      cacheControl:'3600'
+    });
+  if(error)throw error;
+  return{
+    path:data?.path||path,
+    name:fileRecord?.name||'Archivo',
+    mime:fileRecord?.type||blob.type||'application/octet-stream',
+    size:Number(fileRecord?.size||blob.size||0)
+  };
+}
+async function downloadTaskFile(path){
+  if(!client||!session)throw new Error('Inicia sesión para descargar este archivo.');
+  if(!navigator.onLine)throw new Error('Este archivo todavía no está guardado en este dispositivo y no hay conexión.');
+  if(!path)throw new Error('Este archivo todavía no tiene una copia en Kaoru Cloud.');
+  const {data,error}=await client.storage.from(BUCKET).download(path);
+  if(error)throw error;
+  return data;
+}
+function queueStorageDelete(path){
+  if(!path)return;
+  const owner=String(path).split('/')[0]||session?.user?.id||null;
+  if(!owner)return;
+  const items=fileDeleteQueueRead().filter(item=>item.path!==path);
+  items.push({path,userId:owner,createdAt:Date.now()});
+  fileDeleteQueueWrite(items);
+  emit(session?'pending':'local',session?'Archivo pendiente de eliminar de la nube.':'Cambio guardado localmente.');
+  if(session&&navigator.onLine){
+    setTimeout(()=>flushStorageDeletes().catch(err=>{
+      console.warn('Kaoru Storage delete',err);
+      emit('error',err?.message||'No se pudo eliminar un archivo de la nube.');
+    }),100);
+  }
+}
+async function flushStorageDeletes(){
+  if(!client||!session||!navigator.onLine)return;
+  const pending=fileDeleteQueueForCurrentUser();
+  if(!pending.length)return;
+  for(const item of pending){
+    const {error}=await client.storage.from(BUCKET).remove([item.path]);
+    if(error)throw error;
+    fileDeleteQueueWrite(
+      fileDeleteQueueRead().filter(current=>current.path!==item.path)
+    );
+  }
 }
 async function signIn(email,password){
   if(!client)throw new Error('Supabase no está disponible.');
@@ -429,7 +533,15 @@ window.KaoruTaskCloud={
   currentUser,
   queueUpsert,
   queueDelete,
-  flush:flushQueue,
+  queueStorageDelete,
+  uploadTaskFile,
+  downloadTaskFile,
+  flush:async()=>{
+    await flushQueue();
+    await adapter?.syncFiles?.();
+    await flushQueue();
+    await flushStorageDeletes();
+  },
   reconcile,
   signIn,
   signUp,

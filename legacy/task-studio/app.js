@@ -292,7 +292,15 @@ els.taskForm.addEventListener('submit',async e=>{
 });
 els.deleteTaskBtn.addEventListener('click',async()=>{
   const task=taskById(state.selectedTaskId);if(!task)return;if(!confirm(`¿Eliminar la tarea “${task.title}”? Esta acción no se puede deshacer.`))return;
-  for(const doc of(task.docs||[])){if(doc.type==='file'&&doc.fileId)await dbDelete(FILE_STORE,doc.fileId).catch(()=>{});}await dbDelete(TASK_STORE,task.id);state.tasks=state.tasks.filter(t=>t.id!==task.id);state.selectedTaskId=null;renderTaskList();renderDetail();closeMobileDetail();
+  for(const doc of(task.docs||[])){
+    if(doc.type==='file'&&doc.storagePath){
+      window.KaoruTaskCloud?.queueStorageDelete?.(doc.storagePath);
+    }
+    if(doc.type==='file'&&doc.fileId){
+      await dbDelete(FILE_STORE,doc.fileId).catch(()=>{});
+    }
+  }
+  await dbDelete(TASK_STORE,task.id);state.tasks=state.tasks.filter(t=>t.id!==task.id);state.selectedTaskId=null;renderTaskList();renderDetail();closeMobileDetail();
 });
 
 function openSettings(startCourseForm=false){renderCourseSettings();syncNotificationUI();showModal('settingsModal');if(startCourseForm)setTimeout(()=>startNewCourse(),60);}
@@ -317,7 +325,7 @@ async function deleteCourse(id){
 
 function renderDocs(task){
   els.taskDocs.innerHTML='';const docs=task.docs||[];if(!docs.length){els.taskDocs.innerHTML='<span class="docs-empty">Sin documentos todavía. Agrega enlaces o archivos con ＋.</span>';return;}
-  docs.forEach(doc=>{const chip=document.createElement('div');chip.className='doc-chip';const icon=document.createElement('span');icon.textContent=doc.type==='file'?'▧':'↗';let open;if(doc.type==='link'){open=document.createElement('a');open.href=doc.url;open.target='_blank';open.rel='noopener noreferrer';open.textContent=doc.label||doc.url;}else{open=document.createElement('button');open.type='button';open.className='doc-open';open.textContent=doc.name||'Archivo';open.addEventListener('click',()=>openStoredFile(doc.fileId));}const rm=document.createElement('button');rm.type='button';rm.className='doc-remove';rm.textContent='×';rm.title='Quitar';rm.addEventListener('click',()=>removeDoc(task.id,doc.id));chip.append(icon,open,rm);els.taskDocs.appendChild(chip);});
+  docs.forEach(doc=>{const chip=document.createElement('div');chip.className='doc-chip';const icon=document.createElement('span');icon.textContent=doc.type==='file'?(doc.storagePath?'☁':'▧'):'↗';let open;if(doc.type==='link'){open=document.createElement('a');open.href=doc.url;open.target='_blank';open.rel='noopener noreferrer';open.textContent=doc.label||doc.url;}else{open=document.createElement('button');open.type='button';open.className='doc-open';open.textContent=doc.name||'Archivo';open.title=doc.storagePath?'Disponible en Kaoru Cloud':'Guardado en este dispositivo; se subirá automáticamente';open.addEventListener('click',()=>openStoredFile(doc));}const rm=document.createElement('button');rm.type='button';rm.className='doc-remove';rm.textContent='×';rm.title='Quitar';rm.addEventListener('click',()=>removeDoc(task.id,doc.id));chip.append(icon,open,rm);els.taskDocs.appendChild(chip);});
 }
 els.addLinkBtn.addEventListener('click',()=>{els.linkForm.classList.toggle('hidden');if(!els.linkForm.classList.contains('hidden'))els.linkLabel.focus();});els.cancelLinkBtn.addEventListener('click',()=>els.linkForm.classList.add('hidden'));
 els.linkForm.addEventListener('submit',async e=>{
@@ -325,11 +333,147 @@ els.linkForm.addEventListener('submit',async e=>{
 });
 els.addFileBtn.addEventListener('click',()=>els.taskFileInput.click());els.taskFileInput.addEventListener('change',async()=>{
   const task=taskById(state.selectedTaskId);if(!task||!els.taskFileInput.files?.length)return;task.docs=task.docs||[];
-  for(const file of Array.from(els.taskFileInput.files)){const fileId=uid('file');await dbPut(FILE_STORE,{id:fileId,name:file.name,type:file.type||'application/octet-stream',size:file.size,blob:file,createdAt:now()});task.docs.push({id:uid('doc'),type:'file',fileId,name:file.name,mime:file.type||'',size:file.size,createdAt:now()});}
-  task.updatedAt=now();await dbPut(TASK_STORE,task);els.taskFileInput.value='';renderDocs(task);
+  for(const file of Array.from(els.taskFileInput.files)){
+    const fileId=uid('file');
+    await dbPut(FILE_STORE,{
+      id:fileId,
+      name:file.name,
+      type:file.type||'application/octet-stream',
+      size:file.size,
+      blob:file,
+      createdAt:now()
+    });
+    task.docs.push({
+      id:uid('doc'),
+      type:'file',
+      fileId,
+      name:file.name,
+      mime:file.type||'',
+      size:file.size,
+      createdAt:now()
+    });
+  }
+  task.updatedAt=now();
+  await dbPut(TASK_STORE,task);
+  els.taskFileInput.value='';
+  renderDocs(task);
+  syncTaskFilesToCloud().catch(err=>console.warn('Kaoru Storage upload',err));
 });
-async function openStoredFile(fileId){const rec=await dbGet(FILE_STORE,fileId);if(!rec?.blob){alert('Este archivo pertenece a otro dispositivo o aún no se ha subido al Storage de Kaoru Cloud. Lo conectaremos en la siguiente fase.');return;}const url=URL.createObjectURL(rec.blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000);}
-async function removeDoc(taskId,docId){const task=taskById(taskId);if(!task)return;const doc=(task.docs||[]).find(d=>d.id===docId);task.docs=(task.docs||[]).filter(d=>d.id!==docId);if(doc?.type==='file'&&doc.fileId)await dbDelete(FILE_STORE,doc.fileId).catch(()=>{});task.updatedAt=now();await dbPut(TASK_STORE,task);renderDocs(task);}
+
+async function syncTaskFilesToCloud(){
+  if(
+    !navigator.onLine||
+    !window.KaoruTaskCloud?.currentUser?.()||
+    !window.KaoruTaskCloud?.uploadTaskFile
+  ){
+    return{uploaded:0,pending:0};
+  }
+
+  let uploaded=0;
+  let pending=0;
+
+  for(const task of state.tasks){
+    let changed=false;
+
+    for(const doc of(task.docs||[])){
+      if(doc.type!=='file'||doc.storagePath||!doc.fileId)continue;
+
+      const rec=await dbGet(FILE_STORE,doc.fileId).catch(()=>null);
+      if(!rec?.blob)continue;
+
+      try{
+        const cloudFile=await window.KaoruTaskCloud.uploadTaskFile(
+          task.id,
+          doc.fileId,
+          rec
+        );
+
+        doc.storagePath=cloudFile.path;
+        doc.mime=doc.mime||cloudFile.mime||rec.type||'';
+        doc.size=Number(doc.size||cloudFile.size||rec.size||0);
+        doc.cloudStoredAt=now();
+        changed=true;
+        uploaded++;
+      }catch(err){
+        pending++;
+        console.warn('No se pudo subir un adjunto todavía',doc.name,err);
+      }
+    }
+
+    if(changed){
+      task.updatedAt=now();
+      await dbPut(TASK_STORE,task);
+      if(state.selectedTaskId===task.id)renderDocs(task);
+    }
+  }
+
+  return{uploaded,pending};
+}
+
+async function openStoredFile(doc){
+  if(!doc?.fileId)return;
+
+  let rec=await dbGet(FILE_STORE,doc.fileId).catch(()=>null);
+
+  if(!rec?.blob&&doc.storagePath){
+    if(!navigator.onLine){
+      alert('Este archivo está en Kaoru Cloud, pero todavía no se descargó en este dispositivo. Conéctate a Internet para abrirlo por primera vez.');
+      return;
+    }
+
+    try{
+      const blob=await window.KaoruTaskCloud.downloadTaskFile(doc.storagePath);
+      rec={
+        id:doc.fileId,
+        name:doc.name||'Archivo',
+        type:doc.mime||blob.type||'application/octet-stream',
+        size:Number(doc.size||blob.size||0),
+        blob,
+        createdAt:doc.createdAt||now(),
+        cloudPath:doc.storagePath,
+        cachedAt:now()
+      };
+      await dbPut(FILE_STORE,rec);
+    }catch(err){
+      alert(`No se pudo descargar el archivo desde Kaoru Cloud.\n\n${err?.message||err}`);
+      return;
+    }
+  }
+
+  if(!rec?.blob){
+    alert('Este archivo todavía no está disponible en este dispositivo ni tiene una copia accesible en Kaoru Cloud.');
+    return;
+  }
+
+  const url=URL.createObjectURL(rec.blob);
+  const opened=window.open(url,'_blank','noopener');
+  if(!opened){
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=rec.name||doc.name||'archivo';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+async function removeDoc(taskId,docId){
+  const task=taskById(taskId);if(!task)return;
+  const doc=(task.docs||[]).find(d=>d.id===docId);
+  task.docs=(task.docs||[]).filter(d=>d.id!==docId);
+
+  if(doc?.type==='file'&&doc.storagePath){
+    window.KaoruTaskCloud?.queueStorageDelete?.(doc.storagePath);
+  }
+  if(doc?.type==='file'&&doc.fileId){
+    await dbDelete(FILE_STORE,doc.fileId).catch(()=>{});
+  }
+
+  task.updatedAt=now();
+  await dbPut(TASK_STORE,task);
+  renderDocs(task);
+}
 
 const noteSaveTimers=new Map();
 function renderNoteThread(task){
@@ -375,7 +519,7 @@ els.scheduleBtn.addEventListener('click',()=>showModal('scheduleModal'));els.sch
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=21');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=22');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
@@ -467,6 +611,7 @@ async function initTaskCloud(){
       putLocal:async(type,value)=>dbPut(type==='course'?COURSE_STORE:TASK_STORE,value),
       deleteLocal:async(type,id)=>dbDelete(type==='course'?COURSE_STORE:TASK_STORE,id),
       refresh:refreshTaskStateFromDb,
+      syncFiles:syncTaskFilesToCloud,
       onStatus:setCloudUi
     });
 
