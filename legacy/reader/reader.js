@@ -380,11 +380,38 @@ async function renderLibrary() {
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'delete-book';
-    remove.textContent = isCloudUnlocked()
+    const kaoruFiles = window.KaoruReaderFileCloud;
+    remove.textContent = kaoruFiles?.isSignedIn?.() || isCloudUnlocked()
       ? 'Eliminar de todos'
       : 'Eliminar';
 
     remove.addEventListener('click', async () => {
+      if (kaoruFiles?.isSignedIn?.()) {
+        if (!confirm(`Â¿Eliminar "${book.title}" de Kaoru Cloud y de todos tus dispositivos?`)) {
+          return;
+        }
+
+        const accountStatus = document.getElementById('readerAccountStatus');
+
+        try {
+          if (accountStatus) accountStatus.textContent = 'Eliminando de todos los dispositivosâ€¦';
+          await kaoruFiles.deleteEverywhere(book.id);
+
+          const session = readSession();
+          if (session?.bookId === book.id) {
+            writeSession({ view: 'library' });
+          }
+
+          await renderLibrary();
+          return;
+        } catch (error) {
+          if (accountStatus) {
+            accountStatus.textContent = error?.message || 'No se pudo eliminar de Kaoru Cloud.';
+          }
+          return;
+        }
+      }
+
       if (isCloudUnlocked()) {
         if (!confirm(`¿Eliminar "${book.title}" de la nube y de todos tus dispositivos?`)) {
           return;

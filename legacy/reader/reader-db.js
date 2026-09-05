@@ -86,6 +86,7 @@ export async function deleteBook(id) {
   tx.objectStore(BOOK_STORE).delete(id);
   tx.objectStore(PROGRESS_STORE).delete(id);
   tx.objectStore(ASSET_STORE).delete(`pdf:${id}`);
+  tx.objectStore(ASSET_STORE).delete(`source:${id}`);
   await txPromise(tx);
 }
 

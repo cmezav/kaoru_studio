@@ -2,6 +2,7 @@ import {
   getBook,
   putBook,
   listBooks,
+  deleteBook,
   getAsset,
   putAsset
 } from './reader-db.js?cache=pdf-reader-1';
@@ -196,6 +197,66 @@ async function syncBook(book){
   return payload;
 }
 
+async function deleteEverywhere(bookId){
+  const api=client();
+  const user=currentUser();
+  const id=String(bookId||'');
+
+  if(!api||!user)throw new Error('Inicia sesion para eliminar de todos tus dispositivos.');
+  if(!navigator.onLine)throw new Error('Necesitas conexion para eliminar este libro de Kaoru Cloud.');
+  if(!id)throw new Error('No se pudo identificar el libro.');
+
+  showStatus('Eliminando libro y progreso de Kaoru Cloud...');
+
+  const {data:record,error:readError}=await api
+    .from(TABLE)
+    .select('entity_id,payload,client_updated_at,deleted')
+    .eq('module',MODULE)
+    .eq('entity_type',ENTITY_TYPE)
+    .eq('entity_id',id)
+    .maybeSingle();
+
+  if(readError)throw readError;
+
+  const path=String(record?.payload?.storagePath||'');
+  if(path){
+    const {error:removeError}=await api.storage.from(BUCKET).remove([path]);
+    if(removeError)throw removeError;
+  }
+
+  const now=Date.now();
+  const device=localStorage.getItem('kaoru.reader.device-id.v1')||'reader-device';
+
+  const {error:bookError}=await api.rpc('kaoru_upsert_record',{
+    p_module:MODULE,
+    p_entity_type:ENTITY_TYPE,
+    p_entity_id:id,
+    p_payload:{},
+    p_client_updated_at:now,
+    p_deleted:true,
+    p_device_id:device
+  });
+  if(bookError)throw bookError;
+
+  const {error:progressError}=await api.rpc('kaoru_upsert_record',{
+    p_module:MODULE,
+    p_entity_type:'progress',
+    p_entity_id:id,
+    p_payload:{},
+    p_client_updated_at:now,
+    p_deleted:true,
+    p_device_id:device
+  });
+  if(progressError)throw progressError;
+
+  await deleteBook(id);
+
+  window.dispatchEvent(new CustomEvent('kaoru:reader-library-changed',{
+    detail:{bookId:id,source:'delete'}
+  }));
+
+  showStatus('Libro eliminado de todos tus dispositivos.');
+}
 async function downloadRemoteBook(row){
   const api=client();
   if(!api||!currentUser()||!navigator.onLine)return false;
@@ -293,17 +354,30 @@ async function reconcile(){
     if(error)throw error;
 
     const rows=(Array.isArray(data)?data:[])
-      .filter(row=>row.user_id===user.id&&!row.deleted);
+      .filter(row=>row.user_id===user.id);
     const remote=new Map(rows.map(row=>[String(row.entity_id),row]));
     const local=await listBooks();
     const localMap=new Map(local.map(book=>[String(book.id),book]));
+    const deletedIds=new Set();
     let downloaded=0;
     let uploaded=0;
 
     for(const row of rows){
-      const book=localMap.get(String(row.entity_id));
+      const id=String(row.entity_id);
+      const book=localMap.get(id);
       const localTs=Number(book?.contentUpdatedAt||book?.importedAt||0);
       const remoteTs=Number(row.client_updated_at||row.payload?.contentUpdatedAt||0);
+
+      if(row.deleted){
+        if(book&&remoteTs>=localTs){
+          await deleteBook(id);
+          deletedIds.add(id);
+          window.dispatchEvent(new CustomEvent('kaoru:reader-library-changed',{
+            detail:{bookId:id,source:'delete-remote'}
+          }));
+        }
+        continue;
+      }
 
       if(!book||remoteTs>localTs){
         if(await downloadRemoteBook(row))downloaded+=1;
@@ -311,9 +385,20 @@ async function reconcile(){
     }
 
     for(const book of local){
-      const row=remote.get(String(book.id));
+      const id=String(book.id);
+      if(deletedIds.has(id))continue;
+
+      const row=remote.get(id);
       const localTs=Number(book.contentUpdatedAt||book.importedAt||0);
       const remoteTs=Number(row?.client_updated_at||row?.payload?.contentUpdatedAt||0);
+
+      if(row?.deleted){
+        if(localTs>remoteTs){
+          await syncBook(book);
+          uploaded+=1;
+        }
+        continue;
+      }
 
       if(!row||localTs>remoteTs||!row.payload?.storagePath){
         await syncBook(book);
@@ -357,11 +442,19 @@ async function startRealtime(){
           !row||
           row.user_id!==currentUser()?.id||
           row.module!==MODULE||
-          row.entity_type!==ENTITY_TYPE||
-          row.deleted
+          row.entity_type!==ENTITY_TYPE
         )return;
 
         try{
+          if(row.deleted){
+            await deleteBook(String(row.entity_id));
+            window.dispatchEvent(new CustomEvent('kaoru:reader-library-changed',{
+              detail:{bookId:String(row.entity_id),source:'delete-realtime'}
+            }));
+            showStatus('Un libro fue eliminado en otro dispositivo.');
+            return;
+          }
+
           const local=await getBook(String(row.entity_id));
           const localTs=Number(local?.contentUpdatedAt||local?.importedAt||0);
           const remoteTs=Number(row.client_updated_at||0);
@@ -411,6 +504,7 @@ window.KaoruReaderFileCloud={
   storeImportedFile,
   syncBook,
   reconcile,
+  deleteEverywhere,
   isSignedIn:()=>Boolean(currentUser())
 };
 
