@@ -509,17 +509,213 @@ async function loadTaskFonts(){
 els.refreshFontsBtn.addEventListener('click',loadTaskFonts);window.addEventListener('focus',loadTaskFonts);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTaskFonts();});
 
 let scheduleObjectUrl=null;
-async function loadSchedule(){state.schedule=await getSetting('schedulePhoto',null);renderSchedule();}
-function renderSchedule(){
-  if(scheduleObjectUrl){URL.revokeObjectURL(scheduleObjectUrl);scheduleObjectUrl=null;}const s=state.schedule;els.scheduleEmpty.classList.toggle('hidden',!!s?.blob);els.scheduleViewer.classList.toggle('hidden',!s?.blob);if(s?.blob){scheduleObjectUrl=URL.createObjectURL(s.blob);els.scheduleImage.src=scheduleObjectUrl;els.scheduleZoom.value='100';els.scheduleZoomValue.textContent='100%';els.scheduleImage.style.width='100%';}
+let scheduleHydrating=false;
+
+async function loadSchedule(){
+  state.schedule=await getSetting('schedulePhoto',null);
+  renderSchedule();
+
+  /*
+    Si la metadata llego desde otro dispositivo pero el Blob aun no existe
+    localmente, lo descargamos una sola vez y queda cacheado en IndexedDB
+    para que el horario siga abriendo sin Internet despues.
+  */
+  if(
+    state.schedule?.storagePath&&
+    !state.schedule?.blob&&
+    navigator.onLine&&
+    window.KaoruTaskCloud?.currentUser?.()&&
+    !scheduleHydrating
+  ){
+    await hydrateScheduleFromCloud();
+  }
 }
-async function saveScheduleFile(file){if(!file)return;state.schedule={blob:file,name:file.name,type:file.type,updatedAt:now()};await setSetting('schedulePhoto',state.schedule);renderSchedule();}
-els.scheduleBtn.addEventListener('click',()=>showModal('scheduleModal'));els.scheduleInput.addEventListener('change',()=>{const f=els.scheduleInput.files?.[0];saveScheduleFile(f);els.scheduleInput.value='';});els.scheduleReplaceInput.addEventListener('change',()=>{const f=els.scheduleReplaceInput.files?.[0];saveScheduleFile(f);els.scheduleReplaceInput.value='';});els.scheduleZoom.addEventListener('input',()=>{const v=Number(els.scheduleZoom.value);els.scheduleZoomValue.textContent=`${v}%`;els.scheduleImage.style.width=`${v}%`;});els.deleteScheduleBtn.addEventListener('click',async()=>{if(!confirm('¿Eliminar la foto del horario guardada en este navegador?'))return;state.schedule=null;await dbDelete(SETTINGS_STORE,'schedulePhoto');renderSchedule();});
+
+function renderSchedule(){
+  if(scheduleObjectUrl){
+    URL.revokeObjectURL(scheduleObjectUrl);
+    scheduleObjectUrl=null;
+  }
+
+  const s=state.schedule;
+  const hasBlob=!!s?.blob;
+
+  els.scheduleEmpty.classList.toggle('hidden',hasBlob);
+  els.scheduleViewer.classList.toggle('hidden',!hasBlob);
+
+  if(hasBlob){
+    scheduleObjectUrl=URL.createObjectURL(s.blob);
+    els.scheduleImage.src=scheduleObjectUrl;
+    els.scheduleZoom.value='100';
+    els.scheduleZoomValue.textContent='100%';
+    els.scheduleImage.style.width='100%';
+  }
+}
+
+async function hydrateScheduleFromCloud(){
+  if(
+    scheduleHydrating||
+    !state.schedule?.storagePath||
+    state.schedule?.blob||
+    !navigator.onLine||
+    !window.KaoruTaskCloud?.downloadTaskFile
+  )return false;
+
+  scheduleHydrating=true;
+  try{
+    const blob=await window.KaoruTaskCloud.downloadTaskFile(
+      state.schedule.storagePath
+    );
+
+    state.schedule={
+      ...state.schedule,
+      blob,
+      type:state.schedule.type||blob.type||'application/octet-stream',
+      size:Number(state.schedule.size||blob.size||0),
+      cachedAt:now()
+    };
+
+    await setSetting('schedulePhoto',state.schedule);
+    renderSchedule();
+    return true;
+  }catch(err){
+    console.warn('No se pudo descargar el horario desde Kaoru Cloud',err);
+    return false;
+  }finally{
+    scheduleHydrating=false;
+  }
+}
+
+async function syncScheduleToCloud(){
+  const schedule=state.schedule;
+
+  if(
+    !schedule?.blob||
+    schedule?.storagePath||
+    !navigator.onLine||
+    !window.KaoruTaskCloud?.currentUser?.()||
+    !window.KaoruTaskCloud?.uploadScheduleFile
+  ){
+    return{uploaded:0,pending:schedule?.blob&&!schedule?.storagePath?1:0};
+  }
+
+  try{
+    const cloudFile=await window.KaoruTaskCloud.uploadScheduleFile({
+      ...schedule,
+      size:Number(schedule.size||schedule.blob.size||0)
+    });
+
+    const previousPath=schedule.previousStoragePath||null;
+
+    state.schedule={
+      ...schedule,
+      id:'schedulePhoto',
+      storagePath:cloudFile.path,
+      size:cloudFile.size,
+      type:schedule.type||cloudFile.mime||'application/octet-stream',
+      cloudStoredAt:now()
+    };
+
+    delete state.schedule.previousStoragePath;
+
+    await setSetting('schedulePhoto',state.schedule);
+
+    window.KaoruTaskCloud.queueUpsert?.(
+      'schedule',
+      {
+        id:'schedulePhoto',
+        name:state.schedule.name||'horario',
+        type:state.schedule.type||'application/octet-stream',
+        size:Number(state.schedule.size||0),
+        storagePath:state.schedule.storagePath,
+        updatedAt:Number(state.schedule.updatedAt)||now(),
+        cloudStoredAt:state.schedule.cloudStoredAt
+      }
+    );
+
+    if(previousPath&&previousPath!==state.schedule.storagePath){
+      window.KaoruTaskCloud.queueStorageDelete?.(previousPath);
+    }
+
+    renderSchedule();
+    return{uploaded:1,pending:0};
+  }catch(err){
+    console.warn('No se pudo subir el horario todavía',err);
+    return{uploaded:0,pending:1};
+  }
+}
+
+async function saveScheduleFile(file){
+  if(!file)return;
+
+  const previousPath=state.schedule?.storagePath||null;
+
+  state.schedule={
+    id:'schedulePhoto',
+    blob:file,
+    name:file.name,
+    type:file.type||'application/octet-stream',
+    size:file.size,
+    updatedAt:now(),
+    previousStoragePath:previousPath
+  };
+
+  await setSetting('schedulePhoto',state.schedule);
+  renderSchedule();
+
+  syncScheduleToCloud()
+    .then(()=>window.KaoruTaskCloud?.flush?.())
+    .catch(err=>console.warn('Kaoru horario sync',err));
+}
+
+els.scheduleBtn.addEventListener('click',async()=>{
+  await loadSchedule();
+  showModal('scheduleModal');
+});
+
+els.scheduleInput.addEventListener('change',()=>{
+  const f=els.scheduleInput.files?.[0];
+  saveScheduleFile(f);
+  els.scheduleInput.value='';
+});
+
+els.scheduleReplaceInput.addEventListener('change',()=>{
+  const f=els.scheduleReplaceInput.files?.[0];
+  saveScheduleFile(f);
+  els.scheduleReplaceInput.value='';
+});
+
+els.scheduleZoom.addEventListener('input',()=>{
+  const v=Number(els.scheduleZoom.value);
+  els.scheduleZoomValue.textContent=`${v}%`;
+  els.scheduleImage.style.width=`${v}%`;
+});
+
+els.deleteScheduleBtn.addEventListener('click',async()=>{
+  if(!confirm('¿Eliminar la foto del horario de todos tus dispositivos?'))return;
+
+  const previous=state.schedule;
+  state.schedule=null;
+
+  await dbDelete(SETTINGS_STORE,'schedulePhoto');
+
+  if(previous?.storagePath){
+    window.KaoruTaskCloud?.queueStorageDelete?.(previous.storagePath);
+  }
+
+  window.KaoruTaskCloud?.queueDelete?.(
+    'schedule',
+    'schedulePhoto',
+    now()
+  );
+
+  renderSchedule();
+});
 
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=22');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=23');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
@@ -594,6 +790,66 @@ async function refreshTaskStateFromDb(){
   renderCourseSettings();
   renderTaskList();
   renderDetail();
+  await loadSchedule();
+}
+
+async function cloudListLocal(type){
+  if(type==='course')return dbGetAll(COURSE_STORE);
+  if(type==='task')return dbGetAll(TASK_STORE);
+  if(type==='schedule'){
+    const schedule=await getSetting('schedulePhoto',null);
+    return schedule?[{id:'schedulePhoto',...schedule}]:[];
+  }
+  return[];
+}
+
+async function cloudGetLocal(type,id){
+  if(type==='course')return dbGet(COURSE_STORE,id);
+  if(type==='task')return dbGet(TASK_STORE,id);
+  if(type==='schedule'){
+    const schedule=await getSetting('schedulePhoto',null);
+    return schedule?{id:'schedulePhoto',...schedule}:null;
+  }
+  return null;
+}
+
+async function cloudPutLocal(type,value){
+  if(type==='course')return dbPut(COURSE_STORE,value);
+  if(type==='task')return dbPut(TASK_STORE,value);
+
+  if(type==='schedule'){
+    const current=await getSetting('schedulePhoto',null);
+    const keepBlob=
+      current?.blob&&
+      current?.storagePath&&
+      current.storagePath===value?.storagePath
+        ?current.blob
+        :null;
+
+    const next={
+      ...value,
+      id:'schedulePhoto',
+      ...(keepBlob?{blob:keepBlob}:{})
+    };
+
+    await setSetting('schedulePhoto',next);
+    state.schedule=next;
+    renderSchedule();
+    return next;
+  }
+
+  return null;
+}
+
+async function cloudDeleteLocal(type,id){
+  if(type==='course')return dbDelete(COURSE_STORE,id);
+  if(type==='task')return dbDelete(TASK_STORE,id);
+
+  if(type==='schedule'){
+    await dbDelete(SETTINGS_STORE,'schedulePhoto');
+    state.schedule=null;
+    renderSchedule();
+  }
 }
 async function initTaskCloud(){
   if(!window.KaoruTaskCloud){
@@ -606,12 +862,13 @@ async function initTaskCloud(){
 
   try{
     await window.KaoruTaskCloud.init({
-      listLocal:async type=>dbGetAll(type==='course'?COURSE_STORE:TASK_STORE),
-      getLocal:async(type,id)=>dbGet(type==='course'?COURSE_STORE:TASK_STORE,id),
-      putLocal:async(type,value)=>dbPut(type==='course'?COURSE_STORE:TASK_STORE,value),
-      deleteLocal:async(type,id)=>dbDelete(type==='course'?COURSE_STORE:TASK_STORE,id),
+      listLocal:cloudListLocal,
+      getLocal:cloudGetLocal,
+      putLocal:cloudPutLocal,
+      deleteLocal:cloudDeleteLocal,
       refresh:refreshTaskStateFromDb,
       syncFiles:syncTaskFilesToCloud,
+      syncSchedule:syncScheduleToCloud,
       onStatus:setCloudUi
     });
 

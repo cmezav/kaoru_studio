@@ -55,8 +55,15 @@ function sanitizeTask(task){
   }
   return copy;
 }
+function sanitizeSchedule(schedule){
+  const copy=clone(schedule||{});
+  delete copy.blob;
+  return copy;
+}
 function preparePayload(type,payload){
-  return type==='task'?sanitizeTask(payload):clone(payload);
+  if(type==='task')return sanitizeTask(payload);
+  if(type==='schedule')return sanitizeSchedule(payload);
+  return clone(payload);
 }
 function queueRead(){
   try{
@@ -255,6 +262,23 @@ async function reconcile(){
 
   if(changed)await adapter?.refresh?.();
 
+  /*
+    Primero resolvemos el archivo del horario. Asi, si fue creado offline,
+    la cola recibe la metadata FINAL con storagePath y nunca necesitamos
+    publicar el Blob dentro de kaoru_records.
+  */
+  const scheduleResult=await adapter?.syncSchedule?.();
+
+  const scheduleList=await listLocal('schedule');
+  for(const item of scheduleList){
+    const key=`schedule:${item.id}`;
+    const remoteRow=remote.get(key);
+    const remoteTs=Number(remoteRow?.client_updated_at)||0;
+    if(!remoteRow||localUpdated(item)>remoteTs){
+      queueUpsert('schedule',item);
+    }
+  }
+
   await flushQueue();
   const fileResult=await adapter?.syncFiles?.();
   await flushQueue();
@@ -348,6 +372,40 @@ function taskFilePath(taskId,fileId,name){
     safePathPart(fileId,'file'),
     safePathPart(name,'archivo')
   ].join('/');
+}
+function scheduleFilePath(fileRecord){
+  if(!session?.user?.id)throw new Error('Inicia sesión para usar Kaoru Storage.');
+  return [
+    session.user.id,
+    'tasks',
+    'schedule',
+    String(Number(fileRecord?.updatedAt)||Date.now()),
+    safePathPart(fileRecord?.name,'horario')
+  ].join('/');
+}
+async function uploadScheduleFile(fileRecord){
+  if(!client||!session)throw new Error('Inicia sesión para sincronizar el horario.');
+  if(!navigator.onLine)throw new Error('Sin conexión. El horario permanece guardado en este dispositivo.');
+  const blob=fileRecord?.blob;
+  if(!(blob instanceof Blob))throw new Error('La imagen local del horario ya no está disponible.');
+
+  const path=scheduleFilePath(fileRecord);
+  const {data,error}=await client.storage
+    .from(BUCKET)
+    .upload(path,blob,{
+      upsert:false,
+      contentType:fileRecord?.type||blob.type||'application/octet-stream',
+      cacheControl:'3600'
+    });
+
+  if(error)throw error;
+
+  return{
+    path:data?.path||path,
+    name:fileRecord?.name||'horario',
+    mime:fileRecord?.type||blob.type||'application/octet-stream',
+    size:Number(fileRecord?.size||blob.size||0)
+  };
 }
 async function uploadTaskFile(taskId,fileId,fileRecord){
   if(!client||!session)throw new Error('Inicia sesión para sincronizar archivos.');
@@ -535,8 +593,10 @@ window.KaoruTaskCloud={
   queueDelete,
   queueStorageDelete,
   uploadTaskFile,
+  uploadScheduleFile,
   downloadTaskFile,
   flush:async()=>{
+    await adapter?.syncSchedule?.();
     await flushQueue();
     await adapter?.syncFiles?.();
     await flushQueue();
