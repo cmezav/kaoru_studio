@@ -17,7 +17,7 @@ if(EMBEDDED)document.documentElement.classList.add('kaoru-embedded');
 
 const $=id=>document.getElementById(id);
 const els={
-  pendingBadge:$('pendingBadge'),mobileHomeBtn:$('mobileHomeBtn'),scheduleBtn:$('scheduleBtn'),notificationBtn:$('notificationBtn'),settingsBtn:$('settingsBtn'),themeBtn:$('themeBtn'),newTaskBtn:$('newTaskBtn'),
+  pendingBadge:$('pendingBadge'),mobileHomeBtn:$('mobileHomeBtn'),cloudBtn:$('cloudBtn'),cloudBtnText:$('cloudBtnText'),cloudDot:$('cloudDot'),scheduleBtn:$('scheduleBtn'),notificationBtn:$('notificationBtn'),settingsBtn:$('settingsBtn'),themeBtn:$('themeBtn'),newTaskBtn:$('newTaskBtn'),
   courseSidebar:document.querySelector('.course-sidebar'),sideAddCourseBtn:$('sideAddCourseBtn'),closeCoursesBtn:$('closeCoursesBtn'),courseFilters:$('courseFilters'),completedFilterBtn:$('completedFilterBtn'),allCourseCount:$('allCourseCount'),completedCount:$('completedCount'),
   listTitle:$('listTitle'),listSubtitle:$('listSubtitle'),mobileCourseBtn:$('mobileCourseBtn'),pendingViewBtn:$('pendingViewBtn'),historyViewBtn:$('historyViewBtn'),historyCountInline:$('historyCountInline'),overdueCount:$('overdueCount'),todayCount:$('todayCount'),weekCount:$('weekCount'),pendingCount:$('pendingCount'),
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
@@ -27,7 +27,8 @@ const els={
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
   settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
-  requestNotificationBtn:$('requestNotificationBtn'),notificationStatus:$('notificationStatus'),summaryIntervalSelect:$('summaryIntervalSelect')
+  requestNotificationBtn:$('requestNotificationBtn'),notificationStatus:$('notificationStatus'),summaryIntervalSelect:$('summaryIntervalSelect'),
+  cloudSignedOut:$('cloudSignedOut'),cloudSignedIn:$('cloudSignedIn'),cloudStateCard:$('cloudStateCard'),cloudStateText:$('cloudStateText'),cloudStateDetail:$('cloudStateDetail'),cloudAuthForm:$('cloudAuthForm'),cloudEmailInput:$('cloudEmailInput'),cloudPasswordInput:$('cloudPasswordInput'),cloudCreateBtn:$('cloudCreateBtn'),cloudSignOutBtn:$('cloudSignOutBtn'),cloudAuthMessage:$('cloudAuthMessage'),cloudUserEmail:$('cloudUserEmail'),cloudSyncText:$('cloudSyncText'),cloudQueueCount:$('cloudQueueCount')
 };
 
 const state={
@@ -68,16 +69,46 @@ async function dbGet(store,key){
     req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);
   });
 }
+function cloudEntityType(store){
+  if(store===COURSE_STORE)return'course';
+  if(store===TASK_STORE)return'task';
+  return null;
+}
 async function dbPut(store,value){
   const db=await openDB();
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(store,'readwrite');tx.objectStore(store).put(value);tx.oncomplete=()=>resolve(value);tx.onerror=()=>reject(tx.error);
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).put(value);
+    tx.oncomplete=()=>{
+      const entityType=cloudEntityType(store);
+      if(entityType&&!window.__kaoruCloudApplyingRemote){
+        window.KaoruTaskCloud?.queueUpsert?.(entityType,value);
+      }
+      resolve(value);
+    };
+    tx.onerror=()=>reject(tx.error);
   });
 }
 async function dbDelete(store,key){
+  const existing=(store===COURSE_STORE||store===TASK_STORE)
+    ? await dbGet(store,key).catch(()=>null)
+    : null;
   const db=await openDB();
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(store,'readwrite');tx.objectStore(store).delete(key);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).delete(key);
+    tx.oncomplete=()=>{
+      const entityType=cloudEntityType(store);
+      if(entityType&&!window.__kaoruCloudApplyingRemote){
+        window.KaoruTaskCloud?.queueDelete?.(
+          entityType,
+          key,
+          Math.max(Number(existing?.updatedAt||0),Date.now())
+        );
+      }
+      resolve();
+    };
+    tx.onerror=()=>reject(tx.error);
   });
 }
 async function getSetting(key,fallback=null){const rec=await dbGet(SETTINGS_STORE,key);return rec?rec.value:fallback;}
@@ -297,7 +328,7 @@ els.addFileBtn.addEventListener('click',()=>els.taskFileInput.click());els.taskF
   for(const file of Array.from(els.taskFileInput.files)){const fileId=uid('file');await dbPut(FILE_STORE,{id:fileId,name:file.name,type:file.type||'application/octet-stream',size:file.size,blob:file,createdAt:now()});task.docs.push({id:uid('doc'),type:'file',fileId,name:file.name,mime:file.type||'',size:file.size,createdAt:now()});}
   task.updatedAt=now();await dbPut(TASK_STORE,task);els.taskFileInput.value='';renderDocs(task);
 });
-async function openStoredFile(fileId){const rec=await dbGet(FILE_STORE,fileId);if(!rec?.blob){alert('Este archivo ya no está disponible en el navegador.');return;}const url=URL.createObjectURL(rec.blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000);}
+async function openStoredFile(fileId){const rec=await dbGet(FILE_STORE,fileId);if(!rec?.blob){alert('Este archivo pertenece a otro dispositivo o aún no se ha subido al Storage de Kaoru Cloud. Lo conectaremos en la siguiente fase.');return;}const url=URL.createObjectURL(rec.blob);window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000);}
 async function removeDoc(taskId,docId){const task=taskById(taskId);if(!task)return;const doc=(task.docs||[]).find(d=>d.id===docId);task.docs=(task.docs||[]).filter(d=>d.id!==docId);if(doc?.type==='file'&&doc.fileId)await dbDelete(FILE_STORE,doc.fileId).catch(()=>{});task.updatedAt=now();await dbPut(TASK_STORE,task);renderDocs(task);}
 
 const noteSaveTimers=new Map();
@@ -344,7 +375,7 @@ els.scheduleBtn.addEventListener('click',()=>showModal('scheduleModal'));els.sch
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=18');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=19');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
@@ -367,6 +398,139 @@ document.querySelector('.course-filter[data-course="all"]')?.addEventListener('c
 document.querySelectorAll('.type-chip').forEach(btn=>btn.addEventListener('click',()=>{state.kindFilter=btn.dataset.kind;state.quickFilter='all';document.querySelectorAll('.type-chip').forEach(b=>b.classList.toggle('active',b===btn));renderTaskList();}));document.querySelectorAll('.summary-card').forEach(btn=>btn.addEventListener('click',()=>{state.quickFilter=btn.dataset.quick||'all';state.courseFilter=state.courseFilter==='completed'?'all':state.courseFilter;renderTaskList();}));els.taskSearch.addEventListener('input',()=>{state.search=els.taskSearch.value;renderTaskList();});
 
 
+
+function setCloudUi(info={}){
+  const user=info.user||window.KaoruTaskCloud?.currentUser?.()||null;
+  const stateName=info.state||'local';
+  const queue=Number(info.queue||0);
+  const message=info.message||'';
+
+  els.cloudSignedOut.classList.toggle('hidden',!!user);
+  els.cloudSignedIn.classList.toggle('hidden',!user);
+  els.cloudStateCard.dataset.state=stateName;
+  els.cloudQueueCount.textContent=String(queue);
+
+  if(user){
+    els.cloudUserEmail.textContent=user.email||'Cuenta Kaoru';
+    els.cloudBtnText.textContent=
+      stateName==='syncing'?'Sincronizando':
+      stateName==='offline'?'Sin conexión':
+      queue>0?`${queue} pendiente${queue===1?'':'s'}`:
+      'Sincronizado';
+    els.cloudSyncText.textContent=message||els.cloudBtnText.textContent;
+  }else{
+    els.cloudBtnText.textContent='Cuenta';
+    els.cloudUserEmail.textContent='—';
+    els.cloudSyncText.textContent='Solo local';
+  }
+
+  els.cloudDot.dataset.state=stateName;
+
+  const labels={
+    synced:'Sincronizado',
+    syncing:'Sincronizando…',
+    pending:'Cambios pendientes',
+    offline:'Sin conexión',
+    error:'Problema de sincronización',
+    local:'Solo local'
+  };
+  els.cloudStateText.textContent=labels[stateName]||'Kaoru Cloud';
+  els.cloudStateDetail.textContent=message||(
+    user
+      ?'La sincronización automática está activa.'
+      :'Inicia sesión para sincronizar automáticamente.'
+  );
+}
+async function refreshTaskStateFromDb(){
+  state.courses=await dbGetAll(COURSE_STORE);
+  state.tasks=await dbGetAll(TASK_STORE);
+  if(state.selectedTaskId&&!state.tasks.some(t=>t.id===state.selectedTaskId)){
+    state.selectedTaskId=null;
+  }
+  renderCourseSettings();
+  renderTaskList();
+  renderDetail();
+}
+async function initTaskCloud(){
+  if(!window.KaoruTaskCloud){
+    setCloudUi({state:'offline',message:'Kaoru Cloud no pudo cargar. Tus datos locales siguen disponibles.'});
+    return;
+  }
+
+  await window.KaoruTaskCloud.init({
+    listLocal:async type=>dbGetAll(type==='course'?COURSE_STORE:TASK_STORE),
+    getLocal:async(type,id)=>dbGet(type==='course'?COURSE_STORE:TASK_STORE,id),
+    putLocal:async(type,value)=>dbPut(type==='course'?COURSE_STORE:TASK_STORE,value),
+    deleteLocal:async(type,id)=>dbDelete(type==='course'?COURSE_STORE:TASK_STORE,id),
+    refresh:refreshTaskStateFromDb,
+    onStatus:setCloudUi
+  });
+
+  setCloudUi({
+    state:window.KaoruTaskCloud.currentUser?.()?'synced':'local',
+    user:window.KaoruTaskCloud.currentUser?.()||null,
+    message:window.KaoruTaskCloud.currentUser?.()
+      ?'Sincronización automática activa.'
+      :'Inicia sesión para sincronizar automáticamente.'
+  });
+}
+
+els.cloudBtn.addEventListener('click',()=>{
+  els.cloudAuthMessage.textContent='';
+  setCloudUi({
+    state:window.KaoruTaskCloud?.currentUser?.()?'synced':'local',
+    user:window.KaoruTaskCloud?.currentUser?.()||null
+  });
+  showModal('cloudModal');
+});
+
+els.cloudAuthForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const email=els.cloudEmailInput.value.trim();
+  const password=els.cloudPasswordInput.value;
+  if(!email||!password)return;
+  els.cloudAuthMessage.textContent='Iniciando sesión…';
+  try{
+    await window.KaoruTaskCloud.signIn(email,password);
+    els.cloudPasswordInput.value='';
+    els.cloudAuthMessage.textContent='';
+    setCloudUi({state:'syncing',user:window.KaoruTaskCloud.currentUser?.(),message:'Migrando y sincronizando tus datos locales…'});
+  }catch(err){
+    els.cloudAuthMessage.textContent=err?.message||'No se pudo iniciar sesión.';
+  }
+});
+
+els.cloudCreateBtn.addEventListener('click',async()=>{
+  const email=els.cloudEmailInput.value.trim();
+  const password=els.cloudPasswordInput.value;
+  if(!email||!password){
+    els.cloudAuthMessage.textContent='Escribe tu correo y una contraseña de al menos 6 caracteres.';
+    return;
+  }
+  els.cloudAuthMessage.textContent='Creando cuenta…';
+  try{
+    const result=await window.KaoruTaskCloud.signUp(email,password);
+    els.cloudPasswordInput.value='';
+    if(result?.session){
+      els.cloudAuthMessage.textContent='';
+      setCloudUi({state:'syncing',user:window.KaoruTaskCloud.currentUser?.(),message:'Cuenta creada. Migrando tus datos locales…'});
+    }else{
+      els.cloudAuthMessage.textContent='Cuenta creada. Revisa tu correo para confirmar la dirección y luego inicia sesión.';
+    }
+  }catch(err){
+    els.cloudAuthMessage.textContent=err?.message||'No se pudo crear la cuenta.';
+  }
+});
+
+els.cloudSignOutBtn.addEventListener('click',async()=>{
+  if(!confirm('¿Cerrar sesión de Kaoru Cloud en este dispositivo? Tus datos locales seguirán aquí.'))return;
+  try{
+    await window.KaoruTaskCloud.signOut();
+    setCloudUi({state:'local',message:'Sesión cerrada. Tus datos locales siguen disponibles.'});
+  }catch(err){
+    els.cloudStateDetail.textContent=err?.message||'No se pudo cerrar la sesión.';
+  }
+});
 function goTaskHome(){
   if(EMBEDDED){
     window.parent.postMessage({type:'kaoru:navigate',studio:'home'},'*');
@@ -379,7 +543,7 @@ function installNavigationShortcuts(){document.addEventListener('keydown',e=>{if
 
 async function init(){
   try{
-    state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();
+    state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();
     if(EMBEDDED)window.parent.postMessage({type:'kaoru:studio-ready',studio:'tasks',theme:document.documentElement.dataset.theme||'day'},'*');
     ensureServiceWorker();checkNotifications();setInterval(checkNotifications,60000);
   }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para más detalles.');}

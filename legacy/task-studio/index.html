@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=task-studio-3">
+<link rel="stylesheet" href="./styles.css?cache=task-studio-cloud-1">
 <script>
 (function(){
   try{
@@ -30,6 +30,9 @@
     </div>
     <div class="top-actions">
       <span id="pendingBadge" class="pending-badge">0 pendientes</span>
+      <button id="cloudBtn" class="top-btn cloud-btn" type="button" title="Kaoru Cloud">
+        ☁ <span id="cloudBtnText">Cuenta</span><i id="cloudDot" class="cloud-dot"></i>
+      </button>
       <button id="scheduleBtn" class="top-btn schedule-btn" type="button">🗓 <span>Horario</span></button>
       <button id="notificationBtn" class="top-btn" type="button" title="Activar o revisar notificaciones">🔔 <span>Avisos</span></button>
       <button id="settingsBtn" class="top-btn" type="button">⚙ <span>Cursos</span></button>
@@ -181,6 +184,57 @@
   </main>
 </div>
 
+
+<!-- KAORU CLOUD -->
+<div id="cloudModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cloudTitle">
+  <section class="modal-card cloud-modal-card">
+    <header class="modal-head">
+      <div><span class="mini-kicker">KAORU CLOUD</span><h2 id="cloudTitle">Tu cuenta</h2></div>
+      <button class="modal-close" data-close="cloudModal" type="button">×</button>
+    </header>
+
+    <div class="cloud-account-body">
+      <div id="cloudStateCard" class="cloud-state-card" data-state="local">
+        <span class="cloud-state-icon">☁</span>
+        <div>
+          <strong id="cloudStateText">Solo local</strong>
+          <small id="cloudStateDetail">Inicia sesión para sincronizar automáticamente.</small>
+        </div>
+      </div>
+
+      <div id="cloudSignedOut">
+        <p class="cloud-help">La misma cuenta servirá para Task Studio y, en la siguiente fase, Archive Reader. No tendrás que pulsar un botón de sincronizar.</p>
+        <form id="cloudAuthForm" class="cloud-auth-form">
+          <label class="field full"><span>Correo</span><input id="cloudEmailInput" type="email" autocomplete="email" required placeholder="tu-correo@ejemplo.com"></label>
+          <label class="field full"><span>Contraseña</span><input id="cloudPasswordInput" type="password" autocomplete="current-password" minlength="6" required placeholder="Mínimo 6 caracteres"></label>
+          <div class="cloud-auth-actions">
+            <button id="cloudSignInBtn" type="submit" class="small-primary">Iniciar sesión</button>
+            <button id="cloudCreateBtn" type="button" class="small-ghost">Crear cuenta</button>
+          </div>
+        </form>
+        <p id="cloudAuthMessage" class="cloud-auth-message"></p>
+      </div>
+
+      <div id="cloudSignedIn" class="hidden">
+        <div class="cloud-user-card">
+          <span>Sesión iniciada como</span>
+          <strong id="cloudUserEmail">—</strong>
+          <small>Los cambios se envían y reciben automáticamente cuando hay conexión.</small>
+        </div>
+        <div class="cloud-sync-info">
+          <span>Estado</span><strong id="cloudSyncText">Sincronizado</strong>
+          <span>Cambios pendientes</span><strong id="cloudQueueCount">0</strong>
+        </div>
+        <button id="cloudSignOutBtn" type="button" class="small-danger">Cerrar sesión</button>
+      </div>
+
+      <div class="cloud-phase-note">
+        <strong>Fase 1</strong>
+        <span>Sincroniza cursos, profesores, notas generales, tareas, fechas, estados, links y notas de texto. Los archivos adjuntos e imágenes incrustadas se conectarán al Storage privado en la siguiente fase.</span>
+      </div>
+    </div>
+  </section>
+</div>
 <!-- HORARIO -->
 <div id="scheduleModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="scheduleTitle">
   <section class="modal-card schedule-modal-card">
@@ -260,6 +314,8 @@
   </section>
 </div>
 
-<script src="./app.js?cache=task-studio-3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./task-cloud.js?cache=kaoru-cloud-1"></script>
+<script src="./app.js?cache=task-studio-cloud-1"></script>
 </body>
 </html>

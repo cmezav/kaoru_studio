@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-18';
+const CACHE_NAME = 'kaoru-archive-reader-shell-19';
 
 const CORE = [
   './',
@@ -12,6 +12,7 @@ const CORE = [
   './legacy/task-studio/index.html',
   './legacy/task-studio/styles.css',
   './legacy/task-studio/app.js',
+  './legacy/task-studio/task-cloud.js',
   './legacy/reader/index.html',
   './legacy/reader/reader.css',
   './legacy/reader/reader.js',
@@ -129,6 +130,7 @@ self.addEventListener('fetch', (event) => {
               './legacy/task-studio/index.html',
   './legacy/task-studio/styles.css',
   './legacy/task-studio/app.js',
+  './legacy/task-studio/task-cloud.js',
   './legacy/reader/index.html',
               { ignoreSearch: true }
             );
