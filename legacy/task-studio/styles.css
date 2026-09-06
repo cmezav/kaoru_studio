@@ -1457,3 +1457,57 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU NOTE IMAGE EDIT V3 CSS END === */
+
+/* === KAORU NOTE COPY V1 CSS START === */
+
+.copy-thread-btn,
+.note-copy-btn{
+  min-height:31px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-2);
+  color:var(--text);
+  padding:0 9px;
+  font-size:8.5px;
+  font-weight:850;
+}
+
+.copy-thread-btn:hover,
+.note-copy-btn:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-soft);
+}
+
+.copy-thread-btn.is-copied,
+.note-copy-btn.is-copied{
+  border-color:var(--good);
+  color:var(--good);
+}
+
+.note-copy-btn{
+  height:24px;
+  min-height:24px;
+  padding:0 7px;
+  border-radius:7px;
+  font-size:7.5px;
+}
+
+@media(max-width:800px){
+  .copy-thread-btn{
+    min-height:38px;
+    height:38px;
+    padding:0 9px;
+    font-size:10.5px;
+    white-space:nowrap;
+  }
+
+  .note-copy-btn{
+    min-height:32px;
+    height:32px;
+    padding:0 9px;
+    font-size:10px;
+  }
+}
+
+/* === KAORU NOTE COPY V1 CSS END === */

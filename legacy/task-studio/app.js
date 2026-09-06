@@ -2342,37 +2342,6 @@ async function init(){
   }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para más detalles.');}
 }
 
-init();
-}());
-
-/* KAORU_TASK_NOTES_EXPANDED_V1 */
-(function setupExpandedTaskNotes(){
-  const button=document.getElementById('expandNotesBtn');
-  const section=document.querySelector('.notes-section');
-  if(!button||!section)return;
-
-  function setExpanded(expanded){
-    const next=Boolean(expanded);
-    document.body.classList.toggle('notes-expanded',next);
-    button.setAttribute('aria-pressed',String(next));
-    button.setAttribute('title',next?'Cerrar vista ampliada':'Ampliar notas');
-    button.textContent=next?'Salir':'Ampliar';
-  }
-
-  button.addEventListener('click',()=>{
-    setExpanded(!document.body.classList.contains('notes-expanded'));
-  });
-
-  document.addEventListener('keydown',event=>{
-    if(event.key==='Escape'&&document.body.classList.contains('notes-expanded')){
-      event.preventDefault();
-      event.stopPropagation();
-      setExpanded(false);
-      button.focus();
-    }
-  },true);
-}());
-
 /* === KAORU NOTE IMAGE EDIT V3 START === */
 
 let kaoruNoteSelectedImage=null;
@@ -3087,3 +3056,331 @@ els.noteThread.addEventListener('paste',e=>{
 },true);
 
 /* === KAORU NOTE IMAGE EDIT V3 END === */
+
+/* === KAORU NOTE COPY V1 START === */
+
+function kaoruBlobToDataUrl(blob){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=()=>resolve(String(reader.result||''));
+    reader.onerror=()=>reject(reader.error||new Error('FileReader error'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function kaoruClipboardNoteHtml(task,note){
+  const wrapper=document.createElement('div');
+  wrapper.className='kaoru-copy-note';
+
+  const date=document.createElement('div');
+  date.style.cssText='font-size:12px;color:#777;margin:0 0 8px;';
+  date.textContent=noteDate(note.createdAt);
+
+  const body=document.createElement('div');
+  body.innerHTML=note.html||'';
+
+  note.images=Array.isArray(note.images)?note.images:[];
+
+  const images=[
+    ...body.querySelectorAll('img[data-kaoru-image-id]')
+  ];
+
+  for(const img of images){
+    const imageId=img.dataset.kaoruImageId;
+    const meta=note.images.find(item=>item.id===imageId);
+
+    if(!meta)continue;
+
+    try{
+      const rec=await getNoteImageRecord(task,note,meta);
+      if(rec?.blob){
+        img.src=await kaoruBlobToDataUrl(rec.blob);
+      }
+    }catch(err){
+      console.warn('Kaoru copy image',err);
+      img.removeAttribute('src');
+      img.alt=img.alt||'[Imagen no disponible]';
+    }
+
+    img.removeAttribute('data-kaoru-runtime');
+    img.style.maxWidth='100%';
+    img.style.height='auto';
+  }
+
+  wrapper.append(date,body);
+  return wrapper;
+}
+
+function kaoruHtmlToPlainText(html){
+  const temp=document.createElement('div');
+  temp.innerHTML=html;
+  return (temp.innerText||temp.textContent||'').trim();
+}
+
+function kaoruLegacyCopyHtml(html){
+  const host=document.createElement('div');
+  host.contentEditable='true';
+  host.setAttribute('aria-hidden','true');
+  host.style.cssText=
+    'position:fixed;left:-100000px;top:0;width:700px;'+
+    'opacity:.001;pointer-events:none;';
+  host.innerHTML=html;
+
+  document.body.appendChild(host);
+
+  const range=document.createRange();
+  range.selectNodeContents(host);
+
+  const selection=window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  let ok=false;
+
+  try{
+    ok=document.execCommand('copy');
+  }catch(_){
+    ok=false;
+  }
+
+  selection.removeAllRanges();
+  host.remove();
+
+  return ok;
+}
+
+async function kaoruWriteRichClipboard(html,plain){
+  if(
+    navigator.clipboard?.write&&
+    typeof ClipboardItem!=='undefined'
+  ){
+    try{
+      const item=new ClipboardItem({
+        'text/html':new Blob([html],{type:'text/html'}),
+        'text/plain':new Blob([plain],{type:'text/plain'})
+      });
+
+      await navigator.clipboard.write([item]);
+      return 'rich';
+    }catch(err){
+      console.warn('Rich clipboard unavailable, using fallback',err);
+    }
+  }
+
+  if(kaoruLegacyCopyHtml(html)){
+    return 'legacy-rich';
+  }
+
+  if(navigator.clipboard?.writeText){
+    await navigator.clipboard.writeText(plain);
+    return 'plain';
+  }
+
+  throw new Error('Clipboard API unavailable');
+}
+
+function kaoruCopyFeedback(button,label='Copiado'){
+  if(!button)return;
+
+  const original=button.dataset.kaoruOriginalText||button.textContent;
+  button.dataset.kaoruOriginalText=original;
+  button.textContent=label;
+  button.classList.add('is-copied');
+
+  clearTimeout(button.__kaoruCopyTimer);
+
+  button.__kaoruCopyTimer=setTimeout(()=>{
+    button.textContent=button.dataset.kaoruOriginalText||original;
+    button.classList.remove('is-copied');
+  },1400);
+}
+
+async function kaoruCopySingleNote(task,note,button){
+  if(!task||!note)return;
+
+  const wrapper=await kaoruClipboardNoteHtml(task,note);
+  const html=wrapper.outerHTML;
+  const plain=kaoruHtmlToPlainText(html);
+
+  await kaoruWriteRichClipboard(html,plain);
+  kaoruCopyFeedback(button);
+}
+
+async function kaoruCopyWholeThread(task,button){
+  if(!task)return;
+
+  const notes=task.notes||[];
+
+  if(!notes.length){
+    alert('Esta tarea todavia no tiene notas para copiar.');
+    return;
+  }
+
+  const root=document.createElement('div');
+
+  const title=document.createElement('h2');
+  title.textContent=task.title||'Hilo de avance';
+  root.appendChild(title);
+
+  for(let i=0;i<notes.length;i++){
+    const noteWrapper=await kaoruClipboardNoteHtml(
+      task,
+      notes[i]
+    );
+
+    root.appendChild(noteWrapper);
+
+    if(i<notes.length-1){
+      root.appendChild(document.createElement('hr'));
+    }
+  }
+
+  const html=root.innerHTML;
+  const plain=kaoruHtmlToPlainText(html);
+
+  await kaoruWriteRichClipboard(html,plain);
+  kaoruCopyFeedback(button,'Hilo copiado');
+}
+
+function kaoruDecorateNoteCopyButtons(){
+  const task=taskById(state.selectedTaskId);
+
+  els.noteThread
+    .querySelectorAll('.note-card')
+    .forEach(card=>{
+      if(card.querySelector('.note-copy-btn'))return;
+
+      const noteId=card.dataset.noteId;
+      const note=(task?.notes||[]).find(item=>item.id===noteId);
+
+      if(!note)return;
+
+      const head=card.querySelector('.note-headline');
+      if(!head)return;
+
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='note-copy-btn';
+      button.textContent='Copiar';
+      button.title='Copiar esta nota con formato e imagenes';
+      button.dataset.noteId=noteId;
+
+      const bg=head.querySelector('.note-bg-select');
+
+      if(bg){
+        head.insertBefore(button,bg);
+      }else{
+        head.appendChild(button);
+      }
+    });
+}
+
+function kaoruInstallCopyControls(){
+  const actions=document.querySelector('.notes-head-actions');
+
+  if(actions&&!document.getElementById('copyThreadBtn')){
+    const button=document.createElement('button');
+    button.id='copyThreadBtn';
+    button.type='button';
+    button.className='copy-thread-btn';
+    button.textContent='Copiar hilo';
+    button.title='Copiar todo el hilo con formato e imagenes';
+
+    actions.insertBefore(
+      button,
+      actions.firstChild
+    );
+
+    button.addEventListener('click',async()=>{
+      const task=taskById(state.selectedTaskId);
+
+      try{
+        await kaoruCopyWholeThread(task,button);
+      }catch(err){
+        console.warn('Kaoru copy thread',err);
+        alert(
+          'No se pudo copiar el hilo. '+
+          'Revisa los permisos del portapapeles del navegador.'
+        );
+      }
+    });
+  }
+
+  els.noteThread.addEventListener('click',async e=>{
+    const button=e.target?.closest?.('.note-copy-btn');
+    if(!button||!els.noteThread.contains(button))return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const task=taskById(state.selectedTaskId);
+    const note=(task?.notes||[]).find(
+      item=>item.id===button.dataset.noteId
+    );
+
+    if(!task||!note)return;
+
+    try{
+      await kaoruCopySingleNote(
+        task,
+        note,
+        button
+      );
+    }catch(err){
+      console.warn('Kaoru copy note',err);
+      alert(
+        'No se pudo copiar la nota. '+
+        'Revisa los permisos del portapapeles del navegador.'
+      );
+    }
+  });
+
+  const observer=new MutationObserver(()=>{
+    kaoruDecorateNoteCopyButtons();
+  });
+
+  observer.observe(
+    els.noteThread,
+    {
+      childList:true,
+      subtree:true
+    }
+  );
+
+  kaoruDecorateNoteCopyButtons();
+}
+
+/* === KAORU NOTE COPY V1 END === */
+
+kaoruInstallCopyControls();
+
+init();
+}());
+
+/* KAORU_TASK_NOTES_EXPANDED_V1 */
+(function setupExpandedTaskNotes(){
+  const button=document.getElementById('expandNotesBtn');
+  const section=document.querySelector('.notes-section');
+  if(!button||!section)return;
+
+  function setExpanded(expanded){
+    const next=Boolean(expanded);
+    document.body.classList.toggle('notes-expanded',next);
+    button.setAttribute('aria-pressed',String(next));
+    button.setAttribute('title',next?'Cerrar vista ampliada':'Ampliar notas');
+    button.textContent=next?'Salir':'Ampliar';
+  }
+
+  button.addEventListener('click',()=>{
+    setExpanded(!document.body.classList.contains('notes-expanded'));
+  });
+
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&document.body.classList.contains('notes-expanded')){
+      event.preventDefault();
+      event.stopPropagation();
+      setExpanded(false);
+      button.focus();
+    }
+  },true);
+}());
