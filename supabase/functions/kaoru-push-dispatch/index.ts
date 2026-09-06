@@ -492,12 +492,12 @@ Deno.serve(async (request) => {
     2) Notificacion-resumen.
     - Un solo tag, por lo que se reemplaza en vez de apilarse.
     - Se actualiza inmediatamente cuando cambian los conteos.
-    - Si no cambia nada, se refresca cada 15 min como heartbeat.
+    - Si no cambia nada, se refresca cada 5 min como heartbeat.
     - Es silenciosa para no sonar cada vez que se actualiza.
   */
   const SUMMARY_TASK_ID = "__summary__";
   const SUMMARY_DUE_AT = "1970-01-01T00:00:00.000Z";
-  const SUMMARY_HEARTBEAT_MS = 15 * 60 * 1000;
+  const SUMMARY_HEARTBEAT_MS = 5 * 60 * 1000;
 
   for (const userId of enabledUsers) {
     const userSubscriptions = subscriptionMap.get(userId) || [];
@@ -636,7 +636,7 @@ Deno.serve(async (request) => {
       summary: true,
       renotify: false,
       requireInteraction: true,
-      silent: true,
+      silent: false,
       timestamp: nowMs,
     });
 
@@ -644,7 +644,7 @@ Deno.serve(async (request) => {
       admin,
       userSubscriptions,
       summaryPayload,
-      { TTL: 60 * 60, urgency: "normal" },
+      { TTL: 60 * 60, urgency: "high" },
     );
 
     sent += result.successful;

@@ -2028,9 +2028,22 @@ async function saveNotificationConfig(){
   window.KaoruTaskPush?.syncPreferences?.(state.notificationConfig)
     .catch(err=>console.warn('Kaoru Push preferences',err));
 }
-async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=34');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
+async function ensureServiceWorker(){
+  if(!('serviceWorker'in navigator))return null;
+  try{
+    const registration=await navigator.serviceWorker.register(
+      '../../reader-sw.js?cache=kaoru-notify-bg-20260906-2',
+      {updateViaCache:'none'}
+    );
+    try{await registration.update();}catch(_){}
+    return await navigator.serviceWorker.ready;
+  }catch(err){
+    console.warn('No se pudo registrar el service worker',err);
+    return null;
+  }
+}
 async function showSystemNotification(title,body,tag,data={}){
-  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
+  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../icono-kaoru.png',badge:'../../icono-kaoru.png',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
 async function testSystemNotification(){
   if(!('Notification'in window)){
