@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-44-stable-20260906';
+const CACHE_NAME = 'kaoru-archive-reader-shell-45-stable-20260906-notify-1';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
@@ -247,6 +247,20 @@ self.addEventListener('push',event=>{
   try{payload=event.data?.json?.()||{};}catch(_){
     try{payload={body:event.data?.text?.()||''};}catch(__){}
   }
+  if(payload.closeTag){
+
+    event.waitUntil((async()=>{
+
+      const notifications=await self.registration.getNotifications({tag:payload.closeTag});
+
+      notifications.forEach(notification=>notification.close());
+
+    })());
+
+    return;
+
+  }
+
   const title=payload.title||'Kaoru Task Studio';
   const options={
     body:payload.body||'Tienes una tarea pendiente.',
@@ -254,6 +268,9 @@ self.addEventListener('push',event=>{
     badge:new URL('./logo.png',self.registration.scope).href,
     tag:payload.tag||'kaoru-task-push',
     renotify:Boolean(payload.renotify),
+    requireInteraction:Boolean(payload.requireInteraction),
+    silent:Boolean(payload.silent),
+    timestamp:Number(payload.timestamp||Date.now()),
     data:{
       ...payload,
       url:payload.url||new URL('./#tasks',self.registration.scope).href

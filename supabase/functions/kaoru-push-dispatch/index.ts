@@ -125,6 +125,111 @@ function chooseAlert(
     critical: false,
   };
 }
+
+function courseKey(userId: string, courseId: unknown) {
+  return `${userId}:${String(courseId || "")}`;
+}
+
+function taskNotificationContext(
+  userId: string,
+  payload: Record<string, unknown>,
+  courseMap: Map<string, Record<string, unknown>>,
+) {
+  const kind = String(payload.kind || "");
+  const courseId = String(payload.courseId || "").trim();
+  const course = courseId
+    ? courseMap.get(courseKey(userId, courseId))
+    : null;
+
+  const courseName = String(
+    course?.name ||
+    payload.courseNameSnapshot ||
+    "",
+  ).trim();
+
+  let professor = "";
+
+  if (course) {
+    if (kind === "lab") {
+      professor = String(
+        course.labProfessor ||
+        course.theoryProfessor ||
+        "",
+      ).trim();
+    } else {
+      professor = String(course.theoryProfessor || "").trim();
+    }
+  } else {
+    professor = String(payload.professorSnapshot || "").trim();
+  }
+
+  return { courseName, professor };
+}
+
+function taskBodySuffix(courseName: string, professor: string) {
+  const parts: string[] = [];
+  if (courseName) parts.push(courseName);
+  if (professor) parts.push(`Docente: ${professor}`);
+  return parts.length ? ` · ${parts.join(" · ")}` : "";
+}
+
+async function sendPush(
+  admin: ReturnType<typeof createClient>,
+  subscriptions: Array<{
+    id: string;
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+  }>,
+  payload: string,
+  options: {
+    TTL?: number;
+    urgency?: "very-low" | "low" | "normal" | "high";
+  } = {},
+) {
+  let successful = 0;
+  const errors: string[] = [];
+
+  for (const subscription of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh,
+            auth: subscription.auth,
+          },
+        },
+        payload,
+        {
+          TTL: options.TTL ?? 60 * 60,
+          urgency: options.urgency ?? "high",
+        },
+      );
+
+      successful++;
+    } catch (error) {
+      const statusCode = Number(
+        (error as { statusCode?: number })?.statusCode || 0,
+      );
+      const message = String(
+        (error as { message?: string })?.message || error,
+      );
+
+      errors.push(`${statusCode || "?"}: ${message}`);
+
+      if (statusCode === 404 || statusCode === 410) {
+        await admin
+          .from("kaoru_push_subscriptions")
+          .delete()
+          .eq("id", subscription.id);
+      }
+    }
+  }
+
+  return { successful, errors };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -198,7 +303,12 @@ Deno.serve(async (request) => {
   }
 
   if (!subscriptions?.length) {
-    return json({ ok: true, sent: 0, users: enabledUsers.length, reason: "no-subscriptions" });
+    return json({
+      ok: true,
+      sent: 0,
+      users: enabledUsers.length,
+      reason: "no-subscriptions",
+    });
   }
 
   const { data: taskRows, error: tasksError } = await admin
@@ -214,15 +324,38 @@ Deno.serve(async (request) => {
     return json({ error: tasksError.message }, 500);
   }
 
+  const { data: courseRows, error: coursesError } = await admin
+    .from("kaoru_records")
+    .select("user_id,entity_id,payload,deleted")
+    .eq("module", "tasks")
+    .eq("entity_type", "course")
+    .eq("deleted", false)
+    .in("user_id", enabledUsers)
+    .limit(10000);
+
+  if (coursesError) {
+    return json({ error: coursesError.message }, 500);
+  }
+
   const preferenceMap = new Map(
     preferences.map((item) => [item.user_id, item]),
   );
+
   const subscriptionMap = new Map<string, typeof subscriptions>();
 
   for (const subscription of subscriptions) {
     const list = subscriptionMap.get(subscription.user_id) || [];
     list.push(subscription);
     subscriptionMap.set(subscription.user_id, list);
+  }
+
+  const courseMap = new Map<string, Record<string, unknown>>();
+
+  for (const row of courseRows || []) {
+    courseMap.set(
+      courseKey(row.user_id, row.entity_id),
+      (row.payload || {}) as Record<string, unknown>,
+    );
   }
 
   const nowMs = Date.now();
@@ -233,9 +366,14 @@ Deno.serve(async (request) => {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  let summarySent = 0;
 
+  /*
+    1) Recordatorios individuales.
+    Ahora incluyen el curso y, cuando existe, el docente actual.
+  */
   for (const row of taskRows || []) {
-    const payload = row.payload || {};
+    const payload = (row.payload || {}) as Record<string, unknown>;
     if (payload.completed) continue;
     if (!payload.dueAt) continue;
 
@@ -275,27 +413,32 @@ Deno.serve(async (request) => {
     }
 
     const taskTitle = String(payload.title || "Tarea");
-    const courseName = String(payload.courseNameSnapshot || "").trim();
+    const { courseName, professor } = taskNotificationContext(
+      row.user_id,
+      payload,
+      courseMap,
+    );
+
+    const suffix = taskBodySuffix(courseName, professor);
 
     const notification =
       alert.key.startsWith("overdue")
         ? {
             title: "Tarea atrasada",
-            body: `${taskTitle} · ${overdueText(alert.diff)}`,
+            body: `${taskTitle} · ${overdueText(alert.diff)}${suffix}`,
           }
         : alert.key === "due-now"
           ? {
               title: "Entrega ahora",
-              body:
-                `${taskTitle} vence ahora` +
-                (courseName ? ` · ${courseName}` : ""),
+              body: `${taskTitle} vence ahora${suffix}`,
             }
           : {
               title: "Entrega proxima",
               body:
                 `${taskTitle} vence en ${humanRemaining(alert.diff)}` +
-                (courseName ? ` · ${courseName}` : ""),
+                suffix,
             };
+
     const pushPayload = JSON.stringify({
       ...notification,
       tag: `kaoru-task-${row.entity_id}-${dueMs}`,
@@ -304,55 +447,29 @@ Deno.serve(async (request) => {
       dueAt: dueIso,
       alertKey: alert.key,
       renotify: Boolean(alert.critical),
+      requireInteraction: Boolean(alert.critical),
+      silent: false,
+      timestamp: nowMs,
     });
 
-    let successfulForTask = 0;
-    const errors: string[] = [];
+    const result = await sendPush(
+      admin,
+      userSubscriptions,
+      pushPayload,
+      { TTL: 60 * 60, urgency: "high" },
+    );
 
-    for (const subscription of userSubscriptions) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscription.endpoint,
-            keys: {
-              p256dh: subscription.p256dh,
-              auth: subscription.auth,
-            },
-          },
-          pushPayload,
-          {
-            TTL: 60 * 60,
-            urgency: "high",
-          },
-        );
+    sent += result.successful;
 
-        successfulForTask++;
-        sent++;
-      } catch (error) {
-        const statusCode = Number(
-          (error as { statusCode?: number })?.statusCode || 0,
-        );
-        const message = String(
-          (error as { message?: string })?.message || error,
-        );
-        errors.push(`${statusCode || "?"}: ${message}`);
-
-        if (statusCode === 404 || statusCode === 410) {
-          await admin
-            .from("kaoru_push_subscriptions")
-            .delete()
-            .eq("id", subscription.id);
-        }
-      }
-    }
-
-    if (successfulForTask > 0) {
+    if (result.successful > 0) {
       await admin
         .from("kaoru_push_delivery_log")
         .update({
           status: "sent",
           delivered_at: new Date().toISOString(),
-          last_error: errors.length ? errors.join(" | ").slice(0, 1500) : null,
+          last_error: result.errors.length
+            ? result.errors.join(" | ").slice(0, 1500)
+            : null,
         })
         .eq("user_id", row.user_id)
         .eq("task_id", String(row.entity_id))
@@ -360,6 +477,7 @@ Deno.serve(async (request) => {
         .eq("alert_key", alert.key);
     } else {
       failed++;
+
       await admin
         .from("kaoru_push_delivery_log")
         .delete()
@@ -370,9 +488,198 @@ Deno.serve(async (request) => {
     }
   }
 
+  /*
+    2) Notificacion-resumen.
+    - Un solo tag, por lo que se reemplaza en vez de apilarse.
+    - Se actualiza inmediatamente cuando cambian los conteos.
+    - Si no cambia nada, se refresca cada 15 min como heartbeat.
+    - Es silenciosa para no sonar cada vez que se actualiza.
+  */
+  const SUMMARY_TASK_ID = "__summary__";
+  const SUMMARY_DUE_AT = "1970-01-01T00:00:00.000Z";
+  const SUMMARY_HEARTBEAT_MS = 15 * 60 * 1000;
+
+  for (const userId of enabledUsers) {
+    const userSubscriptions = subscriptionMap.get(userId) || [];
+    if (!userSubscriptions.length) continue;
+
+    const pending = (taskRows || []).filter((row) => {
+      if (row.user_id !== userId) return false;
+      const payload = (row.payload || {}) as Record<string, unknown>;
+      return !payload.completed;
+    });
+
+    let theory = 0;
+    let lab = 0;
+    let personal = 0;
+    let overdue = 0;
+
+    for (const row of pending) {
+      const payload = (row.payload || {}) as Record<string, unknown>;
+      const kind = String(payload.kind || "");
+
+      if (kind === "lab") {
+        lab++;
+      } else if (kind === "personal" || payload.personal === true) {
+        personal++;
+      } else {
+        theory++;
+      }
+
+      if (payload.dueAt) {
+        const dueMs = Date.parse(String(payload.dueAt));
+        if (Number.isFinite(dueMs) && dueMs < nowMs) {
+          overdue++;
+        }
+      }
+    }
+
+    const total = pending.length;
+    const summaryKey =
+      `summary-${total}-${theory}-${lab}-${personal}-${overdue}`;
+
+    const { data: lastSummaryRows, error: summaryReadError } = await admin
+      .from("kaoru_push_delivery_log")
+      .select("alert_key,delivered_at,created_at")
+      .eq("user_id", userId)
+      .eq("task_id", SUMMARY_TASK_ID)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (summaryReadError) {
+      console.error("Summary state read", summaryReadError);
+      failed++;
+      continue;
+    }
+
+    const lastSummary = lastSummaryRows?.[0] || null;
+    const lastDeliveredMs = lastSummary?.delivered_at
+      ? Date.parse(String(lastSummary.delivered_at))
+      : 0;
+
+    const changed = lastSummary?.alert_key !== summaryKey;
+    const heartbeatDue =
+      total > 0 &&
+      (!lastDeliveredMs || nowMs - lastDeliveredMs >= SUMMARY_HEARTBEAT_MS);
+
+    if (total === 0) {
+      /*
+        Si habia un resumen anterior, enviamos una orden silenciosa
+        al Service Worker para cerrarlo.
+      */
+      if (lastSummary && lastSummary.alert_key !== summaryKey) {
+        const closePayload = JSON.stringify({
+          tag: "kaoru-pending-summary",
+          closeTag: "kaoru-pending-summary",
+          url: appUrl,
+          silent: true,
+          timestamp: nowMs,
+        });
+
+        const result = await sendPush(
+          admin,
+          userSubscriptions,
+          closePayload,
+          { TTL: 15 * 60, urgency: "normal" },
+        );
+
+        sent += result.successful;
+        summarySent += result.successful;
+
+        if (result.successful > 0) {
+          await admin
+            .from("kaoru_push_delivery_log")
+            .delete()
+            .eq("user_id", userId)
+            .eq("task_id", SUMMARY_TASK_ID);
+
+          await admin
+            .from("kaoru_push_delivery_log")
+            .insert({
+              user_id: userId,
+              task_id: SUMMARY_TASK_ID,
+              due_at: SUMMARY_DUE_AT,
+              alert_key: summaryKey,
+              status: "sent",
+              attempts: 1,
+              delivered_at: new Date().toISOString(),
+            });
+        }
+      }
+
+      continue;
+    }
+
+    if (!changed && !heartbeatDue) continue;
+
+    const bodyParts = [
+      `Teoria ${theory}`,
+      `Lab ${lab}`,
+    ];
+
+    if (personal > 0) {
+      bodyParts.push(`Sin curso ${personal}`);
+    }
+
+    if (overdue > 0) {
+      bodyParts.push(`Atrasadas ${overdue}`);
+    }
+
+    const summaryPayload = JSON.stringify({
+      title:
+        total === 1
+          ? "Kaoru · 1 tarea pendiente"
+          : `Kaoru · ${total} tareas pendientes`,
+      body: bodyParts.join(" · "),
+      tag: "kaoru-pending-summary",
+      url: appUrl,
+      summary: true,
+      renotify: false,
+      requireInteraction: true,
+      silent: true,
+      timestamp: nowMs,
+    });
+
+    const result = await sendPush(
+      admin,
+      userSubscriptions,
+      summaryPayload,
+      { TTL: 60 * 60, urgency: "normal" },
+    );
+
+    sent += result.successful;
+    summarySent += result.successful;
+
+    if (result.successful > 0) {
+      await admin
+        .from("kaoru_push_delivery_log")
+        .delete()
+        .eq("user_id", userId)
+        .eq("task_id", SUMMARY_TASK_ID);
+
+      await admin
+        .from("kaoru_push_delivery_log")
+        .insert({
+          user_id: userId,
+          task_id: SUMMARY_TASK_ID,
+          due_at: SUMMARY_DUE_AT,
+          alert_key: summaryKey,
+          status: "sent",
+          attempts: 1,
+          delivered_at: new Date().toISOString(),
+          last_error: result.errors.length
+            ? result.errors.join(" | ").slice(0, 1500)
+            : null,
+        });
+    } else {
+      failed++;
+    }
+  }
+
   return json({
     ok: true,
     sent,
+    summarySent,
     skipped,
     failed,
     users: enabledUsers.length,
