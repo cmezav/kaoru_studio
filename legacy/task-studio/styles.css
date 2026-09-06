@@ -1681,3 +1681,27 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU FONT SIZE INPUT V1 END === */
+
+/* === KAORU FONT SIZE APPLY V2 START === */
+
+.kaoru-font-size-apply{
+  width:34px;
+  height:34px;
+  padding:0;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font-weight:800;
+  cursor:pointer;
+}
+
+@media(max-width:900px){
+  .kaoru-font-size-apply{
+    width:38px;
+    height:38px;
+    font-size:16px;
+  }
+}
+
+/* === KAORU FONT SIZE APPLY V2 END === */

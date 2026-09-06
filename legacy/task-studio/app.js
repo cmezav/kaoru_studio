@@ -23,7 +23,7 @@ const els={
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
   detailPane:$('detailPane'),detailEmpty:$('detailEmpty'),taskDetail:$('taskDetail'),closeDetailBtn:$('closeDetailBtn'),detailCompleteBtn:$('detailCompleteBtn'),detailCourseDot:$('detailCourseDot'),detailCourse:$('detailCourse'),detailKind:$('detailKind'),detailTitle:$('detailTitle'),detailProfessor:$('detailProfessor'),detailDue:$('detailDue'),restoreTaskBtn:$('restoreTaskBtn'),editTaskBtn:$('editTaskBtn'),deleteTaskBtn:$('deleteTaskBtn'),
   addLinkBtn:$('addLinkBtn'),addFileBtn:$('addFileBtn'),taskFileInput:$('taskFileInput'),taskDocs:$('taskDocs'),linkForm:$('linkForm'),linkLabel:$('linkLabel'),linkUrl:$('linkUrl'),cancelLinkBtn:$('cancelLinkBtn'),
-  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSizeInput:$('fontSizeInput'),fontPickerBtn:$('fontPickerBtn'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
+  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSizeInput:$('fontSizeInput'),fontSizeApplyBtn:$('fontSizeApplyBtn'),fontPickerBtn:$('fontPickerBtn'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
   settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
@@ -2464,6 +2464,97 @@ kaoruBuildFontMenu();
 /* === KAORU NOTE FONT WORDLIKE V4 END === */
 /* === KAORU NOTE SIZE WORDLIKE V1 START === */
 
+let kaoruSizeRange=null;
+let kaoruSizeEditor=null;
+
+function kaoruCaptureSizeRange(){
+  const editor=state.activeEditor;
+  if(!editor)return;
+
+  const sel=window.getSelection();
+
+  if(
+    sel&&
+    sel.rangeCount&&
+    kaoruRangeBelongsToEditor(
+      sel.getRangeAt(0),
+      editor
+    )
+  ){
+    kaoruSizeRange=
+      sel.getRangeAt(0).cloneRange();
+
+    kaoruSizeEditor=editor;
+
+    state.savedRange=
+      kaoruSizeRange.cloneRange();
+
+    return;
+  }
+
+  if(
+    state.savedRange&&
+    kaoruRangeBelongsToEditor(
+      state.savedRange,
+      editor
+    )
+  ){
+    kaoruSizeRange=
+      state.savedRange.cloneRange();
+
+    kaoruSizeEditor=editor;
+  }
+}
+
+function kaoruRestoreSizeRange(editor){
+  let range=null;
+
+  if(
+    kaoruSizeEditor===editor&&
+    kaoruSizeRange&&
+    kaoruRangeBelongsToEditor(
+      kaoruSizeRange,
+      editor
+    )
+  ){
+    range=kaoruSizeRange.cloneRange();
+  }else if(
+    state.savedRange&&
+    kaoruRangeBelongsToEditor(
+      state.savedRange,
+      editor
+    )
+  ){
+    range=state.savedRange.cloneRange();
+  }
+
+  if(!range){
+    range=document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+
+  try{
+    editor.focus({preventScroll:true});
+  }catch(_){
+    editor.focus();
+  }
+
+  const sel=window.getSelection();
+
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  state.savedRange=
+    range.cloneRange();
+
+  kaoruFontRange=
+    range.cloneRange();
+
+  kaoruFontEditor=editor;
+
+  return range;
+}
 function kaoruClampFontSize(value){
   const parsed=Number(value);
 
@@ -2503,6 +2594,18 @@ function kaoruDetectedSizeAtRange(
 }
 
 function kaoruUpdateSizeIndicator(){
+  /*
+    While the manual field has focus, selectionchange can fire on
+    every digit on mobile. Never overwrite the value the user is
+    currently typing.
+  */
+  if(
+    document.activeElement===els.fontSizeInput||
+    document.activeElement===els.fontSizeSelect
+  ){
+    return;
+  }
+
   const editor=state.activeEditor;
 
   if(
@@ -2654,7 +2757,7 @@ function kaoruApplySizeToSelection(
   editor,
   px
 ){
-  const range=kaoruRestoreFontRange(editor);
+  const range=kaoruRestoreSizeRange(editor);
   if(!range)return false;
 
   kaoruApplyMarkerSizeForRange(
@@ -2913,11 +3016,30 @@ for(const control of[
   els.fontSizeSelect,
   els.fontSizeInput
 ]){
-  control?.addEventListener(
+  if(!control)continue;
+
+  for(const eventName of[
     'pointerdown',
-    ()=>{
-      kaoruBeginFontToolbarInteraction();
-    }
+    'touchstart'
+  ]){
+    control.addEventListener(
+      eventName,
+      ()=>{
+        kaoruFontToolbarBusyUntil=
+          Date.now()+10000;
+
+        kaoruCaptureSizeRange();
+      },
+      eventName==='touchstart'
+        ?{passive:true}
+        :undefined
+    );
+  }
+}
+
+function kaoruApplyManualSize(){
+  return kaoruApplySelectedSize(
+    els.fontSizeInput.value
   );
 }
 
@@ -2941,14 +3063,10 @@ els.fontSizeSelect?.addEventListener(
 );
 
 els.fontSizeInput?.addEventListener(
-  'change',
+  'focus',
   ()=>{
-    kaoruApplySelectedSize(
-      els.fontSizeInput.value
-    ).catch(err=>console.warn(
-      'Kaoru tamano manual',
-      err
-    ));
+    kaoruFontToolbarBusyUntil=
+      Date.now()+10000;
   }
 );
 
@@ -2959,12 +3077,49 @@ els.fontSizeInput?.addEventListener(
 
     event.preventDefault();
 
-    kaoruApplySelectedSize(
-      els.fontSizeInput.value
-    ).catch(err=>console.warn(
-      'Kaoru tamano manual',
-      err
-    ));
+    kaoruApplyManualSize()
+      .catch(err=>console.warn(
+        'Kaoru tamano manual',
+        err
+      ));
+  }
+);
+
+els.fontSizeInput?.addEventListener(
+  'change',
+  ()=>{
+    /*
+      Also apply when the user finishes the field with the mobile
+      keyboard's Done action or taps outside.
+    */
+    kaoruApplyManualSize()
+      .catch(err=>console.warn(
+        'Kaoru tamano manual',
+        err
+      ));
+  }
+);
+
+els.fontSizeApplyBtn?.addEventListener(
+  'pointerdown',
+  event=>{
+    /*
+      Do not let the button replace the saved note range.
+    */
+    event.preventDefault();
+    kaoruFontToolbarBusyUntil=
+      Date.now()+10000;
+  }
+);
+
+els.fontSizeApplyBtn?.addEventListener(
+  'click',
+  ()=>{
+    kaoruApplyManualSize()
+      .catch(err=>console.warn(
+        'Kaoru tamano manual',
+        err
+      ));
   }
 );
 
