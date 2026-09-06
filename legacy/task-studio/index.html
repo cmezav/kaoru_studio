@@ -302,7 +302,7 @@
     <header class="modal-head"><div><span class="mini-kicker">TAREA</span><h2 id="taskModalTitle">Nueva tarea</h2></div><button class="modal-close" data-close="taskModal" type="button">×</button></header>
     <form id="taskForm" class="form-grid">
       <label class="field full"><span>Nombre de la tarea</span><input id="taskTitleInput" type="text" required maxlength="180" placeholder="Ej. Terminar informe del laboratorio"></label>
-      <label class="field"><span>Curso</span><select id="taskCourseSelect" required></select></label>
+      <label class="field"><span>Curso</span><select id="taskCourseSelect"></select><small>Opcional. Elige “Sin curso” para una tarea personal.</small></label>
       <label class="field"><span>Tipo</span><select id="taskKindSelect"><option value="theory">Teoría</option><option value="lab">Laboratorio</option></select></label>
       <label class="field full"><span>Fecha y hora de entrega</span><input id="taskDueInput" type="datetime-local"></label>
       <div class="teacher-preview full">Docente de esta tarea: <strong id="taskTeacherPreview">—</strong></div>
@@ -360,6 +360,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=kaoru-web-push-1"></script>
 <script src="./task-push.js?cache=kaoru-web-push-1"></script>
-<script src="./app.js?cache=kaoru-web-push-1"></script>
+<script src="./app.js?cache=task-personal-step21c-2"></script>
 </body>
 </html>

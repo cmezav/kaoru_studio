@@ -116,14 +116,55 @@ async function setSetting(key,value){return dbPut(SETTINGS_STORE,{key,value,upda
 
 function courseById(id){return state.courses.find(c=>c.id===id)||null;}
 function taskById(id){return state.tasks.find(t=>t.id===id)||null;}
-function kindName(kind){return kind==='lab'?'Laboratorio':'Teoría';}
+function kindName(kind){return kind==='lab'?'Laboratorio':kind==='theory'?'Teoría':'';}
 function taskContext(task){
   const course=courseById(task.courseId);
+
   if(course){
-    const professor=task.kind==='lab'?(course.labProfessor||course.theoryProfessor):(course.theoryProfessor||'');
-    return{course,courseName:course.name,color:course.color||'#7C3AED',professor:professor||'Sin profesor registrado',kind:task.kind};
+    const professor=task.kind==='lab'
+      ?(course.labProfessor||course.theoryProfessor)
+      :(course.theoryProfessor||'');
+
+    return{
+      course,
+      courseName:course.name,
+      color:course.color||'#7C3AED',
+      professor:professor||'Sin profesor registrado',
+      kind:task.kind,
+      personal:false,
+      deletedCourse:false
+    };
   }
-  return{course:null,courseName:task.courseNameSnapshot||'Curso eliminado',color:task.courseColorSnapshot||'#8B8490',professor:task.professorSnapshot||'Sin profesor registrado',kind:task.kind||'theory'};
+
+  const intentionalPersonal=
+    task.personal===true||
+    (
+      !task.courseId&&
+      !String(task.courseNameSnapshot||'').trim()&&
+      !String(task.professorSnapshot||'').trim()
+    );
+
+  if(intentionalPersonal){
+    return{
+      course:null,
+      courseName:'',
+      color:'#8B8490',
+      professor:'',
+      kind:'personal',
+      personal:true,
+      deletedCourse:false
+    };
+  }
+
+  return{
+    course:null,
+    courseName:task.courseNameSnapshot||'Curso eliminado',
+    color:task.courseColorSnapshot||'#8B8490',
+    professor:task.professorSnapshot||'Sin profesor registrado',
+    kind:task.kind||'theory',
+    personal:false,
+    deletedCourse:true
+  };
 }
 function localDateTimeValue(value){
   if(!value)return'';const d=new Date(value);if(Number.isNaN(d.getTime()))return'';
@@ -241,8 +282,13 @@ function renderTaskList(){
   const list=filteredTasks();els.taskList.innerHTML='';els.taskEmpty.classList.toggle('hidden',list.length>0);
   if(state.courseFilter==='completed'){els.listTitle.textContent='Completadas';els.listSubtitle.textContent='Tus tareas terminadas más recientes.';}else if(state.quickFilter==='overdue'){els.listTitle.textContent='Atrasadas';els.listSubtitle.textContent='Primero lo que ya pasó de plazo.';}else if(state.quickFilter==='today'){els.listTitle.textContent='Para hoy';els.listSubtitle.textContent='Todo lo que vence durante el día.';}else if(state.quickFilter==='week'){els.listTitle.textContent='Próximos 7 días';els.listSubtitle.textContent='Tus entregas de esta semana.';}else{els.listTitle.textContent='Pendientes';els.listSubtitle.textContent='Lo más urgente aparece primero.';}
   list.forEach(task=>{const ctx=taskContext(task),card=document.createElement('article');card.className='task-card'+(task.id===state.selectedTaskId?' active':'')+(task.completed?' completed':'');card.style.setProperty('--course-color',ctx.color);
-    card.innerHTML=`<button class="task-check" type="button" aria-label="${task.completed?'Marcar pendiente':'Completar tarea'}"></button><div class="task-card-top"><span class="task-course-name">${esc(ctx.courseName)}</span><span class="task-kind">${kindName(task.kind)}</span></div><strong class="task-card-title">${esc(task.title)}</strong><div class="task-card-bottom"><span class="task-professor">${esc(ctx.professor)}</span><span class="task-due ${dueClass(task)}">${esc(relativeDue(task))}</span></div>`;
-    card.querySelector('.task-check').addEventListener('click',async e=>{e.stopPropagation();await toggleComplete(task.id);});card.addEventListener('click',()=>selectTask(task.id));els.taskList.appendChild(card);
+    const metaTop=ctx.personal
+      ?''
+      :`<div class="task-card-top"><span class="task-course-name">${esc(ctx.courseName)}</span><span class="task-kind">${kindName(task.kind)}</span></div>`;
+    const professor=ctx.personal
+      ?''
+      :`<span class="task-professor">${esc(ctx.professor)}</span>`;
+    card.innerHTML=`<button class="task-check" type="button" aria-label="${task.completed?'Marcar pendiente':'Completar tarea'}"></button>${metaTop}<strong class="task-card-title">${esc(task.title)}</strong><div class="task-card-bottom">${professor}<span class="task-due ${dueClass(task)}">${esc(relativeDue(task))}</span></div>`;card.querySelector('.task-check').addEventListener('click',async e=>{e.stopPropagation();await toggleComplete(task.id);});card.addEventListener('click',()=>selectTask(task.id));els.taskList.appendChild(card);
   });
   updateCounts();renderCourseFilters();
 }
@@ -275,28 +321,160 @@ async function toggleComplete(id){
 
 function renderDetail(){
   const task=taskById(state.selectedTaskId);if(!task){els.detailEmpty.classList.remove('hidden');els.taskDetail.classList.add('hidden');return;}
-  const ctx=taskContext(task);els.detailEmpty.classList.add('hidden');els.taskDetail.classList.remove('hidden');els.detailCourse.textContent=ctx.courseName;els.detailCourseDot.style.background=ctx.color;els.detailKind.textContent=kindName(task.kind);els.detailTitle.textContent=task.title;els.detailProfessor.textContent=ctx.professor;els.detailDue.textContent=`${task.completed?'Completada · ':'Entrega · '}${formatDue(task.dueAt)}`;els.detailDue.className='due-line '+dueClass(task);els.detailCompleteBtn.classList.toggle('done',!!task.completed);els.detailCompleteBtn.style.setProperty('--course-color',ctx.color);els.detailCompleteBtn.title=task.completed?'Volver a Pendientes':'Marcar como completada';els.detailCompleteBtn.setAttribute('aria-label',task.completed?'Volver a Pendientes':'Marcar como completada');els.restoreTaskBtn.classList.toggle('hidden',!task.completed);renderDocs(task);renderNoteThread(task);
-}
+  const ctx=taskContext(task);
+  els.detailEmpty.classList.add('hidden');
+  els.taskDetail.classList.remove('hidden');
+
+  els.detailCourse.textContent=ctx.courseName;
+  els.detailCourseDot.style.background=ctx.color;
+  els.detailKind.textContent=kindName(task.kind);
+  els.detailTitle.textContent=task.title;
+  els.detailProfessor.textContent=ctx.professor;
+
+  const detailMetaLine=els.detailCourse.closest('.detail-meta-line');
+  const professorLine=els.detailProfessor.closest('.professor-line');
+
+  if(detailMetaLine)detailMetaLine.classList.toggle('hidden',ctx.personal);
+  if(professorLine)professorLine.classList.toggle('hidden',ctx.personal);
+
+  els.detailDue.textContent=`${task.completed?'Completada · ':'Entrega · '}${formatDue(task.dueAt)}`;
+  els.detailDue.className='due-line '+dueClass(task);
+  els.detailCompleteBtn.classList.toggle('done',!!task.completed);
+  els.detailCompleteBtn.style.setProperty('--course-color',ctx.color);
+  els.detailCompleteBtn.title=task.completed?'Volver a Pendientes':'Marcar como completada';
+  els.detailCompleteBtn.setAttribute('aria-label',task.completed?'Volver a Pendientes':'Marcar como completada');
+  els.restoreTaskBtn.classList.toggle('hidden',!task.completed);
+
+  renderDocs(task);
+  renderNoteThread(task);}
 els.detailCompleteBtn.addEventListener('click',()=>state.selectedTaskId&&toggleComplete(state.selectedTaskId));els.restoreTaskBtn.addEventListener('click',()=>state.selectedTaskId&&toggleComplete(state.selectedTaskId));
 
-function populateTaskCourseSelect(selectedId){
-  els.taskCourseSelect.innerHTML=state.courses.length?state.courses.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join(''):'<option value="">Primero agrega un curso</option>';
-  if(selectedId&&state.courses.some(c=>c.id===selectedId))els.taskCourseSelect.value=selectedId;updateTaskKindOptions();
+function populateTaskCourseSelect(selectedId,task=null){
+  const courseOptions=state.courses
+    .map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`)
+    .join('');
+
+  const deletedCourse=
+    task&&
+    !task.personal&&
+    !task.courseId&&
+    String(task.courseNameSnapshot||'').trim();
+
+  const deletedOption=deletedCourse
+    ?`<option value="__deleted__">Curso eliminado · ${esc(task.courseNameSnapshot)}</option>`
+    :'';
+
+  els.taskCourseSelect.innerHTML=
+    `<option value="">Sin curso</option>${deletedOption}${courseOptions}`;
+
+  if(selectedId&&state.courses.some(c=>c.id===selectedId)){
+    els.taskCourseSelect.value=selectedId;
+  }else if(deletedCourse){
+    els.taskCourseSelect.value='__deleted__';
+  }else{
+    els.taskCourseSelect.value='';
+  }
+
+  updateTaskKindOptions();
 }
+
 function updateTaskKindOptions(){
-  const course=courseById(els.taskCourseSelect.value);const current=els.taskKindSelect.value;els.taskKindSelect.innerHTML='<option value="theory">Teoría</option>'+(course&&course.hasLab?'<option value="lab">Laboratorio</option>':'');els.taskKindSelect.value=(current==='lab'&&course&&course.hasLab)?'lab':'theory';updateTeacherPreview();
+  const selected=els.taskCourseSelect.value;
+  const course=courseById(selected);
+  const currentTask=state.editingTaskId?taskById(state.editingTaskId):null;
+  const current=els.taskKindSelect.value;
+  const kindField=els.taskKindSelect.closest('.field');
+  const teacherField=els.taskTeacherPreview.closest('.teacher-preview');
+
+  if(selected==='__deleted__'){
+    if(kindField)kindField.hidden=false;
+    if(teacherField)teacherField.hidden=false;
+
+    els.taskKindSelect.innerHTML=
+      '<option value="theory">Teoría</option><option value="lab">Laboratorio</option>';
+
+    els.taskKindSelect.value=
+      currentTask?.kind==='lab'?'lab':'theory';
+
+    updateTeacherPreview();
+    return;
+  }
+
+  if(!course){
+    els.taskKindSelect.innerHTML='<option value="personal">Sin tipo</option>';
+    els.taskKindSelect.value='personal';
+
+    if(kindField)kindField.hidden=true;
+    if(teacherField)teacherField.hidden=true;
+
+    updateTeacherPreview();
+    return;
+  }
+
+  if(kindField)kindField.hidden=false;
+  if(teacherField)teacherField.hidden=false;
+
+  els.taskKindSelect.innerHTML=
+    '<option value="theory">Teoría</option>'+
+    (course.hasLab?'<option value="lab">Laboratorio</option>':'');
+
+  els.taskKindSelect.value=
+    (current==='lab'&&course.hasLab)?'lab':'theory';
+
+  updateTeacherPreview();
 }
-function updateTeacherPreview(){const course=courseById(els.taskCourseSelect.value);if(!course){els.taskTeacherPreview.textContent='—';return;}els.taskTeacherPreview.textContent=els.taskKindSelect.value==='lab'?(course.labProfessor||course.theoryProfessor||'Sin profesor registrado'):(course.theoryProfessor||'Sin profesor registrado');}
+
+function updateTeacherPreview(){
+  const selected=els.taskCourseSelect.value;
+  const course=courseById(selected);
+
+  if(selected==='__deleted__'){
+    const task=state.editingTaskId?taskById(state.editingTaskId):null;
+    els.taskTeacherPreview.textContent=
+      task?.professorSnapshot||'Sin profesor registrado';
+    return;
+  }
+
+  if(!course){
+    els.taskTeacherPreview.textContent='—';
+    return;
+  }
+
+  els.taskTeacherPreview.textContent=
+    els.taskKindSelect.value==='lab'
+      ?(course.labProfessor||course.theoryProfessor||'Sin profesor registrado')
+      :(course.theoryProfessor||'Sin profesor registrado');
+}
 function openTaskModal(task=null){
-  if(!state.courses.length){openSettings(true);return;}
   state.editingTaskId=task?task.id:null;
   els.taskModalTitle.textContent=task?'Editar tarea':'Nueva tarea';
-  const preferredCourse=task?.courseId||((state.courseFilter!=='all'&&state.courseFilter!=='completed')?state.courseFilter:null);
-  populateTaskCourseSelect(preferredCourse);
+
+  const preferredCourse=
+    task?.courseId||
+    ((state.courseFilter!=='all'&&state.courseFilter!=='completed')
+      ?state.courseFilter
+      :null);
+
+  populateTaskCourseSelect(preferredCourse,task);
+
   els.taskTitleInput.value=task?.title||'';
-  els.taskKindSelect.value=task?.kind||'theory';
-  updateTaskKindOptions();
-  if(task?.kind==='lab'&&courseById(els.taskCourseSelect.value)?.hasLab)els.taskKindSelect.value='lab';
+
+  if(els.taskCourseSelect.value==='__deleted__'){
+    els.taskKindSelect.value=task?.kind==='lab'?'lab':'theory';
+  }else if(courseById(els.taskCourseSelect.value)){
+    els.taskKindSelect.value=task?.kind||'theory';
+    updateTaskKindOptions();
+
+    if(
+      task?.kind==='lab'&&
+      courseById(els.taskCourseSelect.value)?.hasLab
+    ){
+      els.taskKindSelect.value='lab';
+    }
+  }else{
+    els.taskKindSelect.value='personal';
+  }
+
   els.taskDueInput.value=localDateTimeValue(task?.dueAt||'');
   updateTeacherPreview();
   showModal('taskModal');
@@ -305,12 +483,97 @@ function openTaskModal(task=null){
 
 els.newTaskBtn.addEventListener('click',()=>openTaskModal());els.editTaskBtn.addEventListener('click',()=>{const t=taskById(state.selectedTaskId);if(t)openTaskModal(t);});els.taskCourseSelect.addEventListener('change',updateTaskKindOptions);els.taskKindSelect.addEventListener('change',updateTeacherPreview);
 els.taskForm.addEventListener('submit',async e=>{
-  e.preventDefault();const title=els.taskTitleInput.value.trim(),course=courseById(els.taskCourseSelect.value);if(!title||!course)return;
-  const kind=els.taskKindSelect.value==='lab'&&course.hasLab?'lab':'theory';const professor=kind==='lab'?(course.labProfessor||course.theoryProfessor):(course.theoryProfessor||'');const due=els.taskDueInput.value?new Date(els.taskDueInput.value).toISOString():null;
-  let task=state.editingTaskId?taskById(state.editingTaskId):null;
-  if(task){Object.assign(task,{title,courseId:course.id,courseNameSnapshot:course.name,courseColorSnapshot:course.color,professorSnapshot:professor||'',kind,dueAt:due,updatedAt:now()});}
-  else{task={id:uid('task'),title,courseId:course.id,courseNameSnapshot:course.name,courseColorSnapshot:course.color,professorSnapshot:professor||'',kind,dueAt:due,completed:false,createdAt:now(),updatedAt:now(),notes:[],docs:[]};state.tasks.push(task);}
-  await dbPut(TASK_STORE,task);hideModal('taskModal');state.selectedTaskId=task.id;renderTaskList();renderDetail();if(window.matchMedia('(max-width:900px)').matches)els.detailPane.classList.add('mobile-open');
+  e.preventDefault();
+
+  const title=els.taskTitleInput.value.trim();
+  if(!title)return;
+
+  const selected=els.taskCourseSelect.value;
+  const course=courseById(selected);
+  const deletedCourse=selected==='__deleted__';
+
+  const due=
+    els.taskDueInput.value
+      ?new Date(els.taskDueInput.value).toISOString()
+      :null;
+
+  let task=state.editingTaskId
+    ?taskById(state.editingTaskId)
+    :null;
+
+  let taskData;
+
+  if(deletedCourse&&task){
+    taskData={
+      title,
+      personal:false,
+      courseId:null,
+      courseNameSnapshot:task.courseNameSnapshot||'Curso eliminado',
+      courseColorSnapshot:task.courseColorSnapshot||'#8B8490',
+      professorSnapshot:task.professorSnapshot||'',
+      kind:els.taskKindSelect.value==='lab'?'lab':'theory',
+      dueAt:due,
+      updatedAt:now()
+    };
+  }else if(course){
+    const kind=
+      els.taskKindSelect.value==='lab'&&course.hasLab
+        ?'lab'
+        :'theory';
+
+    const professor=
+      kind==='lab'
+        ?(course.labProfessor||course.theoryProfessor)
+        :(course.theoryProfessor||'');
+
+    taskData={
+      title,
+      personal:false,
+      courseId:course.id,
+      courseNameSnapshot:course.name,
+      courseColorSnapshot:course.color,
+      professorSnapshot:professor||'',
+      kind,
+      dueAt:due,
+      updatedAt:now()
+    };
+  }else{
+    taskData={
+      title,
+      personal:true,
+      courseId:null,
+      courseNameSnapshot:'',
+      courseColorSnapshot:'',
+      professorSnapshot:'',
+      kind:'personal',
+      dueAt:due,
+      updatedAt:now()
+    };
+  }
+
+  if(task){
+    Object.assign(task,taskData);
+  }else{
+    task={
+      id:uid('task'),
+      ...taskData,
+      completed:false,
+      createdAt:now(),
+      notes:[],
+      docs:[]
+    };
+    state.tasks.push(task);
+  }
+
+  await dbPut(TASK_STORE,task);
+  hideModal('taskModal');
+  state.selectedTaskId=task.id;
+  renderTaskList();
+  renderDetail();
+
+  if(window.matchMedia('(max-width:900px)').matches){
+    els.detailPane.classList.add('mobile-open');
+  }
 });
 els.deleteTaskBtn.addEventListener('click',async()=>{
   const task=taskById(state.selectedTaskId);if(!task)return;if(!confirm(`¿Eliminar la tarea “${task.title}”? Esta acción no se puede deshacer.`))return;
@@ -345,7 +608,7 @@ function renderCourseSettings(){
 }
 async function deleteCourse(id){
   const c=courseById(id);if(!c)return;const related=state.tasks.filter(t=>t.courseId===id);const extra=related.length?`\n\n${related.length} tarea(s) conservarán el nombre del curso y docente como referencia, pero quedarán fuera de la configuración del curso.`:'';const notesExtra=(c.generalNotes||'').trim()?'\n\nTambién se eliminarán las notas generales guardadas de este curso.':'';if(!confirm(`¿Estás segura de eliminar el curso “${c.name}”?${extra}${notesExtra}`))return;
-  for(const t of related){const professor=t.kind==='lab'?(c.labProfessor||c.theoryProfessor):(c.theoryProfessor||'');t.courseNameSnapshot=c.name;t.courseColorSnapshot=c.color;t.professorSnapshot=professor||'';t.courseId=null;t.updatedAt=now();await dbPut(TASK_STORE,t);}await dbDelete(COURSE_STORE,id);state.courses=state.courses.filter(x=>x.id!==id);if(state.courseFilter===id)state.courseFilter='all';renderCourseSettings();renderTaskList();renderDetail();
+  for(const t of related){const professor=t.kind==='lab'?(c.labProfessor||c.theoryProfessor):(c.theoryProfessor||'');t.courseNameSnapshot=c.name;t.courseColorSnapshot=c.color;t.professorSnapshot=professor||'';t.courseId=null;t.personal=false;t.updatedAt=now();await dbPut(TASK_STORE,t);}await dbDelete(COURSE_STORE,id);state.courses=state.courses.filter(x=>x.id!==id);if(state.courseFilter===id)state.courseFilter='all';renderCourseSettings();renderTaskList();renderDetail();
 }
 
 function renderDocs(task){
