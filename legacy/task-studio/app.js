@@ -1759,7 +1759,12 @@ els.deleteScheduleBtn.addEventListener('click',async()=>{
 
 function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
 function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
-async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
+async function saveNotificationConfig(){
+  await setSetting('notificationConfig',state.notificationConfig);
+  syncNotificationUI();
+  window.KaoruTaskPush?.syncPreferences?.(state.notificationConfig)
+    .catch(err=>console.warn('Kaoru Push preferences',err));
+}
 async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=34');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
   if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
@@ -1780,7 +1785,32 @@ async function testSystemNotification(){
   );
 }
 async function requestNotifications(){
-  if(!('Notification'in window)){alert('Este navegador no permite notificaciones web.');return;}const permission=await Notification.requestPermission();state.notificationConfig.enabled=permission==='granted';state.notificationConfig.lastSummaryAt=now();await saveNotificationConfig();if(permission==='granted')await showSystemNotification('Task Studio listo','Los recordatorios están activados. Te avisaré de tus tareas mientras Kaoru permanezca abierto.','task-studio-enabled');
+  if(!('Notification'in window)){
+    alert('Este navegador no permite notificaciones web.');
+    return;
+  }
+  const permission=await Notification.requestPermission();
+  state.notificationConfig.enabled=permission==='granted';
+  state.notificationConfig.lastSummaryAt=now();
+  await saveNotificationConfig();
+
+  if(permission==='granted'){
+    try{
+      await window.KaoruTaskPush?.subscribe?.();
+      await window.KaoruTaskPush?.syncPreferences?.(state.notificationConfig);
+    }catch(err){
+      console.warn('Kaoru Web Push',err);
+      if(els.notificationStatus){
+        els.notificationStatus.textContent=
+          'Avisos locales activos, pero el segundo plano no pudo activarse: '+(err?.message||err);
+      }
+    }
+    await showSystemNotification(
+      'Task Studio listo',
+      'Los recordatorios estan activados.',
+      'task-studio-enabled'
+    );
+  }
 }
 els.requestNotificationBtn.addEventListener('click',requestNotifications);els.testNotificationBtn?.addEventListener('click',testSystemNotification);els.notificationBtn.addEventListener('click',()=>{openSettings(false);setTimeout(()=>document.querySelector('.notification-settings')?.scrollIntoView({behavior:'smooth',block:'start'}),80);});els.summaryIntervalSelect.addEventListener('change',async()=>{state.notificationConfig.intervalHours=Number(els.summaryIntervalSelect.value)||3;await saveNotificationConfig();});document.querySelectorAll('[data-threshold]').forEach(cb=>cb.addEventListener('change',async()=>{state.notificationConfig.thresholds=[...document.querySelectorAll('[data-threshold]:checked')].map(x=>Number(x.dataset.threshold)).sort((a,b)=>b-a);await saveNotificationConfig();}));
 function readNotificationLog(){try{return JSON.parse(localStorage.getItem('kaoru-task-notification-log')||'{}')||{};}catch(_){return{};}}
@@ -2030,6 +2060,7 @@ function installNavigationShortcuts(){document.addEventListener('keydown',e=>{if
 async function init(){
   try{
     state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await migrateLegacyNoteImages();await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();
+    await window.KaoruTaskPush?.restore?.(state.notificationConfig).catch(err=>console.warn('Kaoru Push restore',err));
     if(EMBEDDED)window.parent.postMessage({type:'kaoru:studio-ready',studio:'tasks',theme:document.documentElement.dataset.theme||'day'},'*');
     ensureServiceWorker();checkNotifications();setInterval(checkNotifications,15000);
   }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para más detalles.');}

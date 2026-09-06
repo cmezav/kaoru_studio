@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-40';
+const CACHE_NAME = 'kaoru-archive-reader-shell-41';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
@@ -14,6 +14,7 @@ const CORE = [
   './legacy/task-studio/styles.css',
   './legacy/task-studio/app.js',
   './legacy/task-studio/task-cloud.js',
+  './legacy/task-studio/task-push.js',
   './legacy/reader/index.html',
   './legacy/reader/reader.css',
   './legacy/reader/reader.js',
@@ -228,18 +229,35 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(networkFirst(event.request));
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick',event=>{
   event.notification.close();
-  const target = new URL('./#tasks', self.registration.scope).href;
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
-      for (const client of windows) {
-        if ('navigate' in client) {
-          try { await client.navigate(target); } catch (_) {}
-        }
-        if ('focus' in client) return client.focus();
-      }
-      if (clients.openWindow) return clients.openWindow(target);
-    })
-  );
+  const target=event.notification?.data?.url||new URL('./#tasks',self.registration.scope).href;
+  event.waitUntil((async()=>{
+    const windows=await clients.matchAll({type:'window',includeUncontrolled:true});
+    for(const client of windows){
+      try{if('navigate'in client)await client.navigate(target);}catch(_){}
+      if('focus'in client)return client.focus();
+    }
+    return clients.openWindow?clients.openWindow(target):null;
+  })());
+});
+
+self.addEventListener('push',event=>{
+  let payload={};
+  try{payload=event.data?.json?.()||{};}catch(_){
+    try{payload={body:event.data?.text?.()||''};}catch(__){}
+  }
+  const title=payload.title||'Kaoru Task Studio';
+  const options={
+    body:payload.body||'Tienes una tarea pendiente.',
+    icon:new URL('./logo.png',self.registration.scope).href,
+    badge:new URL('./logo.png',self.registration.scope).href,
+    tag:payload.tag||'kaoru-task-push',
+    renotify:false,
+    data:{
+      ...payload,
+      url:payload.url||new URL('./#tasks',self.registration.scope).href
+    }
+  };
+  event.waitUntil(self.registration.showNotification(title,options));
 });

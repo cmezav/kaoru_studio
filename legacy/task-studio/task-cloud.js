@@ -618,6 +618,7 @@ async function startRealtime(){
 }
 async function activateSession(nextSession){
   session=nextSession||null;
+  window.dispatchEvent(new CustomEvent('kaoru:task-cloud-session',{detail:{user:session?.user||null}}));
 
   if(!session){
     await stopRealtime();
@@ -812,11 +813,15 @@ async function signUp(email,password){
 }
 async function signOut(){
   if(!client)return;
+  try{await window.KaoruTaskPush?.unsubscribe?.();}catch(err){console.warn('Kaoru Push signout',err);}
   const {error}=await client.auth.signOut();
   if(error)throw error;
   await activateSession(null);
 }
 function currentUser(){return session?.user||null;}
+function getClient(){return client;}
+function getSession(){return session;}
+function getConfig(){return{url:SUPABASE_URL,key:SUPABASE_KEY};}
 function available(){return Boolean(client);}
 async function init(nextAdapter){
   adapter=nextAdapter||{};
@@ -916,6 +921,9 @@ window.KaoruTaskCloud={
   init,
   available,
   currentUser,
+  getClient,
+  getSession,
+  getConfig,
   recentConflicts,
   queueUpsert,
   queueDelete,
