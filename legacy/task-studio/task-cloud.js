@@ -34,6 +34,17 @@ function deviceId(){
 }
 const DEVICE_ID=deviceId();
 
+function assertOwnedStoragePath(path){
+  const userId=session?.user?.id||'';
+  if(!userId)throw new Error('Kaoru Storage requiere una sesion activa.');
+  const clean=String(path||'').replace(/^\/+/, '');
+  const parts=clean.split('/').filter(Boolean);
+  if(!clean||parts[0]!==userId||parts.includes('..')){
+    throw new Error('Kaoru bloqueo un archivo que no pertenece a esta cuenta.');
+  }
+  return clean;
+}
+
 function clone(value){
   try{return structuredClone(value);}catch(_){
     return JSON.parse(JSON.stringify(value));
@@ -381,7 +392,7 @@ async function listLocal(type){
   return adapter?.listLocal?.(type)||[];
 }
 async function applyRemote(row){
-  if(!row||row.module!==MODULE)return false;
+  if(!row||row.module!==MODULE||row.user_id!==session?.user?.id)return false;
 
   const type=row.entity_type;
   const id=row.entity_id;
@@ -488,6 +499,7 @@ async function reconcile(){
   const {data,error}=await client
     .from(TABLE)
     .select('user_id,module,entity_type,entity_id,payload,client_updated_at,device_id,deleted,server_updated_at')
+    .eq('user_id',session.user.id)
     .eq('module',MODULE);
 
   if(error)throw error;
@@ -582,7 +594,7 @@ async function startRealtime(){
     .channel(`kaoru-task-${session.user.id}`)
     .on(
       'postgres_changes',
-      {event:'*',schema:'public',table:TABLE},
+      {event:'*',schema:'public',table:TABLE,filter:`user_id=eq.${session.user.id}`},
       async payload=>{
         const row=payload?.new&&Object.keys(payload.new).length?payload.new:payload?.old;
         if(!row||row.module!==MODULE||row.user_id!==session?.user?.id)return;
@@ -683,7 +695,7 @@ async function uploadNoteImage(taskId,noteId,imageId,fileRecord){
 
   const {data,error}=await client.storage
     .from(BUCKET)
-    .upload(path,blob,{
+    .upload(assertOwnedStoragePath(path),blob,{
       upsert:true,
       contentType:fileRecord?.type||blob.type||'image/png',
       cacheControl:'3600'
@@ -707,7 +719,7 @@ async function uploadScheduleFile(fileRecord){
   const path=scheduleFilePath(fileRecord);
   const {data,error}=await client.storage
     .from(BUCKET)
-    .upload(path,blob,{
+    .upload(assertOwnedStoragePath(path),blob,{
       upsert:false,
       contentType:fileRecord?.type||blob.type||'application/octet-stream',
       cacheControl:'3600'
@@ -730,7 +742,7 @@ async function uploadTaskFile(taskId,fileId,fileRecord){
   const path=taskFilePath(taskId,fileId,fileRecord?.name||fileId);
   const {data,error}=await client.storage
     .from(BUCKET)
-    .upload(path,blob,{
+    .upload(assertOwnedStoragePath(path),blob,{
       upsert:true,
       contentType:fileRecord?.type||blob.type||'application/octet-stream',
       cacheControl:'3600'
@@ -747,7 +759,7 @@ async function downloadTaskFile(path){
   if(!client||!session)throw new Error('Inicia sesión para descargar este archivo.');
   if(!navigator.onLine)throw new Error('Este archivo todavía no está guardado en este dispositivo y no hay conexión.');
   if(!path)throw new Error('Este archivo todavía no tiene una copia en Kaoru Cloud.');
-  const {data,error}=await client.storage.from(BUCKET).download(path);
+  const {data,error}=await client.storage.from(BUCKET).download(assertOwnedStoragePath(path));
   if(error)throw error;
   return data;
 }
@@ -771,7 +783,7 @@ async function flushStorageDeletes(){
   const pending=fileDeleteQueueForCurrentUser();
   if(!pending.length)return;
   for(const item of pending){
-    const {error}=await client.storage.from(BUCKET).remove([item.path]);
+    const {error}=await client.storage.from(BUCKET).remove([assertOwnedStoragePath(item.path)]);
     if(error)throw error;
     fileDeleteQueueWrite(
       fileDeleteQueueRead().filter(current=>current.path!==item.path)

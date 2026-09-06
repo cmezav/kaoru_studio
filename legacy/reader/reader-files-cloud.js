@@ -33,6 +33,17 @@ function client(){
   return account()?.getClient?.()||null;
 }
 
+function assertOwnedStoragePath(path){
+  const user=currentUser();
+  if(!user?.id)throw new Error('Kaoru Storage requiere una sesion activa.');
+  const clean=String(path||'').replace(/^\/+/, '');
+  const parts=clean.split('/').filter(Boolean);
+  if(!clean||parts[0]!==user.id||parts.includes('..')){
+    throw new Error('Kaoru bloqueo un archivo que no pertenece a esta cuenta.');
+  }
+  return clean;
+}
+
 function showStatus(message){
   const target=document.getElementById('readerAccountStatus');
   if(target)target.textContent=message||'';
@@ -225,7 +236,7 @@ async function syncBook(book){
 
   const {error:uploadError}=await api.storage
     .from(BUCKET)
-    .upload(path,blob,{
+    .upload(assertOwnedStoragePath(path),blob,{
       upsert:true,
       contentType:source.mime,
       cacheControl:'3600'
@@ -264,6 +275,7 @@ async function performDelete(item){
   const {data:record,error:readError}=await api
     .from(TABLE)
     .select('entity_id,payload,client_updated_at,deleted')
+    .eq('user_id',user.id)
     .eq('module',MODULE)
     .eq('entity_type',ENTITY_TYPE)
     .eq('entity_id',id)
@@ -273,7 +285,7 @@ async function performDelete(item){
 
   const path=String(record?.payload?.storagePath||'');
   if(path){
-    const {error:removeError}=await api.storage.from(BUCKET).remove([path]);
+    const {error:removeError}=await api.storage.from(BUCKET).remove([assertOwnedStoragePath(path)]);
     if(removeError)throw removeError;
   }
 
@@ -353,7 +365,7 @@ async function downloadRemoteBook(row){
 
   showStatus(`Descargando ${payload.title||'libro'} de Kaoru Cloud...`);
 
-  const {data,error}=await api.storage.from(BUCKET).download(path);
+  const {data,error}=await api.storage.from(BUCKET).download(assertOwnedStoragePath(path));
   if(error)throw error;
 
   const bytes=await data.arrayBuffer();
@@ -436,6 +448,7 @@ async function reconcile(){
     const {data,error}=await api
       .from(TABLE)
       .select('user_id,module,entity_type,entity_id,payload,client_updated_at,device_id,deleted,server_updated_at')
+      .eq('user_id',user.id)
       .eq('module',MODULE)
       .eq('entity_type',ENTITY_TYPE);
 
@@ -523,7 +536,7 @@ async function startRealtime(){
     .channel(`kaoru-reader-books-${user.id}`)
     .on(
       'postgres_changes',
-      {event:'*',schema:'public',table:TABLE},
+      {event:'*',schema:'public',table:TABLE,filter:`user_id=eq.${user.id}`},
       async event=>{
         const row=event?.new&&Object.keys(event.new).length?event.new:event?.old;
         if(

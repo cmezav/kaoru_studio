@@ -224,6 +224,7 @@ async function reconcile(){
     const {data,error}=await api
       .from(TABLE)
       .select('user_id,module,entity_type,entity_id,payload,client_updated_at,device_id,deleted,server_updated_at')
+      .eq('user_id',user.id)
       .eq('module',MODULE)
       .eq('entity_type',ENTITY_TYPE);
 
@@ -280,7 +281,7 @@ async function startRealtime(){
     .channel(`kaoru-reader-progress-${user.id}-${deviceId()}`)
     .on(
       'postgres_changes',
-      {event:'*',schema:'public',table:TABLE},
+      {event:'*',schema:'public',table:TABLE,filter:`user_id=eq.${user.id}`},
       async payload=>{
         const row=payload?.new&&Object.keys(payload.new).length
           ?payload.new
