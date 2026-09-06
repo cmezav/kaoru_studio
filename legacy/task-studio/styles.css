@@ -684,3 +684,10 @@ body.notes-expanded .note-editor{
   .notes-head-actions{gap:5px}
   .note-expand{height:31px;padding:0 8px}
 }
+
+/* Kaoru notes header buttons size v1 */
+.notes-head-actions .note-expand,
+.notes-head-actions .note-add{
+  font-size:9.5px;
+  min-height:32px;
+}

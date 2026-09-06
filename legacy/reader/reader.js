@@ -389,14 +389,14 @@ async function renderLibrary() {
 
     remove.addEventListener('click', async () => {
       if (kaoruFiles?.isSignedIn?.()) {
-        if (!confirm(`Â¿Eliminar "${book.title}" de Kaoru Cloud y de todos tus dispositivos?`)) {
+        if (!confirm(`\u00BFEliminar "${book.title}" de Kaoru Cloud y de todos tus dispositivos?`)) {
           return;
         }
 
         const accountStatus = document.getElementById('readerAccountStatus');
 
         try {
-          if (accountStatus) accountStatus.textContent = 'Eliminando de todos los dispositivosâ€¦';
+          if (accountStatus) accountStatus.textContent = 'Eliminando de todos los dispositivos\u2026';
           await kaoruFiles.deleteEverywhere(book.id);
 
           const session = readSession();

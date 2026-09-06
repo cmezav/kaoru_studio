@@ -2007,7 +2007,7 @@ init();
     document.body.classList.toggle('notes-expanded',next);
     button.setAttribute('aria-pressed',String(next));
     button.setAttribute('title',next?'Cerrar vista ampliada':'Ampliar notas');
-    button.textContent=next?'Ã— Salir':'â¤¢ Ampliar';
+    button.textContent=next?'Salir':'Ampliar';
   }
 
   button.addEventListener('click',()=>{
