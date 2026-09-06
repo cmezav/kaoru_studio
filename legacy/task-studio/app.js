@@ -23,7 +23,7 @@ const els={
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
   detailPane:$('detailPane'),detailEmpty:$('detailEmpty'),taskDetail:$('taskDetail'),closeDetailBtn:$('closeDetailBtn'),detailCompleteBtn:$('detailCompleteBtn'),detailCourseDot:$('detailCourseDot'),detailCourse:$('detailCourse'),detailKind:$('detailKind'),detailTitle:$('detailTitle'),detailProfessor:$('detailProfessor'),detailDue:$('detailDue'),restoreTaskBtn:$('restoreTaskBtn'),editTaskBtn:$('editTaskBtn'),deleteTaskBtn:$('deleteTaskBtn'),
   addLinkBtn:$('addLinkBtn'),addFileBtn:$('addFileBtn'),taskFileInput:$('taskFileInput'),taskDocs:$('taskDocs'),linkForm:$('linkForm'),linkLabel:$('linkLabel'),linkUrl:$('linkUrl'),cancelLinkBtn:$('cancelLinkBtn'),
-  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
+  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontPickerBtn:$('fontPickerBtn'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
   settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
@@ -1338,11 +1338,14 @@ els.fontSizeSelect.addEventListener(
   ()=>execRich('fontSize',els.fontSizeSelect.value)
 );
 
-/* === KAORU NOTE FONT MOBILE V3 START === */
+/* === KAORU NOTE FONT WORDLIKE V4 START === */
 
 let kaoruFontRange=null;
 let kaoruFontEditor=null;
 let kaoruFontToolbarBusyUntil=0;
+let kaoruFontMenu=null;
+let kaoruTypingFontFamily='';
+let kaoruTypingEditor=null;
 
 function kaoruFontFormattingBusy(){
   return Date.now()<kaoruFontToolbarBusyUntil;
@@ -1354,7 +1357,7 @@ function kaoruBeginFontToolbarInteraction(){
 }
 
 function kaoruEndFontToolbarInteraction(){
-  kaoruFontToolbarBusyUntil=Date.now()+700;
+  kaoruFontToolbarBusyUntil=Date.now()+500;
 }
 
 function kaoruRangeBelongsToEditor(range,editor){
@@ -1450,6 +1453,197 @@ function kaoruRestoreFontRange(editor){
   return target;
 }
 
+function kaoruNormalizeFontName(value){
+  return String(value||'')
+    .split(',')[0]
+    .replace(/["']/g,'')
+    .trim()
+    .toLowerCase();
+}
+
+function kaoruFontOptionForFamily(family){
+  const wanted=kaoruNormalizeFontName(family);
+
+  if(!wanted)return null;
+
+  return[
+    ...els.fontSelect.options
+  ].find(option=>{
+    if(!option.value)return false;
+
+    return kaoruNormalizeFontName(
+      option.value
+    )===wanted;
+  })||null;
+}
+
+function kaoruElementAtCaret(range,editor){
+  let node=range.startContainer;
+
+  if(node.nodeType===Node.TEXT_NODE){
+    return node.parentElement||editor;
+  }
+
+  if(node.nodeType!==Node.ELEMENT_NODE){
+    return editor;
+  }
+
+  if(
+    range.collapsed&&
+    range.startOffset>0&&
+    node.childNodes?.length
+  ){
+    let candidate=
+      node.childNodes[
+        Math.min(
+          range.startOffset-1,
+          node.childNodes.length-1
+        )
+      ];
+
+    while(
+      candidate&&
+      candidate.nodeType===Node.ELEMENT_NODE&&
+      candidate.lastChild
+    ){
+      candidate=candidate.lastChild;
+    }
+
+    if(candidate?.nodeType===Node.TEXT_NODE){
+      return candidate.parentElement||editor;
+    }
+
+    if(candidate?.nodeType===Node.ELEMENT_NODE){
+      return candidate;
+    }
+  }
+
+  if(
+    node!==editor&&
+    editor.contains(node)
+  ){
+    return node;
+  }
+
+  return editor;
+}
+
+function kaoruDetectedFontAtRange(range,editor){
+  if(!range||!editor)return null;
+
+  let commandValue='';
+
+  try{
+    commandValue=document.queryCommandValue(
+      'fontName'
+    )||'';
+  }catch(_){}
+
+  let option=kaoruFontOptionForFamily(
+    commandValue
+  );
+
+  if(option)return option;
+
+  const element=kaoruElementAtCaret(
+    range,
+    editor
+  );
+
+  if(element){
+    const computed=getComputedStyle(
+      element
+    ).fontFamily;
+
+    option=kaoruFontOptionForFamily(
+      computed
+    );
+
+    if(option)return option;
+
+    let current=element;
+
+    while(
+      current&&
+      current!==editor
+    ){
+      const inline=
+        current.style?.fontFamily||
+        current.getAttribute?.('face')||
+        '';
+
+      option=kaoruFontOptionForFamily(
+        inline
+      );
+
+      if(option)return option;
+
+      current=current.parentElement;
+    }
+  }
+
+  const editorComputed=
+    getComputedStyle(editor).fontFamily;
+
+  return kaoruFontOptionForFamily(
+    editorComputed
+  );
+}
+
+function kaoruUpdateFontIndicator(){
+  const editor=state.activeEditor;
+  if(!editor||!els.fontPickerBtn)return;
+
+  const sel=window.getSelection();
+
+  if(
+    !sel||
+    !sel.rangeCount||
+    !kaoruRangeBelongsToEditor(
+      sel.getRangeAt(0),
+      editor
+    )
+  ){
+    return;
+  }
+
+  const range=sel.getRangeAt(0);
+
+  const option=kaoruDetectedFontAtRange(
+    range,
+    editor
+  );
+
+  if(option){
+    els.fontSelect.value=option.value;
+    els.fontPickerBtn.textContent=
+      option.textContent||'Tipografia';
+
+    els.fontPickerBtn.style.fontFamily=
+      option.value;
+
+    if(range.collapsed){
+      kaoruTypingFontFamily=
+        option.value;
+
+      kaoruTypingEditor=editor;
+    }
+  }else{
+    els.fontSelect.value='';
+    els.fontPickerBtn.textContent=
+      'Tipografia';
+
+    els.fontPickerBtn.style.removeProperty(
+      'font-family'
+    );
+
+    if(range.collapsed){
+      kaoruTypingFontFamily='';
+      kaoruTypingEditor=editor;
+    }
+  }
+}
+
 function kaoruStripFontOverrides(root){
   if(!root)return;
 
@@ -1472,79 +1666,49 @@ function kaoruStripFontOverrides(root){
   }
 }
 
-function kaoruWrapRangeWithFont(
-  range,
-  fontFamily
-){
-  const fragment=range.extractContents();
-  const span=document.createElement('span');
-
-  span.dataset.kaoruFont='1';
-  span.style.fontFamily=fontFamily;
-  span.appendChild(fragment);
-
-  kaoruStripFontOverrides(span);
-
-  range.insertNode(span);
-
-  const selected=document.createRange();
-  selected.selectNodeContents(span);
-
-  return selected;
-}
-
-function kaoruCreateTypingFontPoint(
-  range,
-  fontFamily
-){
-  const span=document.createElement('span');
-
-  span.dataset.kaoruFont='1';
-  span.dataset.kaoruFontCaret='1';
-  span.style.fontFamily=fontFamily;
-
-  const marker=document.createTextNode('\u200B');
-  span.appendChild(marker);
-
-  range.deleteContents();
-  range.insertNode(span);
-
-  const caret=document.createRange();
-  caret.setStart(
-    marker,
-    marker.data.length
-  );
-  caret.collapse(true);
-
-  return caret;
-}
-
-async function kaoruApplyFontToSelection(
+function kaoruApplyFontCommand(
   editor,
   fontFamily
 ){
   const range=kaoruRestoreFontRange(editor);
-  if(!range)return;
+  if(!range)return false;
 
-  const nextRange=range.collapsed
-    ?kaoruCreateTypingFontPoint(
-        range,
-        fontFamily
-      )
-    :kaoruWrapRangeWithFont(
-        range,
-        fontFamily
-      );
+  try{
+    document.execCommand(
+      'styleWithCSS',
+      false,
+      true
+    );
+  }catch(_){}
+
+  let applied=false;
+
+  try{
+    applied=document.execCommand(
+      'fontName',
+      false,
+      fontFamily
+    );
+  }catch(err){
+    console.warn(
+      'Kaoru fontName',
+      err
+    );
+  }
 
   const sel=window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(nextRange);
 
-  state.savedRange=nextRange.cloneRange();
-  kaoruFontRange=nextRange.cloneRange();
-  kaoruFontEditor=editor;
+  if(sel&&sel.rangeCount){
+    state.savedRange=
+      sel.getRangeAt(0).cloneRange();
 
-  saveActiveEditor();
+    kaoruFontRange=
+      state.savedRange.cloneRange();
+
+    kaoruFontEditor=editor;
+  }
+
+  return applied;
 }
 
 function kaoruApplyFontToWholeEditor(
@@ -1602,6 +1766,9 @@ async function kaoruApplyFontToCurrentNote(
   task.updatedAt=now();
 
   await dbPut(TASK_STORE,task);
+
+  kaoruTypingFontFamily=fontFamily;
+  kaoruTypingEditor=editor;
 }
 
 async function kaoruApplyFontToWholeThread(
@@ -1652,6 +1819,7 @@ async function kaoruApplySelectedFont(
 
     els.fontScopeSelect.value='selection';
     kaoruEndFontToolbarInteraction();
+    kaoruUpdateFontIndicator();
     return;
   }
 
@@ -1662,40 +1830,228 @@ async function kaoruApplySelectedFont(
 
     els.fontScopeSelect.value='selection';
     kaoruEndFontToolbarInteraction();
+    kaoruUpdateFontIndicator();
     return;
   }
 
   const editor=state.activeEditor;
   if(!editor)return;
 
-  await kaoruApplyFontToSelection(
+  const range=kaoruRestoreFontRange(
+    editor
+  );
+
+  if(!range)return;
+
+  const wasCollapsed=range.collapsed;
+
+  kaoruApplyFontCommand(
     editor,
     fontFamily
   );
 
+  kaoruTypingFontFamily=fontFamily;
+  kaoruTypingEditor=editor;
+
+  els.fontSelect.value=fontFamily;
+
+  const option=kaoruFontOptionForFamily(
+    fontFamily
+  );
+
+  els.fontPickerBtn.textContent=
+    option?.textContent||
+    'Tipografia';
+
+  els.fontPickerBtn.style.fontFamily=
+    fontFamily;
+
+  if(!wasCollapsed){
+    saveActiveEditor();
+  }
+
   kaoruEndFontToolbarInteraction();
 }
 
-for(const control of[
-  els.fontSelect,
-  els.fontScopeSelect
-]){
-  if(!control)continue;
+function kaoruCloseFontMenu(){
+  if(!kaoruFontMenu)return;
 
-  for(const eventName of[
-    'pointerdown',
-    'mousedown',
-    'touchstart'
+  kaoruFontMenu.classList.add('hidden');
+
+  els.fontPickerBtn?.setAttribute(
+    'aria-expanded',
+    'false'
+  );
+}
+
+function kaoruPositionFontMenu(){
+  if(
+    !kaoruFontMenu||
+    kaoruFontMenu.classList.contains(
+      'hidden'
+    )
+  )return;
+
+  const rect=
+    els.fontPickerBtn.getBoundingClientRect();
+
+  const width=Math.min(
+    300,
+    Math.max(
+      220,
+      window.innerWidth-16
+    )
+  );
+
+  let left=rect.left;
+
+  if(left+width>window.innerWidth-8){
+    left=window.innerWidth-width-8;
+  }
+
+  left=Math.max(8,left);
+
+  let top=rect.bottom+6;
+
+  const estimatedHeight=Math.min(
+    320,
+    kaoruFontMenu.scrollHeight||320
+  );
+
+  if(
+    top+estimatedHeight>
+    window.innerHeight-8
+  ){
+    top=Math.max(
+      8,
+      rect.top-estimatedHeight-6
+    );
+  }
+
+  kaoruFontMenu.style.left=
+    `${Math.round(left)}px`;
+
+  kaoruFontMenu.style.top=
+    `${Math.round(top)}px`;
+
+  kaoruFontMenu.style.width=
+    `${Math.round(width)}px`;
+}
+
+function kaoruBuildFontMenu(){
+  if(!kaoruFontMenu){
+    kaoruFontMenu=
+      document.createElement('div');
+
+    kaoruFontMenu.id=
+      'kaoruFontPickerMenu';
+
+    kaoruFontMenu.className=
+      'kaoru-font-picker-menu hidden';
+
+    kaoruFontMenu.setAttribute(
+      'role',
+      'listbox'
+    );
+
+    document.body.appendChild(
+      kaoruFontMenu
+    );
+  }
+
+  kaoruFontMenu.innerHTML='';
+
+  for(const option of[
+    ...els.fontSelect.options
   ]){
-    control.addEventListener(
-      eventName,
-      kaoruBeginFontToolbarInteraction,
-      eventName==='touchstart'
-        ?{passive:true}
-        :undefined
+    if(!option.value)continue;
+
+    const button=
+      document.createElement('button');
+
+    button.type='button';
+    button.className=
+      'kaoru-font-picker-option';
+
+    button.dataset.font=
+      option.value;
+
+    button.textContent=
+      option.textContent;
+
+    button.style.fontFamily=
+      option.value;
+
+    button.addEventListener(
+      'pointerdown',
+      event=>{
+        event.preventDefault();
+        event.stopPropagation();
+
+        const family=
+          button.dataset.font;
+
+        els.fontSelect.value=family;
+
+        kaoruApplySelectedFont(
+          family
+        ).catch(err=>console.warn(
+          'Kaoru cambio de tipografia',
+          err
+        ));
+
+        kaoruCloseFontMenu();
+      }
+    );
+
+    kaoruFontMenu.appendChild(
+      button
     );
   }
 }
+
+function kaoruToggleFontMenu(){
+  kaoruBuildFontMenu();
+
+  const willOpen=
+    kaoruFontMenu.classList.contains(
+      'hidden'
+    );
+
+  if(!willOpen){
+    kaoruCloseFontMenu();
+    return;
+  }
+
+  kaoruFontMenu.classList.remove(
+    'hidden'
+  );
+
+  els.fontPickerBtn.setAttribute(
+    'aria-expanded',
+    'true'
+  );
+
+  kaoruPositionFontMenu();
+}
+
+els.fontPickerBtn?.addEventListener(
+  'pointerdown',
+  event=>{
+    event.preventDefault();
+    event.stopPropagation();
+
+    kaoruBeginFontToolbarInteraction();
+    kaoruToggleFontMenu();
+  }
+);
+
+els.fontScopeSelect?.addEventListener(
+  'pointerdown',
+  ()=>{
+    kaoruBeginFontToolbarInteraction();
+  }
+);
 
 els.fontScopeSelect?.addEventListener(
   'change',
@@ -1705,26 +2061,260 @@ els.fontScopeSelect?.addEventListener(
   }
 );
 
-els.fontSelect.addEventListener(
-  'change',
-  ()=>{
-    const value=els.fontSelect.value;
-    if(!value)return;
+new MutationObserver(()=>{
+  kaoruBuildFontMenu();
+  kaoruUpdateFontIndicator();
+}).observe(
+  els.fontSelect,
+  {childList:true}
+);
 
-    kaoruFontToolbarBusyUntil=
-      Date.now()+5000;
-
-    setTimeout(()=>{
-      kaoruApplySelectedFont(value)
-        .catch(err=>console.warn(
-          'Kaoru cambio de tipografia',
-          err
-        ));
-    },80);
+document.addEventListener(
+  'pointerdown',
+  event=>{
+    if(
+      kaoruFontMenu&&
+      !kaoruFontMenu.classList.contains(
+        'hidden'
+      )&&
+      !kaoruFontMenu.contains(
+        event.target
+      )&&
+      event.target!==els.fontPickerBtn
+    ){
+      kaoruCloseFontMenu();
+    }
   }
 );
 
-/* === KAORU NOTE FONT MOBILE V3 END === */
+window.addEventListener(
+  'resize',
+  kaoruPositionFontMenu
+);
+
+window.addEventListener(
+  'scroll',
+  kaoruPositionFontMenu,
+  true
+);
+
+function kaoruInsertStyledText(
+  editor,
+  text,
+  fontFamily
+){
+  const sel=window.getSelection();
+
+  if(!sel||!sel.rangeCount)return false;
+
+  const range=sel.getRangeAt(0);
+
+  if(
+    !kaoruRangeBelongsToEditor(
+      range,
+      editor
+    )
+  )return false;
+
+  range.deleteContents();
+
+  let node=range.startContainer;
+  let offset=range.startOffset;
+
+  if(
+    node.nodeType===Node.TEXT_NODE&&
+    kaoruNormalizeFontName(
+      getComputedStyle(
+        node.parentElement
+      ).fontFamily
+    )===kaoruNormalizeFontName(
+      fontFamily
+    )
+  ){
+    node.insertData(
+      offset,
+      text
+    );
+
+    const next=document.createRange();
+    next.setStart(
+      node,
+      offset+text.length
+    );
+    next.collapse(true);
+
+    sel.removeAllRanges();
+    sel.addRange(next);
+
+    state.savedRange=
+      next.cloneRange();
+
+    kaoruFontRange=
+      next.cloneRange();
+
+    kaoruFontEditor=editor;
+
+    return true;
+  }
+
+  const span=document.createElement('span');
+  span.dataset.kaoruFont='1';
+  span.style.fontFamily=fontFamily;
+
+  const textNode=
+    document.createTextNode(text);
+
+  span.appendChild(textNode);
+  range.insertNode(span);
+
+  const next=document.createRange();
+  next.setStart(
+    textNode,
+    textNode.data.length
+  );
+  next.collapse(true);
+
+  sel.removeAllRanges();
+  sel.addRange(next);
+
+  state.savedRange=
+    next.cloneRange();
+
+  kaoruFontRange=
+    next.cloneRange();
+
+  kaoruFontEditor=editor;
+
+  return true;
+}
+
+els.noteThread.addEventListener(
+  'beforeinput',
+  event=>{
+    const editor=event.target?.closest?.(
+      '.note-editor'
+    );
+
+    if(
+      !editor||
+      editor!==kaoruTypingEditor||
+      !kaoruTypingFontFamily
+    )return;
+
+    if(
+      ![
+        'insertText',
+        'insertReplacementText'
+      ].includes(event.inputType)
+    )return;
+
+    if(
+      typeof event.data!=='string'||
+      !event.data
+    )return;
+
+    const sel=window.getSelection();
+
+    if(
+      !sel||
+      !sel.rangeCount||
+      !kaoruRangeBelongsToEditor(
+        sel.getRangeAt(0),
+        editor
+      )
+    )return;
+
+    event.preventDefault();
+
+    if(
+      !kaoruInsertStyledText(
+        editor,
+        event.data,
+        kaoruTypingFontFamily
+      )
+    )return;
+
+    let inputEvent;
+
+    try{
+      inputEvent=new InputEvent(
+        'input',
+        {
+          bubbles:true,
+          inputType:event.inputType,
+          data:event.data
+        }
+      );
+    }catch(_){
+      inputEvent=new Event(
+        'input',
+        {bubbles:true}
+      );
+    }
+
+    editor.dispatchEvent(
+      inputEvent
+    );
+  },
+  true
+);
+
+document.addEventListener(
+  'selectionchange',
+  ()=>{
+    const sel=window.getSelection();
+
+    if(!sel||!sel.rangeCount)return;
+
+    const range=sel.getRangeAt(0);
+    const node=range.startContainer;
+
+    const element=
+      node.nodeType===Node.ELEMENT_NODE
+        ?node
+        :node.parentElement;
+
+    const editor=
+      element?.closest?.(
+        '.note-editor'
+      );
+
+    if(!editor)return;
+
+    state.activeEditor=editor;
+    state.savedRange=
+      range.cloneRange();
+
+    kaoruFontRange=
+      range.cloneRange();
+
+    kaoruFontEditor=editor;
+
+    kaoruUpdateFontIndicator();
+  }
+);
+
+els.noteThread.addEventListener(
+  'focusin',
+  event=>{
+    const editor=event.target?.closest?.(
+      '.note-editor'
+    );
+
+    if(!editor)return;
+
+    state.activeEditor=editor;
+
+    setTimeout(
+      kaoruUpdateFontIndicator,
+      0
+    );
+  }
+);
+
+kaoruBuildFontMenu();
+
+/* === KAORU NOTE FONT WORDLIKE V4 END === */
 
 els.textColorInput.addEventListener(
   'input',

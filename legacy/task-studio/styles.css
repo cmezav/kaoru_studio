@@ -1511,3 +1511,88 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU NOTE COPY V1 CSS END === */
+
+/* === KAORU FONT PICKER V4 START === */
+
+.kaoru-font-native-select{
+  display:none!important;
+}
+
+.kaoru-font-picker-btn{
+  min-width:118px;
+  max-width:180px;
+  height:34px;
+  padding:0 10px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface);
+  color:var(--text);
+  font-size:13px;
+  text-align:left;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  cursor:pointer;
+}
+
+.kaoru-font-picker-btn::after{
+  content:" \25BE";
+  float:right;
+  font-family:system-ui,sans-serif;
+  opacity:.65;
+}
+
+.kaoru-font-picker-menu{
+  position:fixed;
+  z-index:10050;
+  max-height:min(320px,55vh);
+  overflow-y:auto;
+  padding:6px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface);
+  box-shadow:0 14px 38px rgba(0,0,0,.24);
+}
+
+.kaoru-font-picker-option{
+  display:block;
+  width:100%;
+  min-height:42px;
+  padding:8px 10px;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--text);
+  text-align:left;
+  font-size:16px;
+  cursor:pointer;
+}
+
+.kaoru-font-picker-option:hover,
+.kaoru-font-picker-option:active{
+  background:var(--soft);
+}
+
+#fontScopeSelect{
+  min-width:142px;
+}
+
+@media(max-width:900px){
+  .kaoru-font-picker-btn{
+    min-width:126px;
+    height:38px;
+    font-size:14px;
+  }
+
+  .kaoru-font-picker-option{
+    min-height:46px;
+    font-size:17px;
+  }
+
+  #fontScopeSelect{
+    min-width:150px;
+    height:38px;
+  }
+}
+
+/* === KAORU FONT PICKER V4 END === */
