@@ -116,7 +116,7 @@ async function setSetting(key,value){return dbPut(SETTINGS_STORE,{key,value,upda
 
 function courseById(id){return state.courses.find(c=>c.id===id)||null;}
 function taskById(id){return state.tasks.find(t=>t.id===id)||null;}
-function kindName(kind){return kind==='lab'?'Laboratorio':kind==='theory'?'TeorÃ­a':'';}
+function kindName(kind){return kind==='lab'?'Laboratorio':kind==='theory'?'Teoría':'';}
 function taskContext(task){
   const course=courseById(task.courseId);
 
@@ -204,13 +204,13 @@ function relativeDue(task){
   if(diff<3600000)return`En ${Math.max(1,Math.ceil(diff/60000))} min`;
   if(due<=endOfToday())return'Hoy';
   const tomorrowEnd=endOfToday()+dayMs;
-  if(due<=tomorrowEnd)return'MaÃ±ana';
-  return`En ${Math.ceil(diff/dayMs)} dÃ­as`;
+  if(due<=tomorrowEnd)return'Mañana';
+  return`En ${Math.ceil(diff/dayMs)} días`;
 }
 function noteDate(ts){return new Intl.DateTimeFormat('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ts||now()));}
 
 function applyTheme(theme,save=false,notifyParent=false){
-  const next=theme==='night'?'night':'day';document.documentElement.dataset.theme=next;els.themeBtn.textContent=next==='night'?'â˜€':'â˜¾';els.themeBtn.title=next==='night'?'Modo claro':'Modo noche';
+  const next=theme==='night'?'night':'day';document.documentElement.dataset.theme=next;els.themeBtn.textContent=next==='night'?'☀':'☾';els.themeBtn.title=next==='night'?'Modo claro':'Modo noche';
   if(save){try{localStorage.setItem(THEME_KEY,next);}catch(_){}}
   if(notifyParent&&EMBEDDED)window.parent.postMessage({type:'kaoru:theme',theme:next},'*');
 }
@@ -232,7 +232,7 @@ function counts(){
 }
 function updateCounts(){
   const c=counts();els.pendingBadge.textContent=`${c.pending.length}\u00A0pendiente${c.pending.length===1?'':'s'}`;els.pendingCount.textContent=c.pending.length;els.overdueCount.textContent=c.overdue.length;els.todayCount.textContent=c.today.length;els.weekCount.textContent=c.week.length;els.allCourseCount.textContent=c.pending.length;els.completedCount.textContent=c.completed.length;if(els.historyCountInline)els.historyCountInline.textContent=c.completed.length;
-  document.title=c.pending.length?`(${c.pending.length}) Kaoru â€” Task Studio`:`Kaoru â€” Task Studio`;
+  document.title=c.pending.length?`(${c.pending.length}) Kaoru — Task Studio`:`Kaoru — Task Studio`;
   if(EMBEDDED)window.parent.postMessage({type:'kaoru:task-count',count:c.pending.length},'*');
 }
 
@@ -280,7 +280,7 @@ function filteredTasks(){
 }
 function renderTaskList(){
   const list=filteredTasks();els.taskList.innerHTML='';els.taskEmpty.classList.toggle('hidden',list.length>0);
-  if(state.courseFilter==='completed'){els.listTitle.textContent='Completadas';els.listSubtitle.textContent='Tus tareas terminadas mÃ¡s recientes.';}else if(state.quickFilter==='overdue'){els.listTitle.textContent='Atrasadas';els.listSubtitle.textContent='Primero lo que ya pasÃ³ de plazo.';}else if(state.quickFilter==='today'){els.listTitle.textContent='Para hoy';els.listSubtitle.textContent='Todo lo que vence durante el dÃ­a.';}else if(state.quickFilter==='week'){els.listTitle.textContent='PrÃ³ximos 7 dÃ­as';els.listSubtitle.textContent='Tus entregas de esta semana.';}else{els.listTitle.textContent='Pendientes';els.listSubtitle.textContent='Lo mÃ¡s urgente aparece primero.';}
+  if(state.courseFilter==='completed'){els.listTitle.textContent='Completadas';els.listSubtitle.textContent='Tus tareas terminadas más recientes.';}else if(state.quickFilter==='overdue'){els.listTitle.textContent='Atrasadas';els.listSubtitle.textContent='Primero lo que ya pasó de plazo.';}else if(state.quickFilter==='today'){els.listTitle.textContent='Para hoy';els.listSubtitle.textContent='Todo lo que vence durante el día.';}else if(state.quickFilter==='week'){els.listTitle.textContent='Próximos 7 días';els.listSubtitle.textContent='Tus entregas de esta semana.';}else{els.listTitle.textContent='Pendientes';els.listSubtitle.textContent='Lo más urgente aparece primero.';}
   list.forEach(task=>{const ctx=taskContext(task),card=document.createElement('article');card.className='task-card'+(task.id===state.selectedTaskId?' active':'')+(task.completed?' completed':'');card.style.setProperty('--course-color',ctx.color);
     const metaTop=ctx.personal
       ?''
@@ -309,7 +309,7 @@ async function toggleComplete(id){
 
   /*
     Si una tarea se recupera desde el Historial, vuelve inmediatamente
-    a Pendientes para que quede claro que no se perdiÃ³.
+    a Pendientes para que quede claro que no se perdió.
   */
   if(restoring&&state.courseFilter==='completed'){
     state.courseFilter='all';
@@ -337,7 +337,7 @@ function renderDetail(){
   if(detailMetaLine)detailMetaLine.classList.toggle('hidden',ctx.personal);
   if(professorLine)professorLine.classList.toggle('hidden',ctx.personal);
 
-  els.detailDue.textContent=`${task.completed?'Completada Â· ':'Entrega Â· '}${formatDue(task.dueAt)}`;
+  els.detailDue.textContent=`${task.completed?'Completada · ':'Entrega · '}${formatDue(task.dueAt)}`;
   els.detailDue.className='due-line '+dueClass(task);
   els.detailCompleteBtn.classList.toggle('done',!!task.completed);
   els.detailCompleteBtn.style.setProperty('--course-color',ctx.color);
@@ -361,7 +361,7 @@ function populateTaskCourseSelect(selectedId,task=null){
     String(task.courseNameSnapshot||'').trim();
 
   const deletedOption=deletedCourse
-    ?`<option value="__deleted__">Curso eliminado Â· ${esc(task.courseNameSnapshot)}</option>`
+    ?`<option value="__deleted__">Curso eliminado · ${esc(task.courseNameSnapshot)}</option>`
     :'';
 
   els.taskCourseSelect.innerHTML=
@@ -391,7 +391,7 @@ function updateTaskKindOptions(){
     if(teacherField)teacherField.hidden=false;
 
     els.taskKindSelect.innerHTML=
-      '<option value="theory">TeorÃ­a</option><option value="lab">Laboratorio</option>';
+      '<option value="theory">Teoría</option><option value="lab">Laboratorio</option>';
 
     els.taskKindSelect.value=
       currentTask?.kind==='lab'?'lab':'theory';
@@ -415,7 +415,7 @@ function updateTaskKindOptions(){
   if(teacherField)teacherField.hidden=false;
 
   els.taskKindSelect.innerHTML=
-    '<option value="theory">TeorÃ­a</option>'+
+    '<option value="theory">Teoría</option>'+
     (course.hasLab?'<option value="lab">Laboratorio</option>':'');
 
   els.taskKindSelect.value=
@@ -436,7 +436,7 @@ function updateTeacherPreview(){
   }
 
   if(!course){
-    els.taskTeacherPreview.textContent='â€”';
+    els.taskTeacherPreview.textContent='—';
     return;
   }
 
@@ -576,7 +576,7 @@ els.taskForm.addEventListener('submit',async e=>{
   }
 });
 els.deleteTaskBtn.addEventListener('click',async()=>{
-  const task=taskById(state.selectedTaskId);if(!task)return;if(!confirm(`Â¿Eliminar la tarea â€œ${task.title}â€? Esta acciÃ³n no se puede deshacer.`))return;
+  const task=taskById(state.selectedTaskId);if(!task)return;if(!confirm(`¿Eliminar la tarea “${task.title}”? Esta acción no se puede deshacer.`))return;
   for(const doc of(task.docs||[])){
     if(doc.type==='file'&&doc.storagePath){
       window.KaoruTaskCloud?.queueStorageDelete?.(doc.storagePath);
@@ -603,21 +603,21 @@ els.courseForm.addEventListener('submit',async e=>{
   if(c)Object.assign(c,data);else{c={...data,createdAt:now()};state.courses.push(c);}await dbPut(COURSE_STORE,c);els.courseForm.classList.add('hidden');renderCourseSettings();renderTaskList();renderDetail();
 });
 function renderCourseSettings(){
-  els.courseSettingsList.innerHTML='';if(!state.courses.length){els.courseSettingsList.innerHTML='<div class="notes-empty">TodavÃ­a no hay cursos. Agrega el primero para empezar a organizar tus tareas.</div>';return;}
-  state.courses.forEach(c=>{const row=document.createElement('div');row.className='course-setting-row';row.style.setProperty('--course-color',c.color);const labText=c.hasLab?` Â· Lab: ${c.sameProfessor?'mismo docente':(c.labProfessor||'sin registrar')}`:' Â· Sin laboratorio';const noteText=(c.generalNotes||'').trim();row.innerHTML=`<span class="course-dot"></span><div class="course-setting-copy"><strong>${esc(c.name)}</strong><small>TeorÃ­a: ${esc(c.theoryProfessor||'sin registrar')}${esc(labText)}</small>${noteText?`<p class="course-note-preview">${esc(noteText)}</p>`:''}</div><div class="course-setting-actions"><button type="button" class="edit-course">Editar</button><button type="button" class="delete-course">Eliminar</button></div>`;row.querySelector('.edit-course').addEventListener('click',()=>editCourse(c.id));row.querySelector('.delete-course').addEventListener('click',()=>deleteCourse(c.id));els.courseSettingsList.appendChild(row);});
+  els.courseSettingsList.innerHTML='';if(!state.courses.length){els.courseSettingsList.innerHTML='<div class="notes-empty">Todavía no hay cursos. Agrega el primero para empezar a organizar tus tareas.</div>';return;}
+  state.courses.forEach(c=>{const row=document.createElement('div');row.className='course-setting-row';row.style.setProperty('--course-color',c.color);const labText=c.hasLab?` · Lab: ${c.sameProfessor?'mismo docente':(c.labProfessor||'sin registrar')}`:' · Sin laboratorio';const noteText=(c.generalNotes||'').trim();row.innerHTML=`<span class="course-dot"></span><div class="course-setting-copy"><strong>${esc(c.name)}</strong><small>Teoría: ${esc(c.theoryProfessor||'sin registrar')}${esc(labText)}</small>${noteText?`<p class="course-note-preview">${esc(noteText)}</p>`:''}</div><div class="course-setting-actions"><button type="button" class="edit-course">Editar</button><button type="button" class="delete-course">Eliminar</button></div>`;row.querySelector('.edit-course').addEventListener('click',()=>editCourse(c.id));row.querySelector('.delete-course').addEventListener('click',()=>deleteCourse(c.id));els.courseSettingsList.appendChild(row);});
 }
 async function deleteCourse(id){
-  const c=courseById(id);if(!c)return;const related=state.tasks.filter(t=>t.courseId===id);const extra=related.length?`\n\n${related.length} tarea(s) conservarÃ¡n el nombre del curso y docente como referencia, pero quedarÃ¡n fuera de la configuraciÃ³n del curso.`:'';const notesExtra=(c.generalNotes||'').trim()?'\n\nTambiÃ©n se eliminarÃ¡n las notas generales guardadas de este curso.':'';if(!confirm(`Â¿EstÃ¡s segura de eliminar el curso â€œ${c.name}â€?${extra}${notesExtra}`))return;
+  const c=courseById(id);if(!c)return;const related=state.tasks.filter(t=>t.courseId===id);const extra=related.length?`\n\n${related.length} tarea(s) conservarán el nombre del curso y docente como referencia, pero quedarán fuera de la configuración del curso.`:'';const notesExtra=(c.generalNotes||'').trim()?'\n\nTambién se eliminarán las notas generales guardadas de este curso.':'';if(!confirm(`¿Estás segura de eliminar el curso “${c.name}”?${extra}${notesExtra}`))return;
   for(const t of related){const professor=t.kind==='lab'?(c.labProfessor||c.theoryProfessor):(c.theoryProfessor||'');t.courseNameSnapshot=c.name;t.courseColorSnapshot=c.color;t.professorSnapshot=professor||'';t.courseId=null;t.personal=false;t.updatedAt=now();await dbPut(TASK_STORE,t);}await dbDelete(COURSE_STORE,id);state.courses=state.courses.filter(x=>x.id!==id);if(state.courseFilter===id)state.courseFilter='all';renderCourseSettings();renderTaskList();renderDetail();
 }
 
 function renderDocs(task){
-  els.taskDocs.innerHTML='';const docs=task.docs||[];if(!docs.length){els.taskDocs.innerHTML='<span class="docs-empty">Sin documentos todavÃ­a. Agrega enlaces o archivos con ï¼‹.</span>';return;}
-  docs.forEach(doc=>{const chip=document.createElement('div');chip.className='doc-chip';const icon=document.createElement('span');icon.textContent=doc.type==='file'?(doc.storagePath?'â˜':'â–§'):'â†—';let open;if(doc.type==='link'){open=document.createElement('a');open.href=doc.url;open.target='_blank';open.rel='noopener noreferrer';open.textContent=doc.label||doc.url;}else{open=document.createElement('button');open.type='button';open.className='doc-open';open.textContent=doc.name||'Archivo';open.title=doc.storagePath?'Disponible en Kaoru Cloud':'Guardado en este dispositivo; se subirÃ¡ automÃ¡ticamente';open.addEventListener('click',()=>openStoredFile(doc));}const rm=document.createElement('button');rm.type='button';rm.className='doc-remove';rm.textContent='Ã—';rm.title='Quitar';rm.addEventListener('click',()=>removeDoc(task.id,doc.id));chip.append(icon,open,rm);els.taskDocs.appendChild(chip);});
+  els.taskDocs.innerHTML='';const docs=task.docs||[];if(!docs.length){els.taskDocs.innerHTML='<span class="docs-empty">Sin documentos todavía. Agrega enlaces o archivos con ＋.</span>';return;}
+  docs.forEach(doc=>{const chip=document.createElement('div');chip.className='doc-chip';const icon=document.createElement('span');icon.textContent=doc.type==='file'?(doc.storagePath?'☁':'▧'):'↗';let open;if(doc.type==='link'){open=document.createElement('a');open.href=doc.url;open.target='_blank';open.rel='noopener noreferrer';open.textContent=doc.label||doc.url;}else{open=document.createElement('button');open.type='button';open.className='doc-open';open.textContent=doc.name||'Archivo';open.title=doc.storagePath?'Disponible en Kaoru Cloud':'Guardado en este dispositivo; se subirá automáticamente';open.addEventListener('click',()=>openStoredFile(doc));}const rm=document.createElement('button');rm.type='button';rm.className='doc-remove';rm.textContent='×';rm.title='Quitar';rm.addEventListener('click',()=>removeDoc(task.id,doc.id));chip.append(icon,open,rm);els.taskDocs.appendChild(chip);});
 }
 els.addLinkBtn.addEventListener('click',()=>{els.linkForm.classList.toggle('hidden');if(!els.linkForm.classList.contains('hidden'))els.linkLabel.focus();});els.cancelLinkBtn.addEventListener('click',()=>els.linkForm.classList.add('hidden'));
 els.linkForm.addEventListener('submit',async e=>{
-  e.preventDefault();const task=taskById(state.selectedTaskId);if(!task)return;let url=els.linkUrl.value.trim();try{const parsed=new URL(url);if(!/^https?:$/.test(parsed.protocol))throw new Error();url=parsed.href;}catch(_){alert('Ingresa un enlace vÃ¡lido que empiece con http:// o https://');return;}const label=els.linkLabel.value.trim()||url;task.docs=task.docs||[];task.docs.push({id:uid('doc'),type:'link',label,url,createdAt:now()});task.updatedAt=now();await dbPut(TASK_STORE,task);els.linkLabel.value='';els.linkUrl.value='';els.linkForm.classList.add('hidden');renderDocs(task);
+  e.preventDefault();const task=taskById(state.selectedTaskId);if(!task)return;let url=els.linkUrl.value.trim();try{const parsed=new URL(url);if(!/^https?:$/.test(parsed.protocol))throw new Error();url=parsed.href;}catch(_){alert('Ingresa un enlace válido que empiece con http:// o https://');return;}const label=els.linkLabel.value.trim()||url;task.docs=task.docs||[];task.docs.push({id:uid('doc'),type:'link',label,url,createdAt:now()});task.updatedAt=now();await dbPut(TASK_STORE,task);els.linkLabel.value='';els.linkUrl.value='';els.linkForm.classList.add('hidden');renderDocs(task);
 });
 els.addFileBtn.addEventListener('click',()=>els.taskFileInput.click());els.taskFileInput.addEventListener('change',async()=>{
   const task=taskById(state.selectedTaskId);if(!task||!els.taskFileInput.files?.length)return;task.docs=task.docs||[];
@@ -691,7 +691,7 @@ async function syncTaskFilesToCloud(){
         uploaded++;
       }catch(err){
         pending++;
-        console.warn('No se pudo subir un adjunto todavÃ­a',doc.name,err);
+        console.warn('No se pudo subir un adjunto todavía',doc.name,err);
       }
     }
 
@@ -716,7 +716,7 @@ async function openStoredFile(doc){
 
   if(!rec?.blob&&doc.storagePath){
     if(!navigator.onLine){
-      alert('Este archivo estÃ¡ en Kaoru Cloud, pero todavÃ­a no se descargÃ³ en este dispositivo. ConÃ©ctate a Internet para abrirlo por primera vez.');
+      alert('Este archivo está en Kaoru Cloud, pero todavía no se descargó en este dispositivo. Conéctate a Internet para abrirlo por primera vez.');
       return;
     }
 
@@ -740,7 +740,7 @@ async function openStoredFile(doc){
   }
 
   if(!rec?.blob){
-    alert('Este archivo todavÃ­a no estÃ¡ disponible en este dispositivo ni tiene una copia accesible en Kaoru Cloud.');
+    alert('Este archivo todavía no está disponible en este dispositivo ni tiene una copia accesible en Kaoru Cloud.');
     return;
   }
 
@@ -813,7 +813,7 @@ function serializeNoteHtml(editor){
     .forEach(img=>{
       /*
         El src es solo de presentacion local. Puede ser blob: y deja de ser
-        valido al cerrar la pagina. Persistimos Ãºnicamente data-kaoru-image-id.
+        valido al cerrar la pagina. Persistimos únicamente data-kaoru-image-id.
       */
       img.removeAttribute('src');
       img.removeAttribute('data-kaoru-runtime');
@@ -908,8 +908,6 @@ async function hydrateNoteImages(task,note,editor){
   for(const img of imgs){
     const imageId=img.dataset.kaoruImageId;
     const meta=note.images.find(item=>item.id===imageId);
-
-    noteImageApplyStoredLayout(img);
 
     if(!meta){
       img.alt='Imagen de nota no disponible';
@@ -1019,7 +1017,7 @@ async function syncNoteImagesToCloud(){
           uploaded++;
         }catch(err){
           pending++;
-          console.warn('No se pudo subir una imagen de nota todavÃ­a',err);
+          console.warn('No se pudo subir una imagen de nota todavía',err);
         }
       }
     }
@@ -1072,335 +1070,13 @@ async function cleanupRemovedNoteImages(note,editor){
   }
 }
 
-/* === KAORU NOTE IMAGE EDIT START === */
-
-let selectedNoteImageEl=null;
-let selectedNoteImageTask=null;
-let selectedNoteImageNote=null;
-let selectedNoteImageToolbar=null;
-
-function noteImageClampWidth(value){
-  const number=Number(value);
-  if(!Number.isFinite(number))return 100;
-  return Math.min(100,Math.max(20,Math.round(number)));
-}
-
-function noteImageNormalizeAlign(value){
-  return ['left','center','right'].includes(value)?value:'center';
-}
-
-function noteImageApplyLayout(img,width,align){
-  if(!img)return;
-
-  const finalWidth=noteImageClampWidth(width);
-  const finalAlign=noteImageNormalizeAlign(align);
-
-  img.dataset.kaoruWidth=String(finalWidth);
-  img.dataset.kaoruAlign=finalAlign;
-  img.style.display='block';
-  img.style.width=`${finalWidth}%`;
-  img.dataset.kaoruWidth='100';
-  img.dataset.kaoruAlign='center';
-  noteImageApplyLayout(img,100,'center');
-
-  if(finalAlign==='left'){
-    img.style.marginLeft='0';
-    img.style.marginRight='auto';
-  }else if(finalAlign==='right'){
-    img.style.marginLeft='auto';
-    img.style.marginRight='0';
-  }else{
-    img.style.marginLeft='auto';
-    img.style.marginRight='auto';
-  }
-}
-
-function noteImageApplyStoredLayout(img){
-  if(!img)return;
-
-  const width=
-    img.dataset.kaoruWidth||
-    parseFloat(img.style.width)||
-    100;
-
-  const align=
-    img.dataset.kaoruAlign||
-    (
-      img.style.marginLeft==='auto'&&img.style.marginRight==='0px'
-        ?'right'
-        :img.style.marginLeft==='0px'&&img.style.marginRight==='auto'
-          ?'left'
-          :'center'
-    );
-
-  noteImageApplyLayout(img,width,align);
-}
-
-function noteImageMetaForElement(img){
-  const card=img?.closest?.('.note-card');
-  const editor=img?.closest?.('.note-editor');
-  const task=taskById(state.selectedTaskId);
-
-  if(!card||!editor||!task)return null;
-
-  const noteId=card.dataset.noteId;
-  const imageId=img.dataset.kaoruImageId;
-  const note=(task.notes||[]).find(item=>item.id===noteId);
-  const meta=(note?.images||[]).find(item=>item.id===imageId);
-
-  if(!note||!meta)return null;
-
-  return{task,note,meta,card,editor};
-}
-
-function noteImageCloseEditor(){
-  selectedNoteImageEl?.classList?.remove('is-kaoru-image-selected');
-  selectedNoteImageToolbar?.classList?.add('hidden');
-  selectedNoteImageEl=null;
-  selectedNoteImageTask=null;
-  selectedNoteImageNote=null;
-}
-
-function noteImageToolbarSync(){
-  if(!selectedNoteImageEl||!selectedNoteImageToolbar)return;
-
-  const width=noteImageClampWidth(
-    selectedNoteImageEl.dataset.kaoruWidth||
-    parseFloat(selectedNoteImageEl.style.width)||
-    100
-  );
-
-  const align=noteImageNormalizeAlign(
-    selectedNoteImageEl.dataset.kaoruAlign||'center'
-  );
-
-  const range=selectedNoteImageToolbar.querySelector('[data-note-image-width-range]');
-  const value=selectedNoteImageToolbar.querySelector('[data-note-image-width-value]');
-
-  if(range)range.value=String(width);
-  if(value)value.textContent=`${width}%`;
-
-  selectedNoteImageToolbar
-    .querySelectorAll('[data-note-image-align]')
-    .forEach(button=>{
-      button.classList.toggle('active',button.dataset.noteImageAlign===align);
-    });
-
-  selectedNoteImageToolbar
-    .querySelectorAll('[data-note-image-size]')
-    .forEach(button=>{
-      button.classList.toggle('active',Number(button.dataset.noteImageSize)===width);
-    });
-}
-
-async function noteImageSaveSelected(){
-  if(!selectedNoteImageEl||!selectedNoteImageTask||!selectedNoteImageNote)return;
-  const editor=selectedNoteImageEl.closest('.note-editor');
-  if(!editor)return;
-  await saveNoteNow(selectedNoteImageTask,selectedNoteImageNote,editor);
-}
-
-async function noteImageSetWidth(value){
-  if(!selectedNoteImageEl)return;
-
-  noteImageApplyLayout(
-    selectedNoteImageEl,
-    value,
-    selectedNoteImageEl.dataset.kaoruAlign||'center'
-  );
-
-  noteImageToolbarSync();
-  await noteImageSaveSelected();
-}
-
-async function noteImageSetAlign(align){
-  if(!selectedNoteImageEl)return;
-
-  noteImageApplyLayout(
-    selectedNoteImageEl,
-    selectedNoteImageEl.dataset.kaoruWidth||100,
-    align
-  );
-
-  noteImageToolbarSync();
-  await noteImageSaveSelected();
-}
-
-async function noteImageQuickDownload(){
-  if(!selectedNoteImageEl)return;
-
-  const info=noteImageMetaForElement(selectedNoteImageEl);
-  if(!info)return;
-
-  try{
-    const rec=await getNoteImageRecord(info.task,info.note,info.meta);
-    const url=URL.createObjectURL(rec.blob);
-    const link=document.createElement('a');
-    link.href=url;
-    link.download=info.meta.name||rec.name||'imagen';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-  }catch(err){
-    alert(`No se pudo descargar esta imagen.\n\n${err?.message||err}`);
-  }
-}
-
-function noteImageContinueBelow(){
-  if(!selectedNoteImageEl)return;
-
-  const img=selectedNoteImageEl;
-  const editor=img.closest('.note-editor');
-  if(!editor)return;
-
-  state.activeEditor=editor;
-
-  const paragraph=document.createElement('p');
-  paragraph.innerHTML='<br>';
-  img.insertAdjacentElement('afterend',paragraph);
-
-  const range=document.createRange();
-  range.selectNodeContents(paragraph);
-  range.collapse(true);
-
-  const sel=window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-
-  state.savedRange=range.cloneRange();
-  editor.focus();
-
-  const info=noteImageMetaForElement(img);
-  if(info)saveNoteNow(info.task,info.note,editor);
-
-  noteImageCloseEditor();
-}
-
-function noteImageCreateToolbar(card){
-  let toolbar=card.querySelector('.note-image-editbar');
-  if(toolbar)return toolbar;
-
-  toolbar=document.createElement('div');
-  toolbar.className='note-image-editbar hidden';
-  toolbar.contentEditable='false';
-
-  toolbar.innerHTML=`
-    <div class="note-image-editbar-main">
-      <strong>Imagen</strong>
-      <label class="note-image-width-control">
-        <span>Tamaño</span>
-        <input type="range" min="20" max="100" step="5" value="100" data-note-image-width-range>
-        <b data-note-image-width-value>100%</b>
-      </label>
-    </div>
-
-    <div class="note-image-presets">
-      <button type="button" data-note-image-size="25">25%</button>
-      <button type="button" data-note-image-size="50">50%</button>
-      <button type="button" data-note-image-size="75">75%</button>
-      <button type="button" data-note-image-size="100">100%</button>
-    </div>
-
-    <div class="note-image-aligns">
-      <button type="button" data-note-image-align="left" title="Izquierda">←</button>
-      <button type="button" data-note-image-align="center" title="Centrar">↔</button>
-      <button type="button" data-note-image-align="right" title="Derecha">→</button>
-    </div>
-
-    <div class="note-image-actions">
-      <button type="button" data-note-image-below>Seguir debajo</button>
-      <button type="button" data-note-image-download>Descargar</button>
-      <button type="button" data-note-image-view>Ver</button>
-      <button type="button" data-note-image-close aria-label="Cerrar">×</button>
-    </div>
-  `;
-
-  const headline=card.querySelector('.note-headline');
-  if(headline)headline.insertAdjacentElement('afterend',toolbar);
-  else card.prepend(toolbar);
-
-  const range=toolbar.querySelector('[data-note-image-width-range]');
-
-  range.addEventListener('input',()=>{
-    if(!selectedNoteImageEl)return;
-
-    noteImageApplyLayout(
-      selectedNoteImageEl,
-      range.value,
-      selectedNoteImageEl.dataset.kaoruAlign||'center'
-    );
-
-    const value=toolbar.querySelector('[data-note-image-width-value]');
-    if(value)value.textContent=`${range.value}%`;
-  });
-
-  range.addEventListener('change',()=>noteImageSetWidth(range.value));
-
-  toolbar.querySelectorAll('[data-note-image-size]').forEach(button=>{
-    button.addEventListener('click',()=>noteImageSetWidth(button.dataset.noteImageSize));
-  });
-
-  toolbar.querySelectorAll('[data-note-image-align]').forEach(button=>{
-    button.addEventListener('click',()=>noteImageSetAlign(button.dataset.noteImageAlign));
-  });
-
-  toolbar.querySelector('[data-note-image-below]').addEventListener('click',noteImageContinueBelow);
-  toolbar.querySelector('[data-note-image-download]').addEventListener('click',noteImageQuickDownload);
-
-  toolbar.querySelector('[data-note-image-view]').addEventListener('click',()=>{
-    if(selectedNoteImageEl){
-      openNoteImageViewer(selectedNoteImageEl).catch(err=>{
-        console.warn('Kaoru note viewer',err);
-      });
-    }
-  });
-
-  toolbar.querySelector('[data-note-image-close]').addEventListener('click',noteImageCloseEditor);
-
-  return toolbar;
-}
-
-function selectNoteImageForEditing(img){
-  const info=noteImageMetaForElement(img);
-  if(!info)return;
-
-  if(selectedNoteImageEl&&selectedNoteImageEl!==img){
-    selectedNoteImageEl.classList.remove('is-kaoru-image-selected');
-  }
-
-  selectedNoteImageEl=img;
-  selectedNoteImageTask=info.task;
-  selectedNoteImageNote=info.note;
-  state.activeEditor=info.editor;
-
-  noteImageApplyStoredLayout(img);
-  img.classList.add('is-kaoru-image-selected');
-
-  selectedNoteImageToolbar=noteImageCreateToolbar(info.card);
-
-  document.querySelectorAll('.note-image-editbar').forEach(bar=>{
-    if(bar!==selectedNoteImageToolbar)bar.classList.add('hidden');
-  });
-
-  selectedNoteImageToolbar.classList.remove('hidden');
-  noteImageToolbarSync();
-
-  selectedNoteImageToolbar.scrollIntoView({
-    behavior:'smooth',
-    block:'nearest'
-  });
-}
-
-/* === KAORU NOTE IMAGE EDIT END === */
-
 function renderNoteThread(task){
   els.noteThread.innerHTML='';
 
   const notes=task.notes||[];
 
   if(!notes.length){
-    els.noteThread.innerHTML='<div class="notes-empty">Tu hilo estÃ¡ vacÃ­o. Pulsa â€œï¼‹ Nueva notaâ€ para ir registrando avances, ideas o informaciÃ³n.</div>';
+    els.noteThread.innerHTML='<div class="notes-empty">Tu hilo está vacío. Pulsa “＋ Nueva nota” para ir registrando avances, ideas o información.</div>';
     return;
   }
 
@@ -1444,7 +1120,7 @@ function renderNoteThread(task){
     const del=document.createElement('button');
     del.type='button';
     del.className='note-delete';
-    del.textContent='Ã—';
+    del.textContent='×';
     del.title='Eliminar nota';
     del.addEventListener('click',()=>deleteNote(task.id,note.id));
 
@@ -1534,7 +1210,7 @@ async function saveNoteNow(task,note,editor){
 async function deleteNote(taskId,noteId){
   const task=taskById(taskId);
   if(!task)return;
-  if(!confirm('Â¿Eliminar esta nota del hilo?'))return;
+  if(!confirm('¿Eliminar esta nota del hilo?'))return;
 
   const note=(task.notes||[]).find(item=>item.id===noteId);
   if(note)await cleanupNoteImages(note);
@@ -1699,9 +1375,8 @@ els.noteImageInput.addEventListener('change',async()=>{
   const img=document.createElement('img');
   img.dataset.kaoruImageId=imageId;
   img.alt=name;
-  img.dataset.kaoruWidth='100';
-  img.dataset.kaoruAlign='center';
-  noteImageApplyLayout(img,100,'center');
+  img.style.maxWidth='100%';
+  img.style.height='auto';
 
   const url=URL.createObjectURL(file);
   img.dataset.kaoruRuntime='1';
@@ -1832,11 +1507,11 @@ async function getNoteImageRecord(task,note,meta){
   }
 
   if(!navigator.onLine){
-    throw new Error('Esta imagen todavÃ­a no fue descargada en este dispositivo. ConÃ©ctate a Internet para abrirla por primera vez.');
+    throw new Error('Esta imagen todavía no fue descargada en este dispositivo. Conéctate a Internet para abrirla por primera vez.');
   }
 
   if(!window.KaoruTaskCloud?.downloadTaskFile){
-    throw new Error('Kaoru Cloud no estÃ¡ disponible en este momento.');
+    throw new Error('Kaoru Cloud no está disponible en este momento.');
   }
 
   const blob=await window.KaoruTaskCloud.downloadTaskFile(meta.storagePath);
@@ -1882,7 +1557,7 @@ function closeNoteImageViewer(){
   }
 
   if(view.loading){
-    view.loading.textContent='Preparando imagenâ€¦';
+    view.loading.textContent='Preparando imagen…';
     view.loading.classList.remove('hidden');
   }
 
@@ -1901,7 +1576,7 @@ async function openNoteImageViewer(imageEl){
   const meta=(note?.images||[]).find(item=>item.id===imageId);
 
   if(!note||!meta){
-    alert('No pude encontrar la informaciÃ³n de esta imagen.');
+    alert('No pude encontrar la información de esta imagen.');
     return;
   }
 
@@ -1910,8 +1585,8 @@ async function openNoteImageViewer(imageEl){
   noteViewerReset();
   noteViewerMeta=meta;
   view.name.textContent=meta.name||'Imagen';
-  view.status.textContent='Preparando imagenâ€¦';
-  view.loading.textContent='Preparando imagenâ€¦';
+  view.status.textContent='Preparando imagen…';
+  view.loading.textContent='Preparando imagen…';
   view.loading.classList.remove('hidden');
   view.image.classList.add('hidden');
 
@@ -1941,17 +1616,17 @@ async function openNoteImageViewer(imageEl){
       sizeText,
       'Rueda o pellizca para zoom',
       'arrastra para moverte'
-    ].filter(Boolean).join(' Â· ');
+    ].filter(Boolean).join(' · ');
   }catch(err){
     console.warn('No se pudo abrir la imagen de la nota',err);
     view.loading.textContent=err?.message||'No se pudo abrir la imagen.';
-    view.status.textContent='La imagen no estÃ¡ disponible en este dispositivo.';
+    view.status.textContent='La imagen no está disponible en este dispositivo.';
   }
 }
 
 function downloadCurrentNoteImage(){
   if(!noteViewerBlob||!noteViewerUrl||!noteViewerMeta){
-    alert('La imagen todavÃ­a no estÃ¡ disponible para descargar.');
+    alert('La imagen todavía no está disponible para descargar.');
     return;
   }
 
@@ -1965,14 +1640,14 @@ function downloadCurrentNoteImage(){
 
 function openCurrentNoteImageOriginal(){
   if(!noteViewerBlob||!noteViewerUrl){
-    alert('La imagen todavÃ­a no estÃ¡ disponible.');
+    alert('La imagen todavía no está disponible.');
     return;
   }
 
   const popup=window.open(noteViewerUrl,'_blank','noopener');
 
   if(!popup){
-    alert('El navegador bloqueÃ³ la nueva pestaÃ±a. Puedes usar el botÃ³n Descargar.');
+    alert('El navegador bloqueó la nueva pestaña. Puedes usar el botón Descargar.');
   }
 }
 
@@ -1995,20 +1670,12 @@ function setupNoteImageViewer(){
 
     e.preventDefault();
     e.stopPropagation();
-    selectNoteImageForEditing(img);
-  });
-
-  els.noteThread.addEventListener('dblclick',e=>{
-    const img=e.target?.closest?.('img[data-kaoru-image-id]');
-    if(!img||!els.noteThread.contains(img))return;
-
-    e.preventDefault();
-    e.stopPropagation();
 
     openNoteImageViewer(img).catch(err=>{
       console.warn('Kaoru note viewer',err);
     });
   });
+
   view.zoomIn.addEventListener(
     'click',
     ()=>noteViewerSetZoom(noteViewerZoom*1.25)
@@ -2139,13 +1806,13 @@ function setupNoteImageViewer(){
 setupNoteImageViewer();
 const loadedFontIds=new Set();
 async function loadTaskFonts(){
-  const base=[['system-ui','Sistema'],['Georgia','Georgia'],['"Times New Roman"','Times New Roman'],['Arial','Arial'],['Verdana','Verdana'],['"Courier New"','Courier New']];const old=els.fontSelect.value;els.fontSelect.innerHTML='<option value="">TipografÃ­a</option>';base.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;els.fontSelect.appendChild(o);});
+  const base=[['system-ui','Sistema'],['Georgia','Georgia'],['"Times New Roman"','Times New Roman'],['Arial','Arial'],['Verdana','Verdana'],['"Courier New"','Courier New']];const old=els.fontSelect.value;els.fontSelect.innerHTML='<option value="">Tipografía</option>';base.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;els.fontSelect.appendChild(o);});
   try{
     const db=await new Promise((resolve,reject)=>{const req=indexedDB.open(FONT_DB_NAME);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(FONT_STORE))req.result.createObjectStore(FONT_STORE,{keyPath:'id'});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
     const records=await new Promise((resolve,reject)=>{const req=db.transaction(FONT_STORE,'readonly').objectStore(FONT_STORE).getAll();req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);});state.taskFonts=[];
     for(const rec of records){try{const css=`taskfont_${String(rec.id).replace(/[^a-zA-Z0-9_-]/g,'_')}`;if(!loadedFontIds.has(rec.id)){const face=new FontFace(css,rec.buffer);await face.load();document.fonts.add(face);loadedFontIds.add(rec.id);}state.taskFonts.push({id:rec.id,css,label:String(rec.fileName||'Fuente').replace(/\.[^.]+$/,'')});}catch(err){console.warn('No se pudo cargar una fuente de Text Studio',rec.fileName,err);}}
     state.taskFonts.sort((a,b)=>a.label.localeCompare(b.label,'es'));state.taskFonts.forEach(f=>{const o=document.createElement('option');o.value=f.css;o.textContent=f.label;els.fontSelect.appendChild(o);});if([...els.fontSelect.options].some(o=>o.value===old))els.fontSelect.value=old;
-  }catch(err){console.warn('Biblioteca de fuentes de Text Studio no disponible todavÃ­a.',err);}
+  }catch(err){console.warn('Biblioteca de fuentes de Text Studio no disponible todavía.',err);}
 }
 els.refreshFontsBtn.addEventListener('click',loadTaskFonts);window.addEventListener('focus',loadTaskFonts);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTaskFonts();});
 
@@ -2281,7 +1948,7 @@ async function syncScheduleToCloud(){
     renderSchedule();
     return{uploaded:1,pending:0};
   }catch(err){
-    console.warn('No se pudo subir el horario todavÃ­a',err);
+    console.warn('No se pudo subir el horario todavía',err);
     return{uploaded:0,pending:1};
   }
 }
@@ -2333,7 +2000,7 @@ els.scheduleZoom.addEventListener('input',()=>{
 });
 
 els.deleteScheduleBtn.addEventListener('click',async()=>{
-  if(!confirm('Â¿Eliminar la foto del horario de todos tus dispositivos?'))return;
+  if(!confirm('¿Eliminar la foto del horario de todos tus dispositivos?'))return;
 
   const previous=state.schedule;
   state.schedule=null;
@@ -2353,8 +2020,8 @@ els.deleteScheduleBtn.addEventListener('click',async()=>{
   renderSchedule();
 });
 
-function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras estÃ© abierto.';if(Notification.permission==='denied')return'Los avisos estÃ¡n bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'TodavÃ­a no has dado permiso para mostrar avisos.';}
-function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'ðŸ”” Notificaciones activadas':'ðŸ”” Activar notificaciones';}
+function notificationPermissionText(){if(!('Notification'in window))return'Este navegador no ofrece notificaciones web.';if(Notification.permission==='granted')return'Avisos permitidos. Kaoru puede recordarte tareas mientras esté abierto.';if(Notification.permission==='denied')return'Los avisos están bloqueados en el navegador. Debes habilitarlos desde los permisos del sitio.';return'Todavía no has dado permiso para mostrar avisos.';}
+function syncNotificationUI(){els.notificationStatus.textContent=notificationPermissionText();els.summaryIntervalSelect.value=String(state.notificationConfig.intervalHours||3);document.querySelectorAll('[data-threshold]').forEach(cb=>cb.checked=(state.notificationConfig.thresholds||[]).includes(Number(cb.dataset.threshold)));els.requestNotificationBtn.textContent=state.notificationConfig.enabled&&('Notification'in window)&&Notification.permission==='granted'?'🔔 Notificaciones activadas':'🔔 Activar notificaciones';}
 async function saveNotificationConfig(){
   await setSetting('notificationConfig',state.notificationConfig);
   syncNotificationUI();
@@ -2376,7 +2043,7 @@ async function ensureServiceWorker(){
   }
 }
 async function showSystemNotification(title,body,tag,data={}){
-  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../kaoru-notification-badge.png',color:'#8B5CF6',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificaciÃ³n',err);}
+  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../kaoru-notification-badge.png',color:'#8B5CF6',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
 async function testSystemNotification(){
   if(!('Notification'in window)){
@@ -2426,8 +2093,8 @@ function readNotificationLog(){try{return JSON.parse(localStorage.getItem('kaoru
 function writeNotificationLog(log){try{localStorage.setItem('kaoru-task-notification-log',JSON.stringify(log));}catch(_){}}
 async function checkNotifications(){
   if(!state.notificationConfig.enabled||!('Notification'in window)||Notification.permission!=='granted')return;const pending=state.tasks.filter(t=>!t.completed);if(!pending.length)return;const log=readNotificationLog(),current=now();
-  const interval=(state.notificationConfig.intervalHours||3)*3600000;if(current-(state.notificationConfig.lastSummaryAt||0)>=interval){const sorted=[...pending].sort((a,b)=>(parseDue(a.dueAt)||Infinity)-(parseDue(b.dueAt)||Infinity));const next=sorted[0];await showSystemNotification(`Tienes ${pending.length} tarea${pending.length===1?'':'s'} pendiente${pending.length===1?'':'s'}`,next?`PrÃ³xima: ${next.title} Â· ${relativeDue(next)}`:'Revisa Task Studio.','task-summary');state.notificationConfig.lastSummaryAt=current;await setSetting('notificationConfig',state.notificationConfig);}
-  for(const task of pending){const due=dueDeadline(task.dueAt);if(!due)continue;const hours=(due-current)/3600000;if(hours<0){const key=`${task.id}:${task.dueAt}:overdue`;if(!log[key]){await showSystemNotification('Tarea atrasada',`${task.title} ya pasÃ³ de plazo.`,`task-${task.id}-overdue`,{taskId:task.id});log[key]=current;}continue;}for(const threshold of(state.notificationConfig.thresholds||[])){if(hours<=threshold){const key=`${task.id}:${task.dueAt}:${threshold}`;if(!log[key]){const ctx=taskContext(task);await showSystemNotification(`Entrega en menos de ${threshold} h`,`${task.title} Â· ${ctx.courseName}`,`task-${task.id}-${threshold}`,{taskId:task.id});log[key]=current;}break;}}}
+  const interval=(state.notificationConfig.intervalHours||3)*3600000;if(current-(state.notificationConfig.lastSummaryAt||0)>=interval){const sorted=[...pending].sort((a,b)=>(parseDue(a.dueAt)||Infinity)-(parseDue(b.dueAt)||Infinity));const next=sorted[0];await showSystemNotification(`Tienes ${pending.length} tarea${pending.length===1?'':'s'} pendiente${pending.length===1?'':'s'}`,next?`Próxima: ${next.title} · ${relativeDue(next)}`:'Revisa Task Studio.','task-summary');state.notificationConfig.lastSummaryAt=current;await setSetting('notificationConfig',state.notificationConfig);}
+  for(const task of pending){const due=dueDeadline(task.dueAt);if(!due)continue;const hours=(due-current)/3600000;if(hours<0){const key=`${task.id}:${task.dueAt}:overdue`;if(!log[key]){await showSystemNotification('Tarea atrasada',`${task.title} ya pasó de plazo.`,`task-${task.id}-overdue`,{taskId:task.id});log[key]=current;}continue;}for(const threshold of(state.notificationConfig.thresholds||[])){if(hours<=threshold){const key=`${task.id}:${task.dueAt}:${threshold}`;if(!log[key]){const ctx=taskContext(task);await showSystemNotification(`Entrega en menos de ${threshold} h`,`${task.title} · ${ctx.courseName}`,`task-${task.id}-${threshold}`,{taskId:task.id});log[key]=current;}break;}}}
   writeNotificationLog(log);
 }
 
@@ -2458,13 +2125,13 @@ function setCloudUi(info={}){
     els.cloudUserEmail.textContent=user.email||'Cuenta Kaoru';
     els.cloudBtnText.textContent=
       stateName==='syncing'?'Sincronizando':
-      stateName==='offline'?'Sin conexiÃ³n':
+      stateName==='offline'?'Sin conexión':
       queue>0?`${queue} pendiente${queue===1?'':'s'}`:
       'Sincronizado';
     els.cloudSyncText.textContent=message||els.cloudBtnText.textContent;
   }else{
     els.cloudBtnText.textContent='Cuenta';
-    els.cloudUserEmail.textContent='â€”';
+    els.cloudUserEmail.textContent='—';
     els.cloudSyncText.textContent='Solo local';
   }
 
@@ -2472,17 +2139,17 @@ function setCloudUi(info={}){
 
   const labels={
     synced:'Sincronizado',
-    syncing:'Sincronizandoâ€¦',
+    syncing:'Sincronizando…',
     pending:'Cambios pendientes',
-    offline:'Sin conexiÃ³n',
-    error:'Problema de sincronizaciÃ³n',
+    offline:'Sin conexión',
+    error:'Problema de sincronización',
     local:'Solo local'
   };
   els.cloudStateText.textContent=labels[stateName]||'Kaoru Cloud';
   els.cloudStateDetail.textContent=message||(
     user
-      ?'La sincronizaciÃ³n automÃ¡tica estÃ¡ activa.'
-      :'Inicia sesiÃ³n para sincronizar automÃ¡ticamente.'
+      ?'La sincronización automática está activa.'
+      :'Inicia sesión para sincronizar automáticamente.'
   );
 }
 async function refreshTaskStateFromDb(){
@@ -2580,8 +2247,8 @@ async function initTaskCloud(){
       state:window.KaoruTaskCloud.currentUser?.()?'synced':'local',
       user:window.KaoruTaskCloud.currentUser?.()||null,
       message:window.KaoruTaskCloud.currentUser?.()
-        ?'SincronizaciÃ³n automÃ¡tica activa.'
-        :'Inicia sesiÃ³n para sincronizar automÃ¡ticamente.'
+        ?'Sincronización automática activa.'
+        :'Inicia sesión para sincronizar automáticamente.'
     });
   }catch(err){
     /*
@@ -2595,7 +2262,7 @@ async function initTaskCloud(){
       user:window.KaoruTaskCloud.currentUser?.()||null,
       message:navigator.onLine
         ?'Cloud no pudo iniciar. Task Studio sigue disponible localmente.'
-        :'Sin conexiÃ³n. Task Studio sigue disponible localmente.'
+        :'Sin conexión. Task Studio sigue disponible localmente.'
     });
   }
 }
@@ -2614,14 +2281,14 @@ els.cloudAuthForm.addEventListener('submit',async e=>{
   const email=els.cloudEmailInput.value.trim();
   const password=els.cloudPasswordInput.value;
   if(!email||!password)return;
-  els.cloudAuthMessage.textContent='Iniciando sesiÃ³nâ€¦';
+  els.cloudAuthMessage.textContent='Iniciando sesión…';
   try{
     await window.KaoruTaskCloud.signIn(email,password);
     els.cloudPasswordInput.value='';
     els.cloudAuthMessage.textContent='';
-    setCloudUi({state:'syncing',user:window.KaoruTaskCloud.currentUser?.(),message:'Migrando y sincronizando tus datos localesâ€¦'});
+    setCloudUi({state:'syncing',user:window.KaoruTaskCloud.currentUser?.(),message:'Migrando y sincronizando tus datos locales…'});
   }catch(err){
-    els.cloudAuthMessage.textContent=err?.message||'No se pudo iniciar sesiÃ³n.';
+    els.cloudAuthMessage.textContent=err?.message||'No se pudo iniciar sesión.';
   }
 });
 
@@ -2629,18 +2296,18 @@ els.cloudCreateBtn.addEventListener('click',async()=>{
   const email=els.cloudEmailInput.value.trim();
   const password=els.cloudPasswordInput.value;
   if(!email||!password){
-    els.cloudAuthMessage.textContent='Escribe tu correo y una contraseÃ±a de al menos 6 caracteres.';
+    els.cloudAuthMessage.textContent='Escribe tu correo y una contraseña de al menos 6 caracteres.';
     return;
   }
-  els.cloudAuthMessage.textContent='Creando cuentaâ€¦';
+  els.cloudAuthMessage.textContent='Creando cuenta…';
   try{
     const result=await window.KaoruTaskCloud.signUp(email,password);
     els.cloudPasswordInput.value='';
     if(result?.session){
       els.cloudAuthMessage.textContent='';
-      setCloudUi({state:'syncing',user:window.KaoruTaskCloud.currentUser?.(),message:'Cuenta creada. Migrando tus datos localesâ€¦'});
+      setCloudUi({state:'syncing',user:window.KaoruTaskCloud.currentUser?.(),message:'Cuenta creada. Migrando tus datos locales…'});
     }else{
-      els.cloudAuthMessage.textContent='Cuenta creada. Revisa tu correo para confirmar la direcciÃ³n y luego inicia sesiÃ³n.';
+      els.cloudAuthMessage.textContent='Cuenta creada. Revisa tu correo para confirmar la dirección y luego inicia sesión.';
     }
   }catch(err){
     els.cloudAuthMessage.textContent=err?.message||'No se pudo crear la cuenta.';
@@ -2648,12 +2315,12 @@ els.cloudCreateBtn.addEventListener('click',async()=>{
 });
 
 els.cloudSignOutBtn.addEventListener('click',async()=>{
-  if(!confirm('Â¿Cerrar sesiÃ³n de Kaoru Cloud en este dispositivo? Tus datos locales seguirÃ¡n aquÃ­.'))return;
+  if(!confirm('¿Cerrar sesión de Kaoru Cloud en este dispositivo? Tus datos locales seguirán aquí.'))return;
   try{
     await window.KaoruTaskCloud.signOut();
-    setCloudUi({state:'local',message:'SesiÃ³n cerrada. Tus datos locales siguen disponibles.'});
+    setCloudUi({state:'local',message:'Sesión cerrada. Tus datos locales siguen disponibles.'});
   }catch(err){
-    els.cloudStateDetail.textContent=err?.message||'No se pudo cerrar la sesiÃ³n.';
+    els.cloudStateDetail.textContent=err?.message||'No se pudo cerrar la sesión.';
   }
 });
 function goTaskHome(){
@@ -2672,7 +2339,7 @@ async function init(){
     await window.KaoruTaskPush?.restore?.(state.notificationConfig).catch(err=>console.warn('Kaoru Push restore',err));
     if(EMBEDDED)window.parent.postMessage({type:'kaoru:studio-ready',studio:'tasks',theme:document.documentElement.dataset.theme||'day'},'*');
     ensureServiceWorker();checkNotifications();setInterval(checkNotifications,15000);
-  }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para mÃ¡s detalles.');}
+  }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para más detalles.');}
 }
 
 init();
@@ -2705,3 +2372,718 @@ init();
     }
   },true);
 }());
+
+/* === KAORU NOTE IMAGE EDIT V3 START === */
+
+let kaoruNoteSelectedImage=null;
+let kaoruNoteSelectedTask=null;
+let kaoruNoteSelectedNote=null;
+let kaoruNoteImageBar=null;
+
+function kaoruImageWidth(value){
+  const n=Number(value);
+  if(!Number.isFinite(n))return 100;
+  return Math.min(100,Math.max(20,Math.round(n)));
+}
+
+function kaoruImageAlign(value){
+  return ['left','center','right'].includes(value)?value:'center';
+}
+
+function kaoruApplyImageLayout(img,width,align){
+  if(!img)return;
+
+  const rawWidth=
+    width!==undefined&&width!==null
+      ?width
+      :(img.dataset.kaoruWidth||parseFloat(img.style.width)||100);
+
+  const rawAlign=
+    align!==undefined&&align!==null
+      ?align
+      :(img.dataset.kaoruAlign||'center');
+
+  const finalWidth=kaoruImageWidth(rawWidth);
+  const finalAlign=kaoruImageAlign(rawAlign);
+
+  img.dataset.kaoruWidth=String(finalWidth);
+  img.dataset.kaoruAlign=finalAlign;
+
+  img.style.display='block';
+  img.style.width=`${finalWidth}%`;
+  img.style.maxWidth='100%';
+  img.style.height='auto';
+
+  if(finalAlign==='left'){
+    img.style.marginLeft='0';
+    img.style.marginRight='auto';
+  }else if(finalAlign==='right'){
+    img.style.marginLeft='auto';
+    img.style.marginRight='0';
+  }else{
+    img.style.marginLeft='auto';
+    img.style.marginRight='auto';
+  }
+}
+
+function kaoruNoteImageContext(img){
+  const editor=img?.closest?.('.note-editor');
+  const card=img?.closest?.('.note-card');
+  const task=taskById(state.selectedTaskId);
+
+  if(!editor||!card||!task)return null;
+
+  const noteId=editor.dataset.noteId||card.dataset.noteId;
+  const note=(task.notes||[]).find(item=>item.id===noteId);
+
+  if(!note)return null;
+
+  note.images=Array.isArray(note.images)?note.images:[];
+
+  const imageId=img.dataset.kaoruImageId||'';
+  const meta=imageId
+    ?note.images.find(item=>item.id===imageId)
+    :null;
+
+  return{editor,card,task,note,meta};
+}
+
+async function kaoruStoreImageBlob(task,note,blob,name){
+  const imageId=uid('noteimg');
+  const ext=noteImageExtension(blob.type);
+  const finalName=
+    name||
+    `imagen-nota-${imageId}.${ext}`;
+
+  await dbPut(FILE_STORE,{
+    id:imageId,
+    kind:'note-image',
+    taskId:task.id,
+    noteId:note.id,
+    name:finalName,
+    type:blob.type||'image/png',
+    size:blob.size,
+    blob,
+    createdAt:now()
+  });
+
+  note.images=Array.isArray(note.images)?note.images:[];
+  note.images.push({
+    id:imageId,
+    fileId:imageId,
+    name:finalName,
+    mime:blob.type||'image/png',
+    size:blob.size,
+    createdAt:now()
+  });
+
+  return{
+    imageId,
+    name:finalName
+  };
+}
+
+async function kaoruAdoptUnmanagedImage(img){
+  const ctx=kaoruNoteImageContext(img);
+  if(!ctx)return null;
+
+  if(ctx.meta)return ctx;
+
+  const src=img.getAttribute('src')||'';
+  if(!src)return null;
+
+  let blob=null;
+
+  try{
+    if(/^data:image\//i.test(src)){
+      blob=dataUrlToBlob(src);
+    }else if(/^blob:/i.test(src)){
+      const response=await fetch(src);
+      blob=await response.blob();
+    }else{
+      const response=await fetch(src);
+      if(!response.ok){
+        throw new Error(`HTTP ${response.status}`);
+      }
+      blob=await response.blob();
+    }
+  }catch(err){
+    console.warn('Kaoru could not adopt pasted image',err);
+    alert(
+      'Esta imagen pegada no se puede convertir automaticamente. '+
+      'Prueba pegarla otra vez desde el portapapeles o usa el boton Imagen.'
+    );
+    return null;
+  }
+
+  if(!blob||!String(blob.type||'').startsWith('image/')){
+    alert('El contenido seleccionado no se reconocio como imagen.');
+    return null;
+  }
+
+  const saved=await kaoruStoreImageBlob(
+    ctx.task,
+    ctx.note,
+    blob,
+    null
+  );
+
+  img.dataset.kaoruImageId=saved.imageId;
+  img.alt=img.alt||saved.name;
+
+  kaoruApplyImageLayout(img,75,'center');
+
+  await saveNoteNow(
+    ctx.task,
+    ctx.note,
+    ctx.editor
+  );
+
+  syncTaskFilesToCloud()
+    .then(()=>window.KaoruTaskCloud?.flush?.())
+    .catch(err=>console.warn('Kaoru adopted image sync',err));
+
+  return kaoruNoteImageContext(img);
+}
+
+async function kaoruInsertClipboardImage(file,editor){
+  const task=taskById(state.selectedTaskId);
+  if(!task||!editor||!file)return;
+
+  const note=(task.notes||[]).find(
+    item=>item.id===editor.dataset.noteId
+  );
+
+  if(!note)return;
+
+  const saved=await kaoruStoreImageBlob(
+    task,
+    note,
+    file,
+    file.name||null
+  );
+
+  const img=document.createElement('img');
+  img.dataset.kaoruImageId=saved.imageId;
+  img.alt=saved.name;
+  kaoruApplyImageLayout(img,75,'center');
+
+  const url=URL.createObjectURL(file);
+  img.dataset.kaoruRuntime='1';
+  img.src=url;
+
+  img.addEventListener(
+    'load',
+    ()=>URL.revokeObjectURL(url),
+    {once:true}
+  );
+
+  const p=document.createElement('p');
+  p.innerHTML='<br>';
+
+  const sel=window.getSelection();
+  let range=null;
+
+  if(
+    sel&&
+    sel.rangeCount&&
+    editor.contains(
+      sel.getRangeAt(0).commonAncestorContainer
+    )
+  ){
+    range=sel.getRangeAt(0);
+  }else{
+    range=document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+
+  range.deleteContents();
+  range.insertNode(p);
+  range.insertNode(img);
+
+  range.setStart(p,0);
+  range.collapse(true);
+
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  state.activeEditor=editor;
+  state.savedRange=range.cloneRange();
+
+  await saveNoteNow(task,note,editor);
+
+  syncTaskFilesToCloud()
+    .then(()=>window.KaoruTaskCloud?.flush?.())
+    .catch(err=>console.warn('Kaoru clipboard image sync',err));
+
+  editor.focus();
+}
+
+function kaoruHideImageEditor(){
+  if(kaoruNoteSelectedImage){
+    kaoruNoteSelectedImage.classList.remove(
+      'is-kaoru-image-selected'
+    );
+  }
+
+  if(kaoruNoteImageBar){
+    kaoruNoteImageBar.classList.add('hidden');
+  }
+
+  kaoruNoteSelectedImage=null;
+  kaoruNoteSelectedTask=null;
+  kaoruNoteSelectedNote=null;
+}
+
+function kaoruSyncImageBar(){
+  if(!kaoruNoteSelectedImage||!kaoruNoteImageBar)return;
+
+  const width=kaoruImageWidth(
+    kaoruNoteSelectedImage.dataset.kaoruWidth||
+    parseFloat(kaoruNoteSelectedImage.style.width)||
+    100
+  );
+
+  const align=kaoruImageAlign(
+    kaoruNoteSelectedImage.dataset.kaoruAlign||'center'
+  );
+
+  const range=kaoruNoteImageBar.querySelector(
+    '[data-kaoru-img-range]'
+  );
+
+  const label=kaoruNoteImageBar.querySelector(
+    '[data-kaoru-img-value]'
+  );
+
+  if(range)range.value=String(width);
+  if(label)label.textContent=`${width}%`;
+
+  kaoruNoteImageBar
+    .querySelectorAll('[data-kaoru-img-size]')
+    .forEach(btn=>{
+      btn.classList.toggle(
+        'active',
+        Number(btn.dataset.kaoruImgSize)===width
+      );
+    });
+
+  kaoruNoteImageBar
+    .querySelectorAll('[data-kaoru-img-align]')
+    .forEach(btn=>{
+      btn.classList.toggle(
+        'active',
+        btn.dataset.kaoruImgAlign===align
+      );
+    });
+}
+
+async function kaoruSaveImageLayout(){
+  if(
+    !kaoruNoteSelectedImage||
+    !kaoruNoteSelectedTask||
+    !kaoruNoteSelectedNote
+  )return;
+
+  const editor=kaoruNoteSelectedImage.closest(
+    '.note-editor'
+  );
+
+  if(!editor)return;
+
+  await saveNoteNow(
+    kaoruNoteSelectedTask,
+    kaoruNoteSelectedNote,
+    editor
+  );
+}
+
+async function kaoruSetImageWidth(value){
+  if(!kaoruNoteSelectedImage)return;
+
+  kaoruApplyImageLayout(
+    kaoruNoteSelectedImage,
+    value,
+    kaoruNoteSelectedImage.dataset.kaoruAlign||'center'
+  );
+
+  kaoruSyncImageBar();
+  await kaoruSaveImageLayout();
+}
+
+async function kaoruSetImageAlign(value){
+  if(!kaoruNoteSelectedImage)return;
+
+  kaoruApplyImageLayout(
+    kaoruNoteSelectedImage,
+    kaoruNoteSelectedImage.dataset.kaoruWidth||100,
+    value
+  );
+
+  kaoruSyncImageBar();
+  await kaoruSaveImageLayout();
+}
+
+async function kaoruDownloadSelectedImage(){
+  if(!kaoruNoteSelectedImage)return;
+
+  let ctx=kaoruNoteImageContext(
+    kaoruNoteSelectedImage
+  );
+
+  if(!ctx)return;
+
+  if(!ctx.meta){
+    ctx=await kaoruAdoptUnmanagedImage(
+      kaoruNoteSelectedImage
+    );
+  }
+
+  if(!ctx?.meta)return;
+
+  try{
+    const rec=await getNoteImageRecord(
+      ctx.task,
+      ctx.note,
+      ctx.meta
+    );
+
+    const url=URL.createObjectURL(rec.blob);
+
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=
+      ctx.meta.name||
+      rec.name||
+      'imagen';
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(
+      ()=>URL.revokeObjectURL(url),
+      1500
+    );
+  }catch(err){
+    alert(
+      `No se pudo descargar la imagen.\n\n${err?.message||err}`
+    );
+  }
+}
+
+function kaoruContinueAfterImage(){
+  if(!kaoruNoteSelectedImage)return;
+
+  const img=kaoruNoteSelectedImage;
+  const editor=img.closest('.note-editor');
+
+  if(!editor)return;
+
+  const p=document.createElement('p');
+  p.innerHTML='<br>';
+
+  img.insertAdjacentElement(
+    'afterend',
+    p
+  );
+
+  const range=document.createRange();
+  range.setStart(p,0);
+  range.collapse(true);
+
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  state.activeEditor=editor;
+  state.savedRange=range.cloneRange();
+
+  const ctx=kaoruNoteImageContext(img);
+  if(ctx){
+    saveNoteNow(
+      ctx.task,
+      ctx.note,
+      editor
+    );
+  }
+
+  kaoruHideImageEditor();
+  editor.focus();
+}
+
+function kaoruBuildImageBar(card){
+  let bar=card.querySelector(
+    '.kaoru-note-image-bar'
+  );
+
+  if(bar)return bar;
+
+  bar=document.createElement('div');
+  bar.className='kaoru-note-image-bar hidden';
+  bar.contentEditable='false';
+
+  bar.innerHTML=`
+    <div class="kaoru-img-size-row">
+      <strong>Imagen</strong>
+      <span>Tamano</span>
+      <input
+        type="range"
+        min="20"
+        max="100"
+        step="5"
+        value="100"
+        data-kaoru-img-range
+      >
+      <b data-kaoru-img-value>100%</b>
+    </div>
+
+    <div class="kaoru-img-presets">
+      <button type="button" data-kaoru-img-size="25">25%</button>
+      <button type="button" data-kaoru-img-size="50">50%</button>
+      <button type="button" data-kaoru-img-size="75">75%</button>
+      <button type="button" data-kaoru-img-size="100">100%</button>
+    </div>
+
+    <div class="kaoru-img-align">
+      <button type="button" data-kaoru-img-align="left">Izq.</button>
+      <button type="button" data-kaoru-img-align="center">Centro</button>
+      <button type="button" data-kaoru-img-align="right">Der.</button>
+    </div>
+
+    <div class="kaoru-img-actions">
+      <button type="button" data-kaoru-img-below>Seguir debajo</button>
+      <button type="button" data-kaoru-img-download>Descargar</button>
+      <button type="button" data-kaoru-img-view>Ver grande</button>
+      <button type="button" data-kaoru-img-close>Cerrar</button>
+    </div>
+  `;
+
+  const headline=card.querySelector(
+    '.note-headline'
+  );
+
+  if(headline){
+    headline.insertAdjacentElement(
+      'afterend',
+      bar
+    );
+  }else{
+    card.prepend(bar);
+  }
+
+  const range=bar.querySelector(
+    '[data-kaoru-img-range]'
+  );
+
+  range.addEventListener('input',()=>{
+    if(!kaoruNoteSelectedImage)return;
+
+    kaoruApplyImageLayout(
+      kaoruNoteSelectedImage,
+      range.value,
+      kaoruNoteSelectedImage.dataset.kaoruAlign||'center'
+    );
+
+    const label=bar.querySelector(
+      '[data-kaoru-img-value]'
+    );
+
+    if(label){
+      label.textContent=`${range.value}%`;
+    }
+  });
+
+  range.addEventListener(
+    'change',
+    ()=>kaoruSetImageWidth(range.value)
+  );
+
+  bar.querySelectorAll(
+    '[data-kaoru-img-size]'
+  ).forEach(btn=>{
+    btn.addEventListener(
+      'click',
+      ()=>kaoruSetImageWidth(
+        btn.dataset.kaoruImgSize
+      )
+    );
+  });
+
+  bar.querySelectorAll(
+    '[data-kaoru-img-align]'
+  ).forEach(btn=>{
+    btn.addEventListener(
+      'click',
+      ()=>kaoruSetImageAlign(
+        btn.dataset.kaoruImgAlign
+      )
+    );
+  });
+
+  bar.querySelector(
+    '[data-kaoru-img-below]'
+  ).addEventListener(
+    'click',
+    kaoruContinueAfterImage
+  );
+
+  bar.querySelector(
+    '[data-kaoru-img-download]'
+  ).addEventListener(
+    'click',
+    kaoruDownloadSelectedImage
+  );
+
+  bar.querySelector(
+    '[data-kaoru-img-view]'
+  ).addEventListener('click',()=>{
+    if(kaoruNoteSelectedImage){
+      openNoteImageViewer(
+        kaoruNoteSelectedImage
+      ).catch(err=>{
+        console.warn(
+          'Kaoru note viewer',
+          err
+        );
+      });
+    }
+  });
+
+  bar.querySelector(
+    '[data-kaoru-img-close]'
+  ).addEventListener(
+    'click',
+    kaoruHideImageEditor
+  );
+
+  return bar;
+}
+
+async function kaoruSelectNoteImage(img){
+  let ctx=kaoruNoteImageContext(img);
+  if(!ctx)return;
+
+  if(!ctx.meta){
+    ctx=await kaoruAdoptUnmanagedImage(img);
+    if(!ctx)return;
+  }
+
+  if(
+    kaoruNoteSelectedImage&&
+    kaoruNoteSelectedImage!==img
+  ){
+    kaoruNoteSelectedImage.classList.remove(
+      'is-kaoru-image-selected'
+    );
+  }
+
+  kaoruNoteSelectedImage=img;
+  kaoruNoteSelectedTask=ctx.task;
+  kaoruNoteSelectedNote=ctx.note;
+  state.activeEditor=ctx.editor;
+
+  kaoruApplyImageLayout(
+    img,
+    img.dataset.kaoruWidth||
+      parseFloat(img.style.width)||
+      100,
+    img.dataset.kaoruAlign||'center'
+  );
+
+  img.classList.add(
+    'is-kaoru-image-selected'
+  );
+
+  document.querySelectorAll(
+    '.kaoru-note-image-bar'
+  ).forEach(other=>{
+    other.classList.add('hidden');
+  });
+
+  kaoruNoteImageBar=
+    kaoruBuildImageBar(ctx.card);
+
+  kaoruNoteImageBar.classList.remove(
+    'hidden'
+  );
+
+  kaoruSyncImageBar();
+}
+
+/*
+  Capture phase:
+  edit images before the old image viewer click handler runs.
+*/
+els.noteThread.addEventListener('click',e=>{
+  const img=e.target?.closest?.(
+    '.note-editor img'
+  );
+
+  if(!img||!els.noteThread.contains(img)){
+    return;
+  }
+
+  e.preventDefault();
+  e.stopImmediatePropagation();
+
+  kaoruSelectNoteImage(img).catch(err=>{
+    console.warn(
+      'Kaoru select note image',
+      err
+    );
+  });
+},true);
+
+/*
+  Clipboard image paste:
+  convert it immediately into a Kaoru-managed note image.
+*/
+els.noteThread.addEventListener('paste',e=>{
+  const editor=e.target?.closest?.(
+    '.note-editor'
+  );
+
+  if(!editor||!els.noteThread.contains(editor)){
+    return;
+  }
+
+  const files=[
+    ...(e.clipboardData?.items||[])
+  ]
+    .filter(item=>
+      String(item.type||'').startsWith(
+        'image/'
+      )
+    )
+    .map(item=>item.getAsFile())
+    .filter(Boolean);
+
+  if(!files.length)return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  state.activeEditor=editor;
+
+  (async()=>{
+    for(const file of files){
+      await kaoruInsertClipboardImage(
+        file,
+        editor
+      );
+    }
+  })().catch(err=>{
+    console.warn(
+      'Kaoru paste image',
+      err
+    );
+
+    alert(
+      `No se pudo pegar la imagen.\n\n${err?.message||err}`
+    );
+  });
+},true);
+
+/* === KAORU NOTE IMAGE EDIT V3 END === */
