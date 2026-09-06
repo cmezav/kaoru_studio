@@ -708,3 +708,598 @@ body.notes-expanded .note-editor{
   border-color:var(--accent);
   color:var(--accent);
 }
+
+/* === KAORU MOBILE EDITABLE START === */
+
+/*
+  Modo móvil real:
+  - conserva el diseño de escritorio intacto;
+  - aumenta tamaños legibles;
+  - controles táctiles de ~40-48 px;
+  - detalle, notas, formularios y cursos siguen totalmente editables.
+*/
+@media(max-width:800px){
+  :root{
+    --topbar-h:70px;
+  }
+
+  .task-topbar{
+    padding:0 12px;
+    gap:10px;
+  }
+
+  .task-brand{
+    gap:9px;
+  }
+
+  .task-logo{
+    width:38px;
+    height:38px;
+  }
+
+  .task-brand strong{
+    font-size:19px!important;
+  }
+
+  .task-eyebrow{
+    font-size:9px!important;
+  }
+
+  .mobile-home-btn,
+  .top-btn,
+  .theme-btn,
+  .icon-button{
+    min-width:42px;
+    width:42px;
+    height:42px;
+    border-radius:12px;
+    font-size:17px;
+  }
+
+  .top-actions{
+    gap:6px;
+  }
+
+  .task-list-pane{
+    padding:16px 14px 24px;
+  }
+
+  .dashboard-head{
+    gap:10px;
+    padding:8px 2px 15px;
+  }
+
+  .dashboard-head h1{
+    font-size:29px!important;
+    line-height:1.08;
+  }
+
+  .dashboard-head p{
+    margin-top:7px;
+    font-size:13px;
+    line-height:1.4;
+  }
+
+  .mini-kicker{
+    font-size:10px;
+  }
+
+  .mobile-course-btn{
+    min-height:40px;
+    padding:0 12px;
+    border-radius:11px;
+    font-size:12px;
+  }
+
+  .summary-grid{
+    gap:7px;
+    margin-bottom:13px;
+  }
+
+  .summary-card{
+    min-height:67px;
+    padding:10px 9px;
+    border-radius:13px;
+  }
+
+  .summary-card span{
+    font-size:10.5px!important;
+  }
+
+  .summary-card strong{
+    margin-top:5px;
+    font-size:22px!important;
+  }
+
+  .task-toolbar{
+    gap:7px;
+    padding:11px 0;
+  }
+
+  .type-filters{
+    gap:5px;
+  }
+
+  .type-chip{
+    min-height:39px;
+    height:39px;
+    padding:0 12px;
+    border-radius:10px;
+    font-size:11.5px;
+  }
+
+  .search-box{
+    min-height:39px;
+    height:39px;
+    padding:0 10px;
+    border-radius:10px;
+  }
+
+  .search-box input{
+    width:100px;
+    font-size:12.5px;
+  }
+
+  .mobile-course-chips{
+    gap:7px;
+    padding:10px 0 4px;
+  }
+
+  .mobile-course-chip{
+    min-height:36px;
+    height:36px;
+    padding:0 12px;
+    font-size:11px;
+  }
+
+  .task-list{
+    gap:9px;
+    padding-top:11px;
+  }
+
+  .task-card{
+    min-height:82px;
+    padding:14px 13px 13px 49px;
+    border-radius:15px;
+  }
+
+  .task-check{
+    left:13px;
+    top:16px;
+    width:25px;
+    height:25px;
+    border-width:2px;
+  }
+
+  .task-card.completed .task-check::after{
+    font-size:13px;
+  }
+
+  .task-course-name{
+    font-size:11.5px;
+  }
+
+  .task-kind{
+    font-size:10px;
+    padding:3px 8px;
+  }
+
+  .task-card-title{
+    margin:7px 0 8px;
+    font-size:15.5px;
+    line-height:1.35;
+  }
+
+  .task-card-bottom{
+    gap:8px;
+    font-size:11.5px;
+  }
+
+  .task-due{
+    font-size:11.5px;
+  }
+
+  /* Panel lateral de cursos */
+  .course-sidebar{
+    padding:18px 15px 90px;
+  }
+
+  .side-heading h2{
+    font-size:22px!important;
+  }
+
+  .course-filter{
+    min-height:56px;
+    padding:11px;
+    grid-template-columns:15px 1fr auto;
+    gap:10px;
+  }
+
+  .course-dot{
+    width:11px;
+    height:11px;
+  }
+
+  .course-filter-main strong{
+    font-size:14px;
+  }
+
+  .course-filter-main small{
+    margin-top:4px;
+    font-size:11px;
+  }
+
+  .course-filter b{
+    font-size:12px;
+  }
+
+  .course-subcounts em{
+    font-size:10px;
+    padding:3px 7px;
+  }
+
+  /* Detalle de tarea */
+  .mobile-back{
+    width:40px!important;
+    height:40px!important;
+    border-radius:11px;
+    font-size:27px!important;
+  }
+
+  .detail-title-row{
+    padding:15px 14px 13px;
+    gap:9px;
+  }
+
+  .complete-circle{
+    width:28px;
+    height:28px;
+  }
+
+  .detail-meta-line{
+    gap:7px;
+    font-size:11.5px;
+  }
+
+  .kind-pill{
+    padding:4px 8px;
+  }
+
+  .detail-title-copy h2{
+    margin:8px 0 8px;
+    font-size:25px!important;
+  }
+
+  .professor-line{
+    font-size:12.5px;
+  }
+
+  .due-line{
+    margin-top:7px;
+    font-size:12.5px;
+  }
+
+  .detail-actions{
+    gap:7px;
+  }
+
+  .detail-actions button{
+    min-width:40px;
+    min-height:40px;
+  }
+
+  .docs-dock{
+    padding:2px 14px 14px;
+  }
+
+  .dock-head strong{
+    font-size:14px;
+  }
+
+  .dock-actions{
+    gap:7px;
+  }
+
+  .dock-actions button,
+  .small-primary,
+  .small-ghost,
+  .small-danger,
+  .note-add,
+  .notification-permission-btn,
+  .upload-schedule{
+    min-height:40px;
+    height:40px;
+    padding:0 12px;
+    border-radius:10px;
+    font-size:11.5px;
+  }
+
+  .task-docs{
+    gap:8px;
+    min-height:43px;
+    padding-top:10px;
+  }
+
+  .doc-chip{
+    height:40px;
+    max-width:250px;
+    padding:0 8px 0 10px;
+    font-size:11.5px;
+  }
+
+  .doc-remove{
+    width:30px;
+    height:30px;
+  }
+
+  .docs-empty{
+    font-size:11.5px;
+  }
+
+  .link-form input{
+    height:44px;
+    padding:0 11px;
+    font-size:16px;
+  }
+
+  /* Notas */
+  .notes-section{
+    padding:17px 14px 90px;
+  }
+
+  .notes-head{
+    gap:8px;
+    margin-bottom:12px;
+  }
+
+  .notes-head h3{
+    font-size:20px!important;
+  }
+
+  .rich-toolbar{
+    gap:6px;
+    padding:8px;
+    margin-bottom:14px;
+  }
+
+  .rich-toolbar button,
+  .rich-toolbar select,
+  .color-tool{
+    min-height:38px;
+    height:38px;
+    font-size:11.5px;
+    padding:0 10px;
+  }
+
+  .color-tool{
+    width:38px;
+  }
+
+  .note-thread{
+    gap:14px;
+    padding-left:22px;
+  }
+
+  .note-time{
+    font-size:10.5px;
+  }
+
+  .note-bg-select{
+    height:34px;
+    font-size:11px;
+  }
+
+  .note-delete{
+    width:34px;
+    height:34px;
+  }
+
+  .note-card{
+    padding:12px;
+    border-radius:15px;
+  }
+
+  .note-editor{
+    min-height:115px;
+    font-size:16px;
+    line-height:1.6;
+  }
+
+  .notes-empty{
+    padding:28px 18px;
+    font-size:12px;
+  }
+
+  /* Modales editables cómodos en móvil */
+  .modal-card{
+    max-height:96dvh;
+  }
+
+  .modal-head{
+    padding:16px 15px;
+  }
+
+  .modal-head h2{
+    font-size:21px!important;
+  }
+
+  .modal-close{
+    width:42px;
+    height:42px;
+    font-size:24px;
+  }
+
+  .form-grid,
+  .course-form{
+    gap:13px;
+    padding:15px;
+  }
+
+  .field{
+    gap:7px;
+  }
+
+  .field span{
+    font-size:12px;
+  }
+
+  .field input,
+  .field select{
+    height:48px;
+    padding:0 12px;
+    border-radius:11px;
+    font-size:16px;
+  }
+
+  .teacher-preview{
+    padding:12px;
+    font-size:12px;
+    line-height:1.45;
+  }
+
+  .form-actions{
+    gap:8px;
+  }
+
+  .form-actions button{
+    min-height:44px;
+    padding-inline:14px;
+    font-size:13px;
+  }
+
+  .settings-section{
+    padding:17px 15px;
+  }
+
+  .settings-section h3{
+    font-size:20px!important;
+  }
+
+  .settings-section p{
+    font-size:12px;
+  }
+
+  .check-field,
+  .thresholds,
+  .thresholds strong{
+    font-size:12px;
+  }
+
+  .thresholds{
+    gap:10px;
+    padding:12px;
+  }
+
+  .course-setting-row{
+    min-height:62px;
+    padding:11px;
+  }
+
+  .course-setting-copy strong{
+    font-size:13px;
+  }
+
+  .course-setting-copy small{
+    font-size:11px;
+  }
+
+  .course-setting-actions button{
+    min-height:38px;
+    padding:0 10px;
+    font-size:11px;
+  }
+
+  .notification-status{
+    font-size:11.5px;
+  }
+}
+
+@media(max-width:520px){
+  .task-topbar{
+    padding-inline:9px;
+  }
+
+  .task-brand strong{
+    font-size:18px!important;
+  }
+
+  .top-btn,
+  .theme-btn,
+  .mobile-home-btn{
+    min-width:40px;
+    width:40px;
+    height:40px;
+  }
+
+  .task-list-pane{
+    padding-inline:12px;
+  }
+
+  .dashboard-head h1{
+    font-size:27px!important;
+  }
+
+  .summary-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+
+  .summary-card{
+    min-height:65px;
+  }
+
+  .task-toolbar{
+    flex-wrap:wrap;
+  }
+
+  .type-filters{
+    flex:1 1 auto;
+  }
+
+  .type-chip{
+    flex:1;
+  }
+
+  .search-box{
+    flex:1 1 130px;
+  }
+
+  .search-box input{
+    width:100%;
+  }
+
+  .task-card-title{
+    font-size:16px;
+  }
+
+  .task-card-bottom{
+    font-size:12px;
+  }
+
+  .detail-title-row{
+    grid-template-columns:40px 28px minmax(0,1fr);
+  }
+
+  .detail-actions{
+    margin-top:3px;
+  }
+
+  .dock-actions button{
+    width:40px!important;
+    height:40px!important;
+  }
+
+  .link-form{
+    gap:8px;
+  }
+
+  .form-actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+  }
+
+  .form-actions button{
+    width:100%;
+  }
+}
+
+/* === KAORU MOBILE EDITABLE END === */
