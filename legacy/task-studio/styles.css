@@ -1596,3 +1596,26 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU FONT PICKER V4 END === */
+
+/* === KAORU FONT MOBILE SCROLL V1 START === */
+
+.kaoru-font-picker-menu{
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  scrollbar-gutter:stable;
+}
+
+.kaoru-font-picker-option{
+  touch-action:pan-y;
+}
+
+@media(max-width:900px){
+  .kaoru-font-picker-menu{
+    max-height:min(60vh,420px);
+  }
+}
+
+/* === KAORU FONT MOBILE SCROLL V1 END === */

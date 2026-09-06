@@ -1983,9 +1983,13 @@ function kaoruBuildFontMenu(){
       option.value;
 
     button.addEventListener(
-      'pointerdown',
+      'click',
       event=>{
-        event.preventDefault();
+        /*
+          Usamos click en vez de pointerdown.
+          En movil, preventDefault() en pointerdown bloqueaba el gesto
+          vertical y por eso solo se podian ver las primeras fuentes.
+        */
         event.stopPropagation();
 
         const family=
