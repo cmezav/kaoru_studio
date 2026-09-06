@@ -1619,3 +1619,14 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU FONT MOBILE SCROLL V1 END === */
+
+/* === KAORU LIST MARKER FONT V2 START === */
+
+.note-editor li::marker{
+  font-family:var(
+    --kaoru-marker-font,
+    inherit
+  );
+}
+
+/* === KAORU LIST MARKER FONT V2 END === */

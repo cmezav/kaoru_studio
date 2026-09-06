@@ -1211,6 +1211,13 @@ function renderNoteThread(task){
     card.append(head,editor);
     els.noteThread.appendChild(card);
 
+    /*
+      Rebuild marker families for notes that already existed
+      before this fix or arrived from Kaoru Cloud.
+    */
+    kaoruSyncListMarkerFonts(editor);
+
+
     hydrateNoteImages(task,note,editor).catch(err=>{
       console.warn('Kaoru note image hydrate',err);
     });
@@ -1666,12 +1673,118 @@ function kaoruStripFontOverrides(root){
   }
 }
 
+/* === KAORU LIST MARKER FONT V2 START === */
+
+function kaoruListItemsForRange(range,editor){
+  if(!range||!editor)return[];
+
+  if(range.collapsed){
+    const node=range.startContainer;
+
+    const element=
+      node.nodeType===Node.ELEMENT_NODE
+        ?node
+        :node.parentElement;
+
+    const li=element?.closest?.('li');
+
+    return li&&editor.contains(li)
+      ?[li]
+      :[];
+  }
+
+  return[
+    ...editor.querySelectorAll('li')
+  ].filter(li=>{
+    try{
+      return range.intersectsNode(li);
+    }catch(_){
+      return false;
+    }
+  });
+}
+
+function kaoruSetListMarkerFont(li,fontFamily){
+  if(!li||!fontFamily)return;
+
+  li.style.setProperty(
+    '--kaoru-marker-font',
+    fontFamily
+  );
+}
+
+function kaoruApplyMarkerFontForRange(
+  range,
+  editor,
+  fontFamily
+){
+  for(const li of kaoruListItemsForRange(
+    range,
+    editor
+  )){
+    kaoruSetListMarkerFont(
+      li,
+      fontFamily
+    );
+  }
+}
+
+function kaoruFindListContentFont(li){
+  if(!li)return'';
+
+  /*
+    Prefer the first explicitly formatted piece of content.
+    That mirrors the visible font of the list item much better
+    than the editor default.
+  */
+  const styled=li.querySelector(
+    '[data-kaoru-font],font[face],[style*="font-family"]'
+  );
+
+  if(styled){
+    return(
+      styled.style?.fontFamily||
+      styled.getAttribute?.('face')||
+      getComputedStyle(styled).fontFamily||
+      ''
+    );
+  }
+
+  return getComputedStyle(li).fontFamily||'';
+}
+
+function kaoruSyncListMarkerFonts(editor){
+  if(!editor)return;
+
+  for(const li of editor.querySelectorAll('li')){
+    const family=kaoruFindListContentFont(li);
+
+    if(family){
+      kaoruSetListMarkerFont(
+        li,
+        family
+      );
+    }
+  }
+}
+
+/* === KAORU LIST MARKER FONT V2 END === */
 function kaoruApplyFontCommand(
   editor,
   fontFamily
 ){
   const range=kaoruRestoreFontRange(editor);
   if(!range)return false;
+
+  /*
+    The number/bullet is rendered by LI::marker, outside the
+    inner text span. Give every affected LI the same family.
+  */
+  kaoruApplyMarkerFontForRange(
+    range.cloneRange(),
+    editor,
+    fontFamily
+  );
 
   try{
     document.execCommand(
@@ -1740,6 +1853,13 @@ function kaoruApplyFontToWholeEditor(
   }
 
   wrapper.style.fontFamily=fontFamily;
+
+  for(const li of editor.querySelectorAll('li')){
+    kaoruSetListMarkerFont(
+      li,
+      fontFamily
+    );
+  }
 }
 
 async function kaoruApplyFontToCurrentNote(
