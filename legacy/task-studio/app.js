@@ -1995,3 +1995,31 @@ async function init(){
 
 init();
 }());
+
+/* KAORU_TASK_NOTES_EXPANDED_V1 */
+(function setupExpandedTaskNotes(){
+  const button=document.getElementById('expandNotesBtn');
+  const section=document.querySelector('.notes-section');
+  if(!button||!section)return;
+
+  function setExpanded(expanded){
+    const next=Boolean(expanded);
+    document.body.classList.toggle('notes-expanded',next);
+    button.setAttribute('aria-pressed',String(next));
+    button.setAttribute('title',next?'Cerrar vista ampliada':'Ampliar notas');
+    button.textContent=next?'Ã— Salir':'â¤¢ Ampliar';
+  }
+
+  button.addEventListener('click',()=>{
+    setExpanded(!document.body.classList.contains('notes-expanded'));
+  });
+
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'&&document.body.classList.contains('notes-expanded')){
+      event.preventDefault();
+      event.stopPropagation();
+      setExpanded(false);
+      button.focus();
+    }
+  },true);
+}());

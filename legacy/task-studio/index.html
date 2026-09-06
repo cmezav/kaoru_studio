@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=kaoru-cloud-ui-2">
+<link rel="stylesheet" href="./styles.css?cache=task-notes-expanded-2">
 <script>
 (function(){
   try{
@@ -148,7 +148,7 @@
         <section class="notes-section">
           <div class="notes-head">
             <div><span class="mini-kicker">BLOC DE NOTAS</span><h3>Hilo de avance</h3></div>
-            <button id="addNoteBtn" class="note-add" type="button">＋ Nueva nota</button>
+            <div class="notes-head-actions">               <button id="expandNotesBtn" class="note-expand" type="button" aria-pressed="false" title="Ampliar notas">â¤¢ Ampliar</button>               <button id="addNoteBtn" class="note-add" type="button">＋ Nueva nota</button>             </div>
           </div>
 
           <div id="richToolbar" class="rich-toolbar">
@@ -355,6 +355,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=kaoru-cloud-security-1"></script>
-<script src="./app.js?cache=task-studio-cloud-ui-8"></script>
+<script src="./app.js?cache=task-notes-expanded-2"></script>
 </body>
 </html>
