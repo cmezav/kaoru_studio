@@ -172,7 +172,12 @@
               <option value="5">24</option>
               <option value="6">32</option>
             </select>
-            <select id="fontSelect" title="Tipografía"><option value="">Tipografía</option></select>
+            <select id="fontSelect" title="Tipografia"><option value="">Tipografia</option></select>
+            <select id="fontScopeSelect" title="Aplicar tipografia a">
+              <option value="selection" selected>Seleccion / escribir</option>
+              <option value="note">Toda la nota</option>
+              <option value="thread">Todo el hilo</option>
+            </select>
             <button id="refreshFontsBtn" type="button" title="Actualizar fuentes desde Text Studio">↻ Fuentes</button>
             <label class="color-tool" title="Color de texto">A<input id="textColorInput" type="color" value="#7c3aed"></label>
             <label class="color-tool highlight-tool" title="Resaltado">▰<input id="highlightColorInput" type="color" value="#fff1a8"></label>
@@ -360,6 +365,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=task-font-v2-editor-stable-20260906-2"></script>
 <script src="./task-push.js?cache=kaoru-stable-20260906"></script>
-<script src="./app.js?cache=task-font-mobile-switch-v2-20260906-1"></script>
+<script src="./app.js?cache=task-font-mobile-v3-scope-20260906-1"></script>
 </body>
 </html>

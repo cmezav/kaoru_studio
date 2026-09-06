@@ -23,7 +23,7 @@ const els={
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
   detailPane:$('detailPane'),detailEmpty:$('detailEmpty'),taskDetail:$('taskDetail'),closeDetailBtn:$('closeDetailBtn'),detailCompleteBtn:$('detailCompleteBtn'),detailCourseDot:$('detailCourseDot'),detailCourse:$('detailCourse'),detailKind:$('detailKind'),detailTitle:$('detailTitle'),detailProfessor:$('detailProfessor'),detailDue:$('detailDue'),restoreTaskBtn:$('restoreTaskBtn'),editTaskBtn:$('editTaskBtn'),deleteTaskBtn:$('deleteTaskBtn'),
   addLinkBtn:$('addLinkBtn'),addFileBtn:$('addFileBtn'),taskFileInput:$('taskFileInput'),taskDocs:$('taskDocs'),linkForm:$('linkForm'),linkLabel:$('linkLabel'),linkUrl:$('linkUrl'),cancelLinkBtn:$('cancelLinkBtn'),
-  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSelect:$('fontSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
+  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
   settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
@@ -809,6 +809,34 @@ function serializeNoteHtml(editor){
   const cloneEditor=editor.cloneNode(true);
 
   cloneEditor
+    .querySelectorAll(
+      '[data-kaoru-font-caret="1"]'
+    )
+    .forEach(span=>{
+      for(const node of[
+        ...span.childNodes
+      ]){
+        if(node.nodeType===Node.TEXT_NODE){
+          node.data=node.data.replace(
+            /\u200B/g,
+            ''
+          );
+        }
+      }
+
+      span.removeAttribute(
+        'data-kaoru-font-caret'
+      );
+
+      if(
+        !span.textContent&&
+        !span.children.length
+      ){
+        span.remove();
+      }
+    });
+
+  cloneEditor
     .querySelectorAll('img[data-kaoru-image-id]')
     .forEach(img=>{
       /*
@@ -1084,16 +1112,23 @@ function kaoruFocusedNoteEditor(){
 async function kaoruFinishNoteEdit(task,note,editor){
   await saveNoteNow(task,note,editor);
 
+  if(kaoruFontFormattingBusy())return;
   if(!kaoruCloudRefreshDeferred)return;
 
   setTimeout(()=>{
-    if(kaoruFocusedNoteEditor())return;
+    if(
+      kaoruFocusedNoteEditor()||
+      kaoruFontFormattingBusy()
+    )return;
 
     kaoruCloudRefreshDeferred=false;
 
     refreshTaskStateFromDb()
-      .catch(err=>console.warn('Kaoru deferred refresh',err));
-  },30);
+      .catch(err=>console.warn(
+        'Kaoru deferred refresh',
+        err
+      ));
+  },120);
 }
 function renderNoteThread(task){
   els.noteThread.innerHTML='';
@@ -1303,9 +1338,24 @@ els.fontSizeSelect.addEventListener(
   ()=>execRich('fontSize',els.fontSizeSelect.value)
 );
 
-/* === KAORU NOTE FONT MOBILE V2 START === */
+/* === KAORU NOTE FONT MOBILE V3 START === */
 
 let kaoruFontRange=null;
+let kaoruFontEditor=null;
+let kaoruFontToolbarBusyUntil=0;
+
+function kaoruFontFormattingBusy(){
+  return Date.now()<kaoruFontToolbarBusyUntil;
+}
+
+function kaoruBeginFontToolbarInteraction(){
+  kaoruFontToolbarBusyUntil=Date.now()+5000;
+  kaoruCaptureFontRange();
+}
+
+function kaoruEndFontToolbarInteraction(){
+  kaoruFontToolbarBusyUntil=Date.now()+700;
+}
 
 function kaoruRangeBelongsToEditor(range,editor){
   if(!range||!editor)return false;
@@ -1338,9 +1388,14 @@ function kaoruCaptureFontRange(){
     kaoruFontRange=
       sel.getRangeAt(0).cloneRange();
 
+    kaoruFontEditor=editor;
     state.savedRange=
       kaoruFontRange.cloneRange();
-  }else if(
+
+    return;
+  }
+
+  if(
     state.savedRange&&
     kaoruRangeBelongsToEditor(
       state.savedRange,
@@ -1349,23 +1404,23 @@ function kaoruCaptureFontRange(){
   ){
     kaoruFontRange=
       state.savedRange.cloneRange();
+
+    kaoruFontEditor=editor;
   }
 }
 
-function kaoruRestoreFontRange(){
-  const editor=state.activeEditor;
-  if(!editor)return null;
-
-  let range=null;
+function kaoruRestoreFontRange(editor){
+  let target=null;
 
   if(
+    kaoruFontEditor===editor&&
     kaoruFontRange&&
     kaoruRangeBelongsToEditor(
       kaoruFontRange,
       editor
     )
   ){
-    range=kaoruFontRange.cloneRange();
+    target=kaoruFontRange.cloneRange();
   }else if(
     state.savedRange&&
     kaoruRangeBelongsToEditor(
@@ -1373,54 +1428,80 @@ function kaoruRestoreFontRange(){
       editor
     )
   ){
-    range=state.savedRange.cloneRange();
+    target=state.savedRange.cloneRange();
   }
 
-  if(!range){
-    range=document.createRange();
-    range.selectNodeContents(editor);
-    range.collapse(false);
+  if(!target){
+    target=document.createRange();
+    target.selectNodeContents(editor);
+    target.collapse(false);
+  }
+
+  try{
+    editor.focus({preventScroll:true});
+  }catch(_){
+    editor.focus();
   }
 
   const sel=window.getSelection();
   sel.removeAllRanges();
-  sel.addRange(range);
+  sel.addRange(target);
 
-  return range;
+  return target;
 }
 
-function kaoruWrapSelectedTextWithFont(
+function kaoruStripFontOverrides(root){
+  if(!root)return;
+
+  const elements=[
+    ...(root.querySelectorAll?.('*')||[])
+  ];
+
+  for(const element of elements){
+    element.removeAttribute('face');
+
+    if(element.style?.fontFamily){
+      element.style.removeProperty(
+        'font-family'
+      );
+
+      if(!element.getAttribute('style')){
+        element.removeAttribute('style');
+      }
+    }
+  }
+}
+
+function kaoruWrapRangeWithFont(
   range,
   fontFamily
 ){
   const fragment=range.extractContents();
   const span=document.createElement('span');
 
-  span.style.fontFamily=fontFamily;
   span.dataset.kaoruFont='1';
+  span.style.fontFamily=fontFamily;
   span.appendChild(fragment);
+
+  kaoruStripFontOverrides(span);
 
   range.insertNode(span);
 
-  const next=document.createRange();
-  next.setStartAfter(span);
-  next.collapse(true);
+  const selected=document.createRange();
+  selected.selectNodeContents(span);
 
-  return next;
+  return selected;
 }
 
-function kaoruCreateFontTypingPoint(
+function kaoruCreateTypingFontPoint(
   range,
   fontFamily
 ){
-  /*
-    Mobile browsers often lose the contentEditable formatting
-    context after a native <select>. A tiny styled caret span
-    gives the next typed characters an explicit font context.
-  */
   const span=document.createElement('span');
-  span.style.fontFamily=fontFamily;
+
   span.dataset.kaoruFont='1';
+  span.dataset.kaoruFontCaret='1';
+  span.style.fontFamily=fontFamily;
 
   const marker=document.createTextNode('\u200B');
   span.appendChild(marker);
@@ -1428,56 +1509,32 @@ function kaoruCreateFontTypingPoint(
   range.deleteContents();
   range.insertNode(span);
 
-  const next=document.createRange();
-  next.setStart(marker,marker.data.length);
-  next.collapse(true);
+  const caret=document.createRange();
+  caret.setStart(
+    marker,
+    marker.data.length
+  );
+  caret.collapse(true);
 
-  return next;
+  return caret;
 }
 
-function kaoruCleanFontCaretMarkers(editor){
-  if(!editor)return;
-
-  for(const span of editor.querySelectorAll(
-    'span[data-kaoru-font="1"]'
-  )){
-    for(const node of [...span.childNodes]){
-      if(node.nodeType===Node.TEXT_NODE){
-        node.data=node.data.replace(/\u200B/g,'');
-      }
-    }
-
-    if(
-      !span.textContent&&
-      !span.querySelector('img,br')
-    ){
-      span.remove();
-    }
-  }
-}
-
-async function kaoruApplyMobileFont(
+async function kaoruApplyFontToSelection(
+  editor,
   fontFamily
 ){
-  const editor=state.activeEditor;
-  if(!editor||!fontFamily)return;
-
-  const range=kaoruRestoreFontRange();
+  const range=kaoruRestoreFontRange(editor);
   if(!range)return;
 
-  let nextRange;
-
-  if(range.collapsed){
-    nextRange=kaoruCreateFontTypingPoint(
-      range,
-      fontFamily
-    );
-  }else{
-    nextRange=kaoruWrapSelectedTextWithFont(
-      range,
-      fontFamily
-    );
-  }
+  const nextRange=range.collapsed
+    ?kaoruCreateTypingFontPoint(
+        range,
+        fontFamily
+      )
+    :kaoruWrapRangeWithFont(
+        range,
+        fontFamily
+      );
 
   const sel=window.getSelection();
   sel.removeAllRanges();
@@ -1485,30 +1542,168 @@ async function kaoruApplyMobileFont(
 
   state.savedRange=nextRange.cloneRange();
   kaoruFontRange=nextRange.cloneRange();
+  kaoruFontEditor=editor;
 
-  editor.focus({
-    preventScroll:true
-  });
-
-  await saveActiveEditor();
+  saveActiveEditor();
 }
 
-/*
-  Capture before the native mobile select opens.
-*/
-for(const eventName of[
-  'pointerdown',
-  'mousedown',
-  'touchstart'
-]){
-  els.fontSelect.addEventListener(
-    eventName,
-    kaoruCaptureFontRange,
-    eventName==='touchstart'
-      ?{passive:true}
-      :undefined
+function kaoruApplyFontToWholeEditor(
+  editor,
+  fontFamily
+){
+  if(!editor)return;
+
+  kaoruStripFontOverrides(editor);
+
+  let wrapper=null;
+
+  if(
+    editor.childNodes.length===1&&
+    editor.firstElementChild&&
+    editor.firstElementChild.dataset
+      ?.kaoruFontScope==='all'
+  ){
+    wrapper=editor.firstElementChild;
+  }else{
+    wrapper=document.createElement('div');
+    wrapper.dataset.kaoruFontScope='all';
+
+    while(editor.firstChild){
+      wrapper.appendChild(editor.firstChild);
+    }
+
+    editor.appendChild(wrapper);
+  }
+
+  wrapper.style.fontFamily=fontFamily;
+}
+
+async function kaoruApplyFontToCurrentNote(
+  fontFamily
+){
+  const editor=state.activeEditor;
+  const task=taskById(state.selectedTaskId);
+
+  if(!editor||!task)return;
+
+  const note=(task.notes||[]).find(
+    item=>item.id===editor.dataset.noteId
   );
+
+  if(!note)return;
+
+  kaoruApplyFontToWholeEditor(
+    editor,
+    fontFamily
+  );
+
+  note.html=serializeNoteHtml(editor);
+  note.updatedAt=now();
+  task.updatedAt=now();
+
+  await dbPut(TASK_STORE,task);
 }
+
+async function kaoruApplyFontToWholeThread(
+  fontFamily
+){
+  const task=taskById(state.selectedTaskId);
+  if(!task)return;
+
+  let changed=false;
+
+  for(const editor of els.noteThread
+    .querySelectorAll('.note-editor')){
+    const note=(task.notes||[]).find(
+      item=>item.id===editor.dataset.noteId
+    );
+
+    if(!note)continue;
+
+    kaoruApplyFontToWholeEditor(
+      editor,
+      fontFamily
+    );
+
+    note.html=serializeNoteHtml(editor);
+    note.updatedAt=now();
+    changed=true;
+  }
+
+  if(!changed)return;
+
+  task.updatedAt=now();
+  await dbPut(TASK_STORE,task);
+}
+
+async function kaoruApplySelectedFont(
+  fontFamily
+){
+  if(!fontFamily)return;
+
+  const scope=
+    els.fontScopeSelect?.value||
+    'selection';
+
+  if(scope==='thread'){
+    await kaoruApplyFontToWholeThread(
+      fontFamily
+    );
+
+    els.fontScopeSelect.value='selection';
+    kaoruEndFontToolbarInteraction();
+    return;
+  }
+
+  if(scope==='note'){
+    await kaoruApplyFontToCurrentNote(
+      fontFamily
+    );
+
+    els.fontScopeSelect.value='selection';
+    kaoruEndFontToolbarInteraction();
+    return;
+  }
+
+  const editor=state.activeEditor;
+  if(!editor)return;
+
+  await kaoruApplyFontToSelection(
+    editor,
+    fontFamily
+  );
+
+  kaoruEndFontToolbarInteraction();
+}
+
+for(const control of[
+  els.fontSelect,
+  els.fontScopeSelect
+]){
+  if(!control)continue;
+
+  for(const eventName of[
+    'pointerdown',
+    'mousedown',
+    'touchstart'
+  ]){
+    control.addEventListener(
+      eventName,
+      kaoruBeginFontToolbarInteraction,
+      eventName==='touchstart'
+        ?{passive:true}
+        :undefined
+    );
+  }
+}
+
+els.fontScopeSelect?.addEventListener(
+  'change',
+  ()=>{
+    kaoruFontToolbarBusyUntil=
+      Date.now()+5000;
+  }
+);
 
 els.fontSelect.addEventListener(
   'change',
@@ -1516,39 +1711,20 @@ els.fontSelect.addEventListener(
     const value=els.fontSelect.value;
     if(!value)return;
 
-    /*
-      Wait for the native picker to close before restoring
-      the contentEditable selection.
-    */
+    kaoruFontToolbarBusyUntil=
+      Date.now()+5000;
+
     setTimeout(()=>{
-      kaoruApplyMobileFont(value)
+      kaoruApplySelectedFont(value)
         .catch(err=>console.warn(
           'Kaoru cambio de tipografia',
           err
         ));
-    },30);
+    },80);
   }
 );
 
-/*
-  Once the user types, remove only the invisible caret marker.
-  The span and its font-family remain around the real text.
-*/
-els.noteThread.addEventListener(
-  'input',
-  e=>{
-    const editor=e.target?.closest?.(
-      '.note-editor'
-    );
-
-    if(!editor)return;
-
-    kaoruCleanFontCaretMarkers(editor);
-  },
-  true
-);
-
-/* === KAORU NOTE FONT MOBILE V2 END === */
+/* === KAORU NOTE FONT MOBILE V3 END === */
 
 els.textColorInput.addEventListener(
   'input',
