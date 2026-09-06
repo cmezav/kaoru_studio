@@ -510,6 +510,7 @@ async function reconcile(){
 
   for(const row of rows){
     if(row.user_id!==session.user.id)continue;
+    if(row.entity_type==='font')continue;
     const local=await getLocal(row.entity_type,row.entity_id);
     const localTs=localUpdated(local);
     const remoteTs=Number(row.client_updated_at)||0;
@@ -598,6 +599,7 @@ async function startRealtime(){
       async payload=>{
         const row=payload?.new&&Object.keys(payload.new).length?payload.new:payload?.old;
         if(!row||row.module!==MODULE||row.user_id!==session?.user?.id)return;
+        if(row.entity_type==='font')return;
         if(row.device_id===DEVICE_ID)return;
         try{
           const changed=await applyRemote(row);

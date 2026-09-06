@@ -1025,7 +1025,7 @@ async function syncNoteImagesToCloud(){
     if(taskChanged){
       task.updatedAt=now();
       await dbPut(TASK_STORE,task);
-      if(state.selectedTaskId===task.id)renderNoteThread(task);
+      if(state.selectedTaskId===task.id&&!kaoruFocusedNoteEditor())renderNoteThread(task);
     }
   }
 
@@ -1070,6 +1070,31 @@ async function cleanupRemovedNoteImages(note,editor){
   }
 }
 
+let kaoruCloudRefreshDeferred=false;
+
+function kaoruFocusedNoteEditor(){
+  const active=document.activeElement;
+  return Boolean(
+    active&&
+    active.classList?.contains('note-editor')&&
+    els.noteThread.contains(active)
+  );
+}
+
+async function kaoruFinishNoteEdit(task,note,editor){
+  await saveNoteNow(task,note,editor);
+
+  if(!kaoruCloudRefreshDeferred)return;
+
+  setTimeout(()=>{
+    if(kaoruFocusedNoteEditor())return;
+
+    kaoruCloudRefreshDeferred=false;
+
+    refreshTaskStateFromDb()
+      .catch(err=>console.warn('Kaoru deferred refresh',err));
+  },30);
+}
 function renderNoteThread(task){
   els.noteThread.innerHTML='';
 
@@ -1144,7 +1169,8 @@ function renderNoteThread(task){
     );
     editor.addEventListener(
       'blur',
-      ()=>saveNoteNow(task,note,editor)
+      ()=>kaoruFinishNoteEdit(task,note,editor)
+        .catch(err=>console.warn('Kaoru note blur save',err))
     );
 
     card.append(head,editor);
@@ -1806,39 +1832,28 @@ function setupNoteImageViewer(){
 setupNoteImageViewer();
 const loadedFontIds=new Set();
 
-/* === KAORU TASK FONT CLOUD V1 START === */
+/* === KAORU TASK FONT CLOUD V2 START === */
 
 const KAORU_FONT_ENTITY='font';
 const KAORU_FONT_TASK_ID='__fonts__';
 
 function taskFontMime(fileName){
-  const ext=String(fileName||'')
-    .split('.')
-    .pop()
-    .toLowerCase();
-
+  const ext=String(fileName||'').split('.').pop().toLowerCase();
   if(ext==='ttf')return'font/ttf';
   if(ext==='otf')return'font/otf';
   if(ext==='woff')return'font/woff';
   if(ext==='woff2')return'font/woff2';
-
   return'application/octet-stream';
 }
 
 function openTaskFontDb(){
   return new Promise((resolve,reject)=>{
     const req=indexedDB.open(FONT_DB_NAME);
-
     req.onupgradeneeded=()=>{
-      const db=req.result;
-      if(!db.objectStoreNames.contains(FONT_STORE)){
-        db.createObjectStore(
-          FONT_STORE,
-          {keyPath:'id'}
-        );
+      if(!req.result.objectStoreNames.contains(FONT_STORE)){
+        req.result.createObjectStore(FONT_STORE,{keyPath:'id'});
       }
     };
-
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
   });
@@ -1846,17 +1861,8 @@ function openTaskFontDb(){
 
 async function taskFontDbGetAll(){
   const db=await openTaskFontDb();
-
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(
-      FONT_STORE,
-      'readonly'
-    );
-
-    const req=tx
-      .objectStore(FONT_STORE)
-      .getAll();
-
+    const req=db.transaction(FONT_STORE,'readonly').objectStore(FONT_STORE).getAll();
     req.onsuccess=()=>resolve(req.result||[]);
     req.onerror=()=>reject(req.error);
   });
@@ -1864,18 +1870,19 @@ async function taskFontDbGetAll(){
 
 async function taskFontDbPut(record){
   const db=await openTaskFontDb();
-
   return new Promise((resolve,reject)=>{
-    const tx=db.transaction(
-      FONT_STORE,
-      'readwrite'
-    );
-
+    const tx=db.transaction(FONT_STORE,'readwrite');
     tx.objectStore(FONT_STORE).put(record);
-
     tx.oncomplete=()=>resolve(record);
     tx.onerror=()=>reject(tx.error);
   });
+}
+
+function taskFontBufferSize(record){
+  const value=record?.buffer;
+  if(value instanceof ArrayBuffer)return value.byteLength;
+  if(ArrayBuffer.isView(value))return value.byteLength;
+  return 0;
 }
 
 async function listCloudTaskFonts(){
@@ -1883,199 +1890,164 @@ async function listCloudTaskFonts(){
   const client=cloud?.getClient?.();
   const user=cloud?.currentUser?.();
 
-  if(!client||!user||!navigator.onLine){
-    return[];
-  }
+  if(!client||!user||!navigator.onLine)return[];
 
-  const result=await client
+  const {data,error}=await client
     .from('kaoru_records')
-    .select(
-      'entity_id,payload,client_updated_at,deleted'
-    )
+    .select('entity_id,payload,client_updated_at,deleted')
     .eq('user_id',user.id)
     .eq('module','tasks')
     .eq('entity_type',KAORU_FONT_ENTITY)
     .eq('deleted',false);
 
-  if(result.error)throw result.error;
+  if(error)throw error;
 
-  return(result.data||[])
+  return(data||[])
     .map(row=>({
       id:String(row.entity_id||row.payload?.id||''),
-      ...row.payload,
-      updatedAt:Number(
-        row.payload?.updatedAt||
-        row.client_updated_at||
-        0
-      )
+      ...(row.payload||{}),
+      updatedAt:Number(row.payload?.updatedAt||row.client_updated_at||0)
     }))
     .filter(item=>item.id);
 }
 
-async function downloadMissingTaskFonts(remoteFonts){
+async function upsertCloudTaskFont(payload){
+  const cloud=window.KaoruTaskCloud;
+  const client=cloud?.getClient?.();
+  const user=cloud?.currentUser?.();
+
+  if(!client||!user){
+    throw new Error('Kaoru Cloud no esta iniciado.');
+  }
+
+  const updatedAt=Number(payload?.updatedAt||Date.now());
+
+  const {error}=await client.rpc('kaoru_upsert_record',{
+    p_module:'tasks',
+    p_entity_type:KAORU_FONT_ENTITY,
+    p_entity_id:String(payload.id),
+    p_payload:payload,
+    p_client_updated_at:updatedAt,
+    p_deleted:false,
+    p_device_id:null
+  });
+
+  if(error)throw error;
+}
+
+async function downloadCloudTaskFonts(remoteFonts){
   const cloud=window.KaoruTaskCloud;
 
   if(
     !cloud?.downloadTaskFile||
-    !navigator.onLine||
-    !cloud?.currentUser?.()
-  ){
-    return 0;
-  }
+    !cloud?.currentUser?.()||
+    !navigator.onLine
+  )return 0;
 
   const local=await taskFontDbGetAll();
-  const localIds=new Set(
-    local.map(item=>String(item.id))
-  );
-
+  const localById=new Map(local.map(item=>[String(item.id),item]));
   let downloaded=0;
 
   for(const remote of remoteFonts){
+    if(!remote?.id||!remote?.storagePath)continue;
+
+    const localRecord=localById.get(String(remote.id));
+    const localSize=taskFontBufferSize(localRecord);
+    const remoteSize=Number(remote.size||0);
+
     if(
-      !remote?.id||
-      !remote?.storagePath||
-      localIds.has(String(remote.id))
-    ){
-      continue;
-    }
+      localRecord&&
+      localSize>0&&
+      (!remoteSize||localSize===remoteSize)
+    )continue;
 
     try{
-      const blob=await cloud.downloadTaskFile(
-        remote.storagePath
-      );
+      const blob=await cloud.downloadTaskFile(remote.storagePath);
+
+      if(!(blob instanceof Blob)||!blob.size){
+        throw new Error('La fuente descargada esta vacia.');
+      }
 
       const buffer=await blob.arrayBuffer();
 
       await taskFontDbPut({
         id:remote.id,
-        fileName:
-          remote.fileName||
-          remote.name||
-          `fuente-${remote.id}`,
+        fileName:remote.fileName||remote.name||`fuente-${remote.id}`,
         buffer,
-        createdAt:Number(
-          remote.createdAt||
-          remote.updatedAt||
-          Date.now()
-        )
+        createdAt:Number(remote.createdAt||remote.updatedAt||Date.now())
       });
 
-      localIds.add(String(remote.id));
+      localById.set(String(remote.id),{
+        id:remote.id,
+        fileName:remote.fileName,
+        buffer
+      });
+
       downloaded++;
     }catch(err){
-      console.warn(
-        'Kaoru font download',
-        remote?.fileName||remote?.id,
-        err
-      );
+      console.warn('Kaoru font download',remote?.fileName||remote?.id,err);
     }
   }
 
   return downloaded;
 }
 
-async function uploadMissingTaskFonts(remoteFonts){
+async function uploadLocalTaskFonts(remoteFonts){
   const cloud=window.KaoruTaskCloud;
 
   if(
     !cloud?.uploadTaskFile||
-    !cloud?.queueUpsert||
     !cloud?.currentUser?.()||
     !navigator.onLine
-  ){
-    return 0;
-  }
+  )return 0;
 
   const local=await taskFontDbGetAll();
-
-  const remoteById=new Map(
-    remoteFonts.map(item=>[
-      String(item.id),
-      item
-    ])
-  );
-
+  const remoteById=new Map(remoteFonts.map(item=>[String(item.id),item]));
   let uploaded=0;
 
   for(const rec of local){
-    if(
-      !rec?.id||
-      !rec?.buffer||
-      remoteById.has(String(rec.id))
-    ){
-      continue;
-    }
+    const size=taskFontBufferSize(rec);
+    if(!rec?.id||!size)continue;
+
+    const remote=remoteById.get(String(rec.id));
+
+    const remoteComplete=
+      Boolean(remote?.storagePath)&&
+      (!Number(remote?.size||0)||Number(remote.size)===size);
+
+    if(remoteComplete)continue;
 
     try{
       const mime=taskFontMime(rec.fileName);
+      const blob=new Blob([rec.buffer],{type:mime});
 
-      const blob=new Blob(
-        [rec.buffer],
-        {type:mime}
+      const cloudFile=await cloud.uploadTaskFile(
+        KAORU_FONT_TASK_ID,
+        rec.id,
+        {
+          blob,
+          name:rec.fileName||`fuente-${rec.id}`,
+          type:mime,
+          size:blob.size
+        }
       );
-
-      const cloudFile=
-        await cloud.uploadTaskFile(
-          KAORU_FONT_TASK_ID,
-          rec.id,
-          {
-            blob,
-            name:
-              rec.fileName||
-              `fuente-${rec.id}`,
-            type:mime,
-            size:blob.size
-          }
-        );
 
       const payload={
         id:rec.id,
-        fileName:
-          rec.fileName||
-          `fuente-${rec.id}`,
+        fileName:rec.fileName||`fuente-${rec.id}`,
         storagePath:cloudFile.path,
-        mime:
-          cloudFile.mime||
-          mime,
-        size:Number(
-          cloudFile.size||
-          blob.size||
-          0
-        ),
-        createdAt:Number(
-          rec.createdAt||
-          Date.now()
-        ),
+        mime:cloudFile.mime||mime,
+        size:Number(cloudFile.size||blob.size||0),
+        createdAt:Number(rec.createdAt||Date.now()),
         updatedAt:Date.now()
       };
 
-      cloud.queueUpsert(
-        KAORU_FONT_ENTITY,
-        payload
-      );
-
-      remoteById.set(
-        String(rec.id),
-        payload
-      );
-
+      await upsertCloudTaskFont(payload);
+      remoteById.set(String(rec.id),payload);
       uploaded++;
     }catch(err){
-      console.warn(
-        'Kaoru font upload',
-        rec?.fileName||rec?.id,
-        err
-      );
+      console.warn('Kaoru font upload',rec?.fileName||rec?.id,err);
     }
-  }
-
-  if(uploaded){
-    await cloud.flush?.().catch(err=>{
-      console.warn(
-        'Kaoru font flush',
-        err
-      );
-    });
   }
 
   return uploaded;
@@ -2084,44 +2056,25 @@ async function uploadMissingTaskFonts(remoteFonts){
 let taskFontCloudSyncPromise=null;
 
 async function syncTaskFontsWithCloud(){
-  if(taskFontCloudSyncPromise){
-    return taskFontCloudSyncPromise;
-  }
+  if(taskFontCloudSyncPromise)return taskFontCloudSyncPromise;
 
   taskFontCloudSyncPromise=(async()=>{
     const cloud=window.KaoruTaskCloud;
 
-    if(
-      !cloud?.currentUser?.()||
-      !navigator.onLine
-    ){
-      return{
-        uploaded:0,
-        downloaded:0
-      };
+    if(!cloud?.currentUser?.()||!navigator.onLine){
+      return{uploaded:0,downloaded:0,remote:0};
     }
 
     let remote=await listCloudTaskFonts();
-
-    const downloaded=
-      await downloadMissingTaskFonts(
-        remote
-      );
-
-    const uploaded=
-      await uploadMissingTaskFonts(
-        remote
-      );
+    const downloaded=await downloadCloudTaskFonts(remote);
+    const uploaded=await uploadLocalTaskFonts(remote);
 
     if(uploaded){
       remote=await listCloudTaskFonts();
+      await downloadCloudTaskFonts(remote);
     }
 
-    return{
-      uploaded,
-      downloaded,
-      remote:remote.length
-    };
+    return{uploaded,downloaded,remote:remote.length};
   })();
 
   try{
@@ -2133,35 +2086,20 @@ async function syncTaskFontsWithCloud(){
 
 async function refreshTaskFontsFromCloud(){
   try{
-    const result=
-      await syncTaskFontsWithCloud();
+    const result=await syncTaskFontsWithCloud();
 
-    if(
-      result?.downloaded||
-      result?.uploaded
-    ){
-      console.info(
-        'Kaoru fonts synced',
-        result
-      );
+    if(result?.downloaded||result?.uploaded){
+      console.info('Kaoru fonts synced',result);
     }
 
     return result;
   }catch(err){
-    console.warn(
-      'Kaoru font cloud sync',
-      err
-    );
-
-    return{
-      uploaded:0,
-      downloaded:0,
-      error:err
-    };
+    console.warn('Kaoru font cloud sync',err);
+    return{uploaded:0,downloaded:0,remote:0,error:err};
   }
 }
 
-/* === KAORU TASK FONT CLOUD V1 END === */
+/* === KAORU TASK FONT CLOUD V2 END === */
 
 async function loadTaskFonts(){
   await refreshTaskFontsFromCloud();
@@ -2173,7 +2111,7 @@ async function loadTaskFonts(){
     state.taskFonts.sort((a,b)=>a.label.localeCompare(b.label,'es'));state.taskFonts.forEach(f=>{const o=document.createElement('option');o.value=f.css;o.textContent=f.label;els.fontSelect.appendChild(o);});if([...els.fontSelect.options].some(o=>o.value===old))els.fontSelect.value=old;
   }catch(err){console.warn('Biblioteca de fuentes de Text Studio no disponible todavía.',err);}
 }
-els.refreshFontsBtn.addEventListener('click',loadTaskFonts);window.addEventListener('focus',loadTaskFonts);window.addEventListener('online',()=>loadTaskFonts().catch(()=>{}));document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTaskFonts();});
+els.refreshFontsBtn.addEventListener('click',()=>loadTaskFonts().catch(()=>{}));window.addEventListener('online',()=>loadTaskFonts().catch(()=>{}));
 
 let scheduleObjectUrl=null;
 let scheduleHydrating=false;
@@ -2512,14 +2450,45 @@ function setCloudUi(info={}){
   );
 }
 async function refreshTaskStateFromDb(){
-  state.courses=await dbGetAll(COURSE_STORE);
-  state.tasks=await dbGetAll(TASK_STORE);
-  if(state.selectedTaskId&&!state.tasks.some(t=>t.id===state.selectedTaskId)){
+  const editing=kaoruFocusedNoteEditor();
+  const selectedId=state.selectedTaskId;
+  const editingTask=editing&&selectedId?taskById(selectedId):null;
+
+  const freshCourses=await dbGetAll(COURSE_STORE);
+  const freshTasks=await dbGetAll(TASK_STORE);
+
+  state.courses=freshCourses;
+
+  if(editing&&editingTask){
+    let found=false;
+
+    state.tasks=freshTasks.map(item=>{
+      if(item.id!==editingTask.id)return item;
+      found=true;
+      return editingTask;
+    });
+
+    if(!found)state.tasks.push(editingTask);
+
+    kaoruCloudRefreshDeferred=true;
+  }else{
+    state.tasks=freshTasks;
+  }
+
+  if(
+    state.selectedTaskId&&
+    !state.tasks.some(item=>item.id===state.selectedTaskId)
+  ){
     state.selectedTaskId=null;
   }
+
   renderCourseSettings();
   renderTaskList();
-  renderDetail();
+
+  if(!editing){
+    renderDetail();
+  }
+
   await loadSchedule();
 }
 
