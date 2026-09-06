@@ -1303,9 +1303,252 @@ els.fontSizeSelect.addEventListener(
   ()=>execRich('fontSize',els.fontSizeSelect.value)
 );
 
-els.fontSelect.addEventListener('change',()=>{
-  if(els.fontSelect.value)execRich('fontName',els.fontSelect.value);
-});
+/* === KAORU NOTE FONT MOBILE V2 START === */
+
+let kaoruFontRange=null;
+
+function kaoruRangeBelongsToEditor(range,editor){
+  if(!range||!editor)return false;
+
+  const node=range.commonAncestorContainer;
+
+  return Boolean(
+    node&&
+    (
+      node===editor||
+      editor.contains(node)
+    )
+  );
+}
+
+function kaoruCaptureFontRange(){
+  const editor=state.activeEditor;
+  if(!editor)return;
+
+  const sel=window.getSelection();
+
+  if(
+    sel&&
+    sel.rangeCount&&
+    kaoruRangeBelongsToEditor(
+      sel.getRangeAt(0),
+      editor
+    )
+  ){
+    kaoruFontRange=
+      sel.getRangeAt(0).cloneRange();
+
+    state.savedRange=
+      kaoruFontRange.cloneRange();
+  }else if(
+    state.savedRange&&
+    kaoruRangeBelongsToEditor(
+      state.savedRange,
+      editor
+    )
+  ){
+    kaoruFontRange=
+      state.savedRange.cloneRange();
+  }
+}
+
+function kaoruRestoreFontRange(){
+  const editor=state.activeEditor;
+  if(!editor)return null;
+
+  let range=null;
+
+  if(
+    kaoruFontRange&&
+    kaoruRangeBelongsToEditor(
+      kaoruFontRange,
+      editor
+    )
+  ){
+    range=kaoruFontRange.cloneRange();
+  }else if(
+    state.savedRange&&
+    kaoruRangeBelongsToEditor(
+      state.savedRange,
+      editor
+    )
+  ){
+    range=state.savedRange.cloneRange();
+  }
+
+  if(!range){
+    range=document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+  }
+
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  return range;
+}
+
+function kaoruWrapSelectedTextWithFont(
+  range,
+  fontFamily
+){
+  const fragment=range.extractContents();
+  const span=document.createElement('span');
+
+  span.style.fontFamily=fontFamily;
+  span.dataset.kaoruFont='1';
+  span.appendChild(fragment);
+
+  range.insertNode(span);
+
+  const next=document.createRange();
+  next.setStartAfter(span);
+  next.collapse(true);
+
+  return next;
+}
+
+function kaoruCreateFontTypingPoint(
+  range,
+  fontFamily
+){
+  /*
+    Mobile browsers often lose the contentEditable formatting
+    context after a native <select>. A tiny styled caret span
+    gives the next typed characters an explicit font context.
+  */
+  const span=document.createElement('span');
+  span.style.fontFamily=fontFamily;
+  span.dataset.kaoruFont='1';
+
+  const marker=document.createTextNode('\u200B');
+  span.appendChild(marker);
+
+  range.deleteContents();
+  range.insertNode(span);
+
+  const next=document.createRange();
+  next.setStart(marker,marker.data.length);
+  next.collapse(true);
+
+  return next;
+}
+
+function kaoruCleanFontCaretMarkers(editor){
+  if(!editor)return;
+
+  for(const span of editor.querySelectorAll(
+    'span[data-kaoru-font="1"]'
+  )){
+    for(const node of [...span.childNodes]){
+      if(node.nodeType===Node.TEXT_NODE){
+        node.data=node.data.replace(/\u200B/g,'');
+      }
+    }
+
+    if(
+      !span.textContent&&
+      !span.querySelector('img,br')
+    ){
+      span.remove();
+    }
+  }
+}
+
+async function kaoruApplyMobileFont(
+  fontFamily
+){
+  const editor=state.activeEditor;
+  if(!editor||!fontFamily)return;
+
+  const range=kaoruRestoreFontRange();
+  if(!range)return;
+
+  let nextRange;
+
+  if(range.collapsed){
+    nextRange=kaoruCreateFontTypingPoint(
+      range,
+      fontFamily
+    );
+  }else{
+    nextRange=kaoruWrapSelectedTextWithFont(
+      range,
+      fontFamily
+    );
+  }
+
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(nextRange);
+
+  state.savedRange=nextRange.cloneRange();
+  kaoruFontRange=nextRange.cloneRange();
+
+  editor.focus({
+    preventScroll:true
+  });
+
+  await saveActiveEditor();
+}
+
+/*
+  Capture before the native mobile select opens.
+*/
+for(const eventName of[
+  'pointerdown',
+  'mousedown',
+  'touchstart'
+]){
+  els.fontSelect.addEventListener(
+    eventName,
+    kaoruCaptureFontRange,
+    eventName==='touchstart'
+      ?{passive:true}
+      :undefined
+  );
+}
+
+els.fontSelect.addEventListener(
+  'change',
+  ()=>{
+    const value=els.fontSelect.value;
+    if(!value)return;
+
+    /*
+      Wait for the native picker to close before restoring
+      the contentEditable selection.
+    */
+    setTimeout(()=>{
+      kaoruApplyMobileFont(value)
+        .catch(err=>console.warn(
+          'Kaoru cambio de tipografia',
+          err
+        ));
+    },30);
+  }
+);
+
+/*
+  Once the user types, remove only the invisible caret marker.
+  The span and its font-family remain around the real text.
+*/
+els.noteThread.addEventListener(
+  'input',
+  e=>{
+    const editor=e.target?.closest?.(
+      '.note-editor'
+    );
+
+    if(!editor)return;
+
+    kaoruCleanFontCaretMarkers(editor);
+  },
+  true
+);
+
+/* === KAORU NOTE FONT MOBILE V2 END === */
 
 els.textColorInput.addEventListener(
   'input',
