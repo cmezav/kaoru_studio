@@ -1705,3 +1705,35 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU FONT SIZE APPLY V2 END === */
+
+/* === KAORU SIZE VISIBLE SELECTION V3 START === */
+
+.kaoru-size-selection-layer{
+  position:fixed;
+  inset:0;
+  z-index:10040;
+  pointer-events:none;
+  overflow:hidden;
+  display:none;
+}
+
+.kaoru-size-selection-layer.active{
+  display:block;
+}
+
+.kaoru-size-selection-rect{
+  position:absolute;
+  border-radius:2px;
+  background:color-mix(
+    in srgb,
+    var(--accent) 32%,
+    transparent
+  );
+  outline:1px solid color-mix(
+    in srgb,
+    var(--accent) 28%,
+    transparent
+  );
+}
+
+/* === KAORU SIZE VISIBLE SELECTION V3 END === */

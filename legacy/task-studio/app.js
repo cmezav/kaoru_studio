@@ -2466,6 +2466,161 @@ kaoruBuildFontMenu();
 
 let kaoruSizeRange=null;
 let kaoruSizeEditor=null;
+let kaoruSizeSelectionLayer=null;
+
+function kaoruEnsureSizeSelectionLayer(){
+  if(kaoruSizeSelectionLayer){
+    return kaoruSizeSelectionLayer;
+  }
+
+  const layer=document.createElement('div');
+
+  layer.className=
+    'kaoru-size-selection-layer';
+
+  layer.setAttribute(
+    'aria-hidden',
+    'true'
+  );
+
+  document.body.appendChild(layer);
+
+  kaoruSizeSelectionLayer=layer;
+
+  return layer;
+}
+
+function kaoruRenderSizeSelection(){
+  const layer=
+    kaoruEnsureSizeSelectionLayer();
+
+  layer.innerHTML='';
+
+  if(
+    !kaoruSizeRange||
+    kaoruSizeRange.collapsed||
+    !kaoruSizeEditor||
+    !kaoruSizeEditor.isConnected
+  ){
+    layer.classList.remove('active');
+    return;
+  }
+
+  let rects=[];
+
+  try{
+    rects=[
+      ...kaoruSizeRange.getClientRects()
+    ];
+  }catch(_){
+    rects=[];
+  }
+
+  const viewportWidth=
+    window.visualViewport?.width||
+    window.innerWidth;
+
+  const viewportHeight=
+    window.visualViewport?.height||
+    window.innerHeight;
+
+  for(const rect of rects){
+    if(
+      rect.width<=0||
+      rect.height<=0||
+      rect.right<0||
+      rect.bottom<0||
+      rect.left>viewportWidth||
+      rect.top>viewportHeight
+    ){
+      continue;
+    }
+
+    const mark=document.createElement('span');
+
+    mark.className=
+      'kaoru-size-selection-rect';
+
+    mark.style.left=
+      `${Math.round(rect.left)}px`;
+
+    mark.style.top=
+      `${Math.round(rect.top)}px`;
+
+    mark.style.width=
+      `${Math.max(1,Math.round(rect.width))}px`;
+
+    mark.style.height=
+      `${Math.max(1,Math.round(rect.height))}px`;
+
+    layer.appendChild(mark);
+  }
+
+  layer.classList.toggle(
+    'active',
+    layer.childElementCount>0
+  );
+}
+
+function kaoruShowSizeSelection(range=null){
+  const target=
+    range||
+    kaoruSizeRange;
+
+  if(!target||target.collapsed){
+    return;
+  }
+
+  kaoruSizeRange=
+    target.cloneRange();
+
+  kaoruEnsureSizeSelectionLayer();
+  kaoruRenderSizeSelection();
+}
+
+function kaoruHideSizeSelection(){
+  if(!kaoruSizeSelectionLayer)return;
+
+  kaoruSizeSelectionLayer.innerHTML='';
+  kaoruSizeSelectionLayer.classList.remove(
+    'active'
+  );
+}
+
+function kaoruRefreshSizeSelectionVisual(){
+  if(
+    !kaoruSizeSelectionLayer||
+    !kaoruSizeSelectionLayer.classList
+      .contains('active')
+  ){
+    return;
+  }
+
+  requestAnimationFrame(
+    kaoruRenderSizeSelection
+  );
+}
+
+window.addEventListener(
+  'resize',
+  kaoruRefreshSizeSelectionVisual
+);
+
+window.addEventListener(
+  'scroll',
+  kaoruRefreshSizeSelectionVisual,
+  true
+);
+
+window.visualViewport?.addEventListener(
+  'resize',
+  kaoruRefreshSizeSelectionVisual
+);
+
+window.visualViewport?.addEventListener(
+  'scroll',
+  kaoruRefreshSizeSelectionVisual
+);
 
 function kaoruCaptureSizeRange(){
   const editor=state.activeEditor;
@@ -2489,6 +2644,14 @@ function kaoruCaptureSizeRange(){
     state.savedRange=
       kaoruSizeRange.cloneRange();
 
+    if(!kaoruSizeRange.collapsed){
+      kaoruShowSizeSelection(
+        kaoruSizeRange
+      );
+    }else{
+      kaoruHideSizeSelection();
+    }
+
     return;
   }
 
@@ -2503,6 +2666,12 @@ function kaoruCaptureSizeRange(){
       state.savedRange.cloneRange();
 
     kaoruSizeEditor=editor;
+
+    if(!kaoruSizeRange.collapsed){
+      kaoruShowSizeSelection(
+        kaoruSizeRange
+      );
+    }
   }
 }
 
@@ -3037,10 +3206,14 @@ for(const control of[
   }
 }
 
-function kaoruApplyManualSize(){
-  return kaoruApplySelectedSize(
-    els.fontSizeInput.value
-  );
+async function kaoruApplyManualSize(){
+  try{
+    return await kaoruApplySelectedSize(
+      els.fontSizeInput.value
+    );
+  }finally{
+    kaoruHideSizeSelection();
+  }
 }
 
 els.fontSizeSelect?.addEventListener(
@@ -3147,6 +3320,72 @@ els.noteThread.addEventListener(
 );
 
 /* === KAORU NOTE SIZE WORDLIKE V1 END === */
+/* === KAORU SIZE VISIBLE SELECTION V3 START === */
+
+els.fontSizeInput?.addEventListener(
+  'focus',
+  ()=>{
+    if(
+      kaoruSizeRange&&
+      !kaoruSizeRange.collapsed
+    ){
+      kaoruShowSizeSelection(
+        kaoruSizeRange
+      );
+    }
+  }
+);
+
+els.fontSizeInput?.addEventListener(
+  'input',
+  ()=>{
+    /*
+      Android can resize the visual viewport while the numeric
+      keyboard is open. Repaint the fake selection in place.
+    */
+    kaoruRefreshSizeSelectionVisual();
+  }
+);
+
+els.fontSizeSelect?.addEventListener(
+  'change',
+  ()=>{
+    setTimeout(
+      kaoruHideSizeSelection,
+      80
+    );
+  }
+);
+
+els.noteThread.addEventListener(
+  'pointerdown',
+  ()=>{
+    kaoruHideSizeSelection();
+  },
+  true
+);
+
+els.fontSizeInput?.addEventListener(
+  'blur',
+  ()=>{
+    setTimeout(()=>{
+      const active=
+        document.activeElement;
+
+      if(
+        active===els.fontSizeInput||
+        active===els.fontSizeApplyBtn||
+        active===els.fontSizeSelect
+      ){
+        return;
+      }
+
+      kaoruHideSizeSelection();
+    },160);
+  }
+);
+
+/* === KAORU SIZE VISIBLE SELECTION V3 END === */
 
 els.textColorInput.addEventListener(
   'input',
