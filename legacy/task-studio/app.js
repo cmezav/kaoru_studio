@@ -1805,7 +1805,366 @@ function setupNoteImageViewer(){
 
 setupNoteImageViewer();
 const loadedFontIds=new Set();
+
+/* === KAORU TASK FONT CLOUD V1 START === */
+
+const KAORU_FONT_ENTITY='font';
+const KAORU_FONT_TASK_ID='__fonts__';
+
+function taskFontMime(fileName){
+  const ext=String(fileName||'')
+    .split('.')
+    .pop()
+    .toLowerCase();
+
+  if(ext==='ttf')return'font/ttf';
+  if(ext==='otf')return'font/otf';
+  if(ext==='woff')return'font/woff';
+  if(ext==='woff2')return'font/woff2';
+
+  return'application/octet-stream';
+}
+
+function openTaskFontDb(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(FONT_DB_NAME);
+
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(FONT_STORE)){
+        db.createObjectStore(
+          FONT_STORE,
+          {keyPath:'id'}
+        );
+      }
+    };
+
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function taskFontDbGetAll(){
+  const db=await openTaskFontDb();
+
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(
+      FONT_STORE,
+      'readonly'
+    );
+
+    const req=tx
+      .objectStore(FONT_STORE)
+      .getAll();
+
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function taskFontDbPut(record){
+  const db=await openTaskFontDb();
+
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(
+      FONT_STORE,
+      'readwrite'
+    );
+
+    tx.objectStore(FONT_STORE).put(record);
+
+    tx.oncomplete=()=>resolve(record);
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+
+async function listCloudTaskFonts(){
+  const cloud=window.KaoruTaskCloud;
+  const client=cloud?.getClient?.();
+  const user=cloud?.currentUser?.();
+
+  if(!client||!user||!navigator.onLine){
+    return[];
+  }
+
+  const result=await client
+    .from('kaoru_records')
+    .select(
+      'entity_id,payload,client_updated_at,deleted'
+    )
+    .eq('user_id',user.id)
+    .eq('module','tasks')
+    .eq('entity_type',KAORU_FONT_ENTITY)
+    .eq('deleted',false);
+
+  if(result.error)throw result.error;
+
+  return(result.data||[])
+    .map(row=>({
+      id:String(row.entity_id||row.payload?.id||''),
+      ...row.payload,
+      updatedAt:Number(
+        row.payload?.updatedAt||
+        row.client_updated_at||
+        0
+      )
+    }))
+    .filter(item=>item.id);
+}
+
+async function downloadMissingTaskFonts(remoteFonts){
+  const cloud=window.KaoruTaskCloud;
+
+  if(
+    !cloud?.downloadTaskFile||
+    !navigator.onLine||
+    !cloud?.currentUser?.()
+  ){
+    return 0;
+  }
+
+  const local=await taskFontDbGetAll();
+  const localIds=new Set(
+    local.map(item=>String(item.id))
+  );
+
+  let downloaded=0;
+
+  for(const remote of remoteFonts){
+    if(
+      !remote?.id||
+      !remote?.storagePath||
+      localIds.has(String(remote.id))
+    ){
+      continue;
+    }
+
+    try{
+      const blob=await cloud.downloadTaskFile(
+        remote.storagePath
+      );
+
+      const buffer=await blob.arrayBuffer();
+
+      await taskFontDbPut({
+        id:remote.id,
+        fileName:
+          remote.fileName||
+          remote.name||
+          `fuente-${remote.id}`,
+        buffer,
+        createdAt:Number(
+          remote.createdAt||
+          remote.updatedAt||
+          Date.now()
+        )
+      });
+
+      localIds.add(String(remote.id));
+      downloaded++;
+    }catch(err){
+      console.warn(
+        'Kaoru font download',
+        remote?.fileName||remote?.id,
+        err
+      );
+    }
+  }
+
+  return downloaded;
+}
+
+async function uploadMissingTaskFonts(remoteFonts){
+  const cloud=window.KaoruTaskCloud;
+
+  if(
+    !cloud?.uploadTaskFile||
+    !cloud?.queueUpsert||
+    !cloud?.currentUser?.()||
+    !navigator.onLine
+  ){
+    return 0;
+  }
+
+  const local=await taskFontDbGetAll();
+
+  const remoteById=new Map(
+    remoteFonts.map(item=>[
+      String(item.id),
+      item
+    ])
+  );
+
+  let uploaded=0;
+
+  for(const rec of local){
+    if(
+      !rec?.id||
+      !rec?.buffer||
+      remoteById.has(String(rec.id))
+    ){
+      continue;
+    }
+
+    try{
+      const mime=taskFontMime(rec.fileName);
+
+      const blob=new Blob(
+        [rec.buffer],
+        {type:mime}
+      );
+
+      const cloudFile=
+        await cloud.uploadTaskFile(
+          KAORU_FONT_TASK_ID,
+          rec.id,
+          {
+            blob,
+            name:
+              rec.fileName||
+              `fuente-${rec.id}`,
+            type:mime,
+            size:blob.size
+          }
+        );
+
+      const payload={
+        id:rec.id,
+        fileName:
+          rec.fileName||
+          `fuente-${rec.id}`,
+        storagePath:cloudFile.path,
+        mime:
+          cloudFile.mime||
+          mime,
+        size:Number(
+          cloudFile.size||
+          blob.size||
+          0
+        ),
+        createdAt:Number(
+          rec.createdAt||
+          Date.now()
+        ),
+        updatedAt:Date.now()
+      };
+
+      cloud.queueUpsert(
+        KAORU_FONT_ENTITY,
+        payload
+      );
+
+      remoteById.set(
+        String(rec.id),
+        payload
+      );
+
+      uploaded++;
+    }catch(err){
+      console.warn(
+        'Kaoru font upload',
+        rec?.fileName||rec?.id,
+        err
+      );
+    }
+  }
+
+  if(uploaded){
+    await cloud.flush?.().catch(err=>{
+      console.warn(
+        'Kaoru font flush',
+        err
+      );
+    });
+  }
+
+  return uploaded;
+}
+
+let taskFontCloudSyncPromise=null;
+
+async function syncTaskFontsWithCloud(){
+  if(taskFontCloudSyncPromise){
+    return taskFontCloudSyncPromise;
+  }
+
+  taskFontCloudSyncPromise=(async()=>{
+    const cloud=window.KaoruTaskCloud;
+
+    if(
+      !cloud?.currentUser?.()||
+      !navigator.onLine
+    ){
+      return{
+        uploaded:0,
+        downloaded:0
+      };
+    }
+
+    let remote=await listCloudTaskFonts();
+
+    const downloaded=
+      await downloadMissingTaskFonts(
+        remote
+      );
+
+    const uploaded=
+      await uploadMissingTaskFonts(
+        remote
+      );
+
+    if(uploaded){
+      remote=await listCloudTaskFonts();
+    }
+
+    return{
+      uploaded,
+      downloaded,
+      remote:remote.length
+    };
+  })();
+
+  try{
+    return await taskFontCloudSyncPromise;
+  }finally{
+    taskFontCloudSyncPromise=null;
+  }
+}
+
+async function refreshTaskFontsFromCloud(){
+  try{
+    const result=
+      await syncTaskFontsWithCloud();
+
+    if(
+      result?.downloaded||
+      result?.uploaded
+    ){
+      console.info(
+        'Kaoru fonts synced',
+        result
+      );
+    }
+
+    return result;
+  }catch(err){
+    console.warn(
+      'Kaoru font cloud sync',
+      err
+    );
+
+    return{
+      uploaded:0,
+      downloaded:0,
+      error:err
+    };
+  }
+}
+
+/* === KAORU TASK FONT CLOUD V1 END === */
+
 async function loadTaskFonts(){
+  await refreshTaskFontsFromCloud();
   const base=[['system-ui','Sistema'],['Georgia','Georgia'],['"Times New Roman"','Times New Roman'],['Arial','Arial'],['Verdana','Verdana'],['"Courier New"','Courier New']];const old=els.fontSelect.value;els.fontSelect.innerHTML='<option value="">Tipografía</option>';base.forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;els.fontSelect.appendChild(o);});
   try{
     const db=await new Promise((resolve,reject)=>{const req=indexedDB.open(FONT_DB_NAME);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(FONT_STORE))req.result.createObjectStore(FONT_STORE,{keyPath:'id'});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
@@ -1814,7 +2173,7 @@ async function loadTaskFonts(){
     state.taskFonts.sort((a,b)=>a.label.localeCompare(b.label,'es'));state.taskFonts.forEach(f=>{const o=document.createElement('option');o.value=f.css;o.textContent=f.label;els.fontSelect.appendChild(o);});if([...els.fontSelect.options].some(o=>o.value===old))els.fontSelect.value=old;
   }catch(err){console.warn('Biblioteca de fuentes de Text Studio no disponible todavía.',err);}
 }
-els.refreshFontsBtn.addEventListener('click',loadTaskFonts);window.addEventListener('focus',loadTaskFonts);document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTaskFonts();});
+els.refreshFontsBtn.addEventListener('click',loadTaskFonts);window.addEventListener('focus',loadTaskFonts);window.addEventListener('online',()=>loadTaskFonts().catch(()=>{}));document.addEventListener('visibilitychange',()=>{if(!document.hidden)loadTaskFonts();});
 
 let scheduleObjectUrl=null;
 let scheduleHydrating=false;
@@ -2335,7 +2694,7 @@ function installNavigationShortcuts(){document.addEventListener('keydown',e=>{if
 
 async function init(){
   try{
-    state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await migrateLegacyNoteImages();await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();
+    state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await migrateLegacyNoteImages();await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();await loadTaskFonts();
     await window.KaoruTaskPush?.restore?.(state.notificationConfig).catch(err=>console.warn('Kaoru Push restore',err));
     if(EMBEDDED)window.parent.postMessage({type:'kaoru:studio-ready',studio:'tasks',theme:document.documentElement.dataset.theme||'day'},'*');
     ensureServiceWorker();checkNotifications();setInterval(checkNotifications,15000);
