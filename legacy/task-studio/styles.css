@@ -709,597 +709,627 @@ body.notes-expanded .note-editor{
   color:var(--accent);
 }
 
-/* === KAORU MOBILE EDITABLE START === */
+/* === KAORU MOBILE REPAIR START === */
 
 /*
-  Modo móvil real:
-  - conserva el diseño de escritorio intacto;
-  - aumenta tamaños legibles;
-  - controles táctiles de ~40-48 px;
-  - detalle, notas, formularios y cursos siguen totalmente editables.
+  Reparación móvil:
+  - evita que la cabecera se salga de pantalla;
+  - mantiene controles cómodos sin hacerlos gigantes;
+  - resumen 2 x 2;
+  - filtros en filas limpias;
+  - botones Enlace/Archivo legibles;
+  - barra de notas envuelve controles en vez de cortarlos.
 */
 @media(max-width:800px){
   :root{
-    --topbar-h:70px;
+    --topbar-h:108px;
   }
 
+  html,body{
+    width:100%;
+    max-width:100%;
+    overflow:hidden;
+  }
+
+  .task-app{
+    width:100%;
+    max-width:100vw;
+    height:100dvh;
+  }
+
+  /* CABECERA EN DOS FILAS */
   .task-topbar{
-    padding:0 12px;
-    gap:10px;
+    height:var(--topbar-h);
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:50px 46px;
+    align-content:center;
+    gap:4px;
+    padding:5px 10px 7px;
+    overflow:hidden;
   }
 
   .task-brand{
-    gap:9px;
+    width:100%;
+    min-width:0;
+    justify-content:flex-start;
+    gap:8px;
   }
 
   .task-logo{
-    width:38px;
-    height:38px;
+    display:block!important;
+    width:34px!important;
+    height:34px!important;
+    flex:0 0 34px;
+  }
+
+  .task-brand>div{
+    min-width:0;
   }
 
   .task-brand strong{
-    font-size:19px!important;
+    font-size:18px!important;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
   .task-eyebrow{
-    font-size:9px!important;
+    display:block!important;
+    font-size:8px!important;
   }
 
-  .mobile-home-btn,
-  .top-btn,
-  .theme-btn,
-  .icon-button{
-    min-width:42px;
-    width:42px;
-    height:42px;
-    border-radius:12px;
-    font-size:17px;
+  .mobile-home-btn{
+    display:inline-flex!important;
+    width:38px!important;
+    min-width:38px!important;
+    height:38px!important;
+    flex:0 0 38px;
+    font-size:22px!important;
   }
 
   .top-actions{
-    gap:6px;
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:5px;
+    overflow:visible;
+  }
+
+  .top-btn,
+  .theme-btn{
+    width:100%!important;
+    min-width:0!important;
+    height:38px!important;
+    padding:0 5px!important;
+    border-radius:10px;
+    font-size:15px!important;
+    overflow:hidden;
+  }
+
+  .top-btn span,
+  .schedule-btn span,
+  .top-btn.primary span,
+  .notification-btn span{
+    display:none!important;
+  }
+
+  .top-btn.primary{
+    box-shadow:none;
+  }
+
+  .pending-badge{
+    display:none!important;
+  }
+
+  /* CUERPO */
+  .task-workspace{
+    display:block!important;
+    width:100%;
+    max-width:100vw;
+    padding:0!important;
+    overflow:hidden;
   }
 
   .task-list-pane{
-    padding:16px 14px 24px;
+    width:100%;
+    height:100%;
+    padding:14px 12px 22px!important;
+    border:0;
+    border-radius:0;
+    box-shadow:none;
+    overflow:hidden;
   }
 
   .dashboard-head{
-    gap:10px;
-    padding:8px 2px 15px;
+    padding:7px 2px 13px!important;
+    gap:9px;
   }
 
   .dashboard-head h1{
-    font-size:29px!important;
+    font-size:26px!important;
     line-height:1.08;
   }
 
   .dashboard-head p{
-    margin-top:7px;
-    font-size:13px;
-    line-height:1.4;
+    margin-top:6px;
+    font-size:12px!important;
   }
 
   .mini-kicker{
-    font-size:10px;
+    font-size:9px!important;
   }
 
   .mobile-course-btn{
-    min-height:40px;
-    padding:0 12px;
-    border-radius:11px;
-    font-size:12px;
+    min-height:38px!important;
+    height:38px!important;
+    padding:0 10px!important;
+    font-size:11px!important;
+    white-space:nowrap;
   }
 
+  /* 2 x 2: ya no quedan cuatro cajitas diminutas */
   .summary-grid{
-    gap:7px;
-    margin-bottom:13px;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+    margin-bottom:12px!important;
   }
 
   .summary-card{
-    min-height:67px;
-    padding:10px 9px;
-    border-radius:13px;
+    min-height:61px;
+    padding:9px 10px!important;
+    border-radius:12px;
   }
 
   .summary-card span{
-    font-size:10.5px!important;
+    font-size:10px!important;
   }
 
   .summary-card strong{
-    margin-top:5px;
-    font-size:22px!important;
-  }
-
-  .task-toolbar{
-    gap:7px;
-    padding:11px 0;
-  }
-
-  .type-filters{
-    gap:5px;
-  }
-
-  .type-chip{
-    min-height:39px;
-    height:39px;
-    padding:0 12px;
-    border-radius:10px;
-    font-size:11.5px;
-  }
-
-  .search-box{
-    min-height:39px;
-    height:39px;
-    padding:0 10px;
-    border-radius:10px;
-  }
-
-  .search-box input{
-    width:100px;
-    font-size:12.5px;
-  }
-
-  .mobile-course-chips{
-    gap:7px;
-    padding:10px 0 4px;
-  }
-
-  .mobile-course-chip{
-    min-height:36px;
-    height:36px;
-    padding:0 12px;
-    font-size:11px;
-  }
-
-  .task-list{
-    gap:9px;
-    padding-top:11px;
-  }
-
-  .task-card{
-    min-height:82px;
-    padding:14px 13px 13px 49px;
-    border-radius:15px;
-  }
-
-  .task-check{
-    left:13px;
-    top:16px;
-    width:25px;
-    height:25px;
-    border-width:2px;
-  }
-
-  .task-card.completed .task-check::after{
-    font-size:13px;
-  }
-
-  .task-course-name{
-    font-size:11.5px;
-  }
-
-  .task-kind{
-    font-size:10px;
-    padding:3px 8px;
-  }
-
-  .task-card-title{
-    margin:7px 0 8px;
-    font-size:15.5px;
-    line-height:1.35;
-  }
-
-  .task-card-bottom{
-    gap:8px;
-    font-size:11.5px;
-  }
-
-  .task-due{
-    font-size:11.5px;
-  }
-
-  /* Panel lateral de cursos */
-  .course-sidebar{
-    padding:18px 15px 90px;
-  }
-
-  .side-heading h2{
-    font-size:22px!important;
-  }
-
-  .course-filter{
-    min-height:56px;
-    padding:11px;
-    grid-template-columns:15px 1fr auto;
-    gap:10px;
-  }
-
-  .course-dot{
-    width:11px;
-    height:11px;
-  }
-
-  .course-filter-main strong{
-    font-size:14px;
-  }
-
-  .course-filter-main small{
     margin-top:4px;
-    font-size:11px;
-  }
-
-  .course-filter b{
-    font-size:12px;
-  }
-
-  .course-subcounts em{
-    font-size:10px;
-    padding:3px 7px;
-  }
-
-  /* Detalle de tarea */
-  .mobile-back{
-    width:40px!important;
-    height:40px!important;
-    border-radius:11px;
-    font-size:27px!important;
-  }
-
-  .detail-title-row{
-    padding:15px 14px 13px;
-    gap:9px;
-  }
-
-  .complete-circle{
-    width:28px;
-    height:28px;
-  }
-
-  .detail-meta-line{
-    gap:7px;
-    font-size:11.5px;
-  }
-
-  .kind-pill{
-    padding:4px 8px;
-  }
-
-  .detail-title-copy h2{
-    margin:8px 0 8px;
-    font-size:25px!important;
-  }
-
-  .professor-line{
-    font-size:12.5px;
-  }
-
-  .due-line{
-    margin-top:7px;
-    font-size:12.5px;
-  }
-
-  .detail-actions{
-    gap:7px;
-  }
-
-  .detail-actions button{
-    min-width:40px;
-    min-height:40px;
-  }
-
-  .docs-dock{
-    padding:2px 14px 14px;
-  }
-
-  .dock-head strong{
-    font-size:14px;
-  }
-
-  .dock-actions{
-    gap:7px;
-  }
-
-  .dock-actions button,
-  .small-primary,
-  .small-ghost,
-  .small-danger,
-  .note-add,
-  .notification-permission-btn,
-  .upload-schedule{
-    min-height:40px;
-    height:40px;
-    padding:0 12px;
-    border-radius:10px;
-    font-size:11.5px;
-  }
-
-  .task-docs{
-    gap:8px;
-    min-height:43px;
-    padding-top:10px;
-  }
-
-  .doc-chip{
-    height:40px;
-    max-width:250px;
-    padding:0 8px 0 10px;
-    font-size:11.5px;
-  }
-
-  .doc-remove{
-    width:30px;
-    height:30px;
-  }
-
-  .docs-empty{
-    font-size:11.5px;
-  }
-
-  .link-form input{
-    height:44px;
-    padding:0 11px;
-    font-size:16px;
-  }
-
-  /* Notas */
-  .notes-section{
-    padding:17px 14px 90px;
-  }
-
-  .notes-head{
-    gap:8px;
-    margin-bottom:12px;
-  }
-
-  .notes-head h3{
     font-size:20px!important;
   }
 
+  /* FILTROS: chips arriba, buscador abajo */
+  .task-toolbar{
+    display:grid!important;
+    grid-template-columns:1fr;
+    gap:8px!important;
+    padding:10px 0!important;
+  }
+
+  .type-filters{
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:5px!important;
+    width:100%;
+  }
+
+  .type-chip{
+    width:100%;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0 8px!important;
+    font-size:11px!important;
+  }
+
+  .search-box{
+    width:100%!important;
+    height:40px!important;
+    margin-left:0!important;
+    padding:0 10px!important;
+  }
+
+  .search-box input{
+    width:100%!important;
+    font-size:13px!important;
+  }
+
+  .mobile-course-chips{
+    gap:6px!important;
+    padding:8px 0 3px!important;
+  }
+
+  .mobile-course-chip{
+    height:34px!important;
+    padding:0 10px!important;
+    font-size:10.5px!important;
+  }
+
+  /* TARJETAS */
+  .task-list{
+    gap:8px!important;
+    padding:10px 1px 80px!important;
+  }
+
+  .task-card{
+    min-height:76px;
+    padding:12px 12px 11px 45px!important;
+    border-radius:14px;
+  }
+
+  .task-check{
+    left:12px!important;
+    top:14px!important;
+    width:23px!important;
+    height:23px!important;
+  }
+
+  .task-course-name{
+    font-size:10.5px!important;
+  }
+
+  .task-kind{
+    font-size:9px!important;
+    padding:3px 7px!important;
+  }
+
+  .task-card-title{
+    margin:6px 0 7px!important;
+    font-size:14.5px!important;
+  }
+
+  .task-card-bottom{
+    font-size:10.5px!important;
+  }
+
+  .task-due{
+    font-size:10.5px!important;
+  }
+
+  .task-empty strong{
+    font-size:15px!important;
+  }
+
+  .task-empty span{
+    font-size:11px!important;
+  }
+
+  /* CURSOS */
+  .course-sidebar{
+    inset:var(--topbar-h) 0 0 0!important;
+    padding:16px 13px 80px!important;
+  }
+
+  .side-heading h2{
+    font-size:20px!important;
+  }
+
+  .course-filter{
+    min-height:52px;
+    padding:10px!important;
+  }
+
+  .course-filter-main strong{
+    font-size:13px!important;
+  }
+
+  .course-filter-main small{
+    font-size:10.5px!important;
+  }
+
+  .course-filter b{
+    font-size:11px!important;
+  }
+
+  /* DETALLE */
+  .detail-pane{
+    inset:0!important;
+    top:0!important;
+  }
+
+  .detail-title-row{
+    grid-template-columns:38px 26px minmax(0,1fr)!important;
+    gap:8px!important;
+    padding:12px 11px 10px!important;
+  }
+
+  .mobile-back{
+    width:38px!important;
+    height:38px!important;
+    font-size:24px!important;
+  }
+
+  .complete-circle{
+    width:26px!important;
+    height:26px!important;
+  }
+
+  .detail-title-copy h2{
+    font-size:22px!important;
+    margin:6px 0!important;
+  }
+
+  .detail-meta-line{
+    font-size:10.5px!important;
+  }
+
+  .professor-line,
+  .due-line{
+    font-size:11.5px!important;
+  }
+
+  .detail-actions{
+    grid-column:3!important;
+    grid-row:2!important;
+    justify-self:end;
+    gap:5px!important;
+  }
+
+  .detail-actions button{
+    min-width:36px!important;
+    width:36px!important;
+    height:36px!important;
+  }
+
+  /* DOC / ENLACE: NO volver a convertirlos en iconos minúsculos */
+  .docs-dock{
+    padding:0 11px 12px!important;
+  }
+
+  .dock-head{
+    display:flex!important;
+    align-items:flex-end!important;
+    justify-content:space-between!important;
+    gap:8px!important;
+  }
+
+  .dock-head strong{
+    font-size:13px!important;
+  }
+
+  .dock-actions{
+    display:flex!important;
+    gap:6px!important;
+    margin-top:0!important;
+    flex-wrap:nowrap;
+  }
+
+  .dock-actions button{
+    width:auto!important;
+    min-width:76px!important;
+    height:38px!important;
+    padding:0 9px!important;
+    font-size:11px!important;
+    white-space:nowrap;
+  }
+
+  .dock-actions button::first-letter{
+    font-size:inherit!important;
+  }
+
+  .task-docs{
+    min-height:40px;
+    gap:7px!important;
+    padding-top:8px!important;
+  }
+
+  .doc-chip{
+    height:38px!important;
+    max-width:220px;
+    font-size:10.5px!important;
+  }
+
+  .link-form{
+    grid-template-columns:1fr!important;
+    gap:7px!important;
+  }
+
+  .link-form input{
+    height:44px!important;
+    font-size:16px!important;
+  }
+
+  /* NOTAS */
+  .notes-section{
+    padding:14px 11px 80px!important;
+  }
+
+  .notes-head{
+    align-items:center!important;
+    gap:7px!important;
+  }
+
+  .notes-head h3{
+    font-size:19px!important;
+  }
+
+  .notes-head-actions{
+    gap:5px!important;
+  }
+
+  .note-expand,
+  .note-add{
+    height:38px!important;
+    min-height:38px!important;
+    padding:0 9px!important;
+    font-size:10.5px!important;
+    white-space:nowrap;
+  }
+
+  /* La barra ahora puede envolver a otra línea, no queda cortada */
   .rich-toolbar{
-    gap:6px;
-    padding:8px;
-    margin-bottom:14px;
+    position:relative!important;
+    top:auto!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    overflow:visible!important;
+    gap:5px!important;
+    padding:7px!important;
+    margin-bottom:12px!important;
   }
 
   .rich-toolbar button,
   .rich-toolbar select,
   .color-tool{
-    min-height:38px;
-    height:38px;
-    font-size:11.5px;
-    padding:0 10px;
+    height:35px!important;
+    min-height:35px!important;
+    font-size:10.5px!important;
+    padding:0 8px!important;
+    flex:0 0 auto;
+  }
+
+  .rich-toolbar select{
+    max-width:145px!important;
   }
 
   .color-tool{
-    width:38px;
+    width:35px!important;
   }
 
   .note-thread{
-    gap:14px;
-    padding-left:22px;
-  }
-
-  .note-time{
-    font-size:10.5px;
-  }
-
-  .note-bg-select{
-    height:34px;
-    font-size:11px;
-  }
-
-  .note-delete{
-    width:34px;
-    height:34px;
+    padding-left:19px!important;
   }
 
   .note-card{
-    padding:12px;
-    border-radius:15px;
+    padding:10px!important;
+  }
+
+  .note-time{
+    font-size:9.5px!important;
+  }
+
+  .note-bg-select{
+    height:32px!important;
+    font-size:10px!important;
+  }
+
+  .note-delete{
+    width:32px!important;
+    height:32px!important;
   }
 
   .note-editor{
-    min-height:115px;
-    font-size:16px;
-    line-height:1.6;
+    min-height:105px!important;
+    font-size:16px!important;
+    line-height:1.6!important;
   }
 
-  .notes-empty{
-    padding:28px 18px;
-    font-size:12px;
-  }
-
-  /* Modales editables cómodos en móvil */
+  /* MODALES */
   .modal-card{
-    max-height:96dvh;
+    max-height:96dvh!important;
   }
 
   .modal-head{
-    padding:16px 15px;
+    padding:14px!important;
   }
 
   .modal-head h2{
-    font-size:21px!important;
+    font-size:19px!important;
   }
 
   .modal-close{
-    width:42px;
-    height:42px;
-    font-size:24px;
-  }
-
-  .form-grid,
-  .course-form{
-    gap:13px;
-    padding:15px;
-  }
-
-  .field{
-    gap:7px;
-  }
-
-  .field span{
-    font-size:12px;
-  }
-
-  .field input,
-  .field select{
-    height:48px;
-    padding:0 12px;
-    border-radius:11px;
-    font-size:16px;
-  }
-
-  .teacher-preview{
-    padding:12px;
-    font-size:12px;
-    line-height:1.45;
-  }
-
-  .form-actions{
-    gap:8px;
-  }
-
-  .form-actions button{
-    min-height:44px;
-    padding-inline:14px;
-    font-size:13px;
-  }
-
-  .settings-section{
-    padding:17px 15px;
-  }
-
-  .settings-section h3{
-    font-size:20px!important;
-  }
-
-  .settings-section p{
-    font-size:12px;
-  }
-
-  .check-field,
-  .thresholds,
-  .thresholds strong{
-    font-size:12px;
-  }
-
-  .thresholds{
-    gap:10px;
-    padding:12px;
-  }
-
-  .course-setting-row{
-    min-height:62px;
-    padding:11px;
-  }
-
-  .course-setting-copy strong{
-    font-size:13px;
-  }
-
-  .course-setting-copy small{
-    font-size:11px;
-  }
-
-  .course-setting-actions button{
-    min-height:38px;
-    padding:0 10px;
-    font-size:11px;
-  }
-
-  .notification-status{
-    font-size:11.5px;
-  }
-}
-
-@media(max-width:520px){
-  .task-topbar{
-    padding-inline:9px;
-  }
-
-  .task-brand strong{
-    font-size:18px!important;
-  }
-
-  .top-btn,
-  .theme-btn,
-  .mobile-home-btn{
-    min-width:40px;
-    width:40px;
-    height:40px;
-  }
-
-  .task-list-pane{
-    padding-inline:12px;
-  }
-
-  .dashboard-head h1{
-    font-size:27px!important;
-  }
-
-  .summary-grid{
-    grid-template-columns:repeat(2,minmax(0,1fr));
-  }
-
-  .summary-card{
-    min-height:65px;
-  }
-
-  .task-toolbar{
-    flex-wrap:wrap;
-  }
-
-  .type-filters{
-    flex:1 1 auto;
-  }
-
-  .type-chip{
-    flex:1;
-  }
-
-  .search-box{
-    flex:1 1 130px;
-  }
-
-  .search-box input{
-    width:100%;
-  }
-
-  .task-card-title{
-    font-size:16px;
-  }
-
-  .task-card-bottom{
-    font-size:12px;
-  }
-
-  .detail-title-row{
-    grid-template-columns:40px 28px minmax(0,1fr);
-  }
-
-  .detail-actions{
-    margin-top:3px;
-  }
-
-  .dock-actions button{
     width:40px!important;
     height:40px!important;
   }
 
-  .link-form{
-    gap:8px;
+  .form-grid,
+  .course-form{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+    padding:14px!important;
   }
 
-  .form-actions{
-    display:grid;
-    grid-template-columns:1fr 1fr;
+  .field span{
+    font-size:11px!important;
   }
 
-  .form-actions button{
-    width:100%;
+  .field input,
+  .field select{
+    height:46px!important;
+    font-size:16px!important;
+  }
+
+  .teacher-preview{
+    font-size:11px!important;
+  }
+
+  .settings-grid{
+    grid-template-columns:1fr!important;
+  }
+
+  .settings-section{
+    padding:15px!important;
+  }
+
+  .settings-section h3{
+    font-size:18px!important;
+  }
+
+  .settings-section p{
+    font-size:11px!important;
   }
 }
 
-/* === KAORU MOBILE EDITABLE END === */
+@media(max-width:430px){
+  :root{
+    --topbar-h:104px;
+  }
+
+  .task-topbar{
+    grid-template-rows:48px 44px;
+    padding-inline:8px;
+  }
+
+  .task-logo{
+    width:31px!important;
+    height:31px!important;
+    flex-basis:31px;
+  }
+
+  .task-brand strong{
+    font-size:16px!important;
+  }
+
+  .task-eyebrow{
+    font-size:7px!important;
+  }
+
+  .mobile-home-btn{
+    width:36px!important;
+    min-width:36px!important;
+    height:36px!important;
+  }
+
+  .top-btn,
+  .theme-btn{
+    height:36px!important;
+    font-size:14px!important;
+  }
+
+  .dashboard-head h1{
+    font-size:24px!important;
+  }
+
+  .summary-card{
+    min-height:57px;
+    padding:8px!important;
+  }
+
+  .summary-card strong{
+    font-size:18px!important;
+  }
+
+  .dock-head{
+    display:block!important;
+  }
+
+  .dock-actions{
+    margin-top:7px!important;
+    justify-content:flex-start!important;
+  }
+
+  .dock-actions button{
+    min-width:82px!important;
+  }
+
+  .notes-head{
+    align-items:flex-start!important;
+  }
+
+  .notes-head-actions{
+    flex-wrap:wrap!important;
+    justify-content:flex-end;
+  }
+}
+
+/* === KAORU MOBILE REPAIR END === */
