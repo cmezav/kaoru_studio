@@ -34,6 +34,22 @@ function readSecretApiKey() {
   return value;
 }
 
+function humanRemaining(diff: number) {
+  const minutes = Math.max(1, Math.ceil(diff / 60000));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  return `${Math.ceil(hours / 24)} d`;
+}
+
+function overdueText(diff: number) {
+  const minutes = Math.max(1, Math.ceil(Math.abs(diff) / 60000));
+  if (minutes < 60) return `Vencio hace ${minutes} min`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 24) return `Vencio hace ${hours} h`;
+  return `Vencio hace ${Math.ceil(hours / 24)} d`;
+}
+
 function chooseAlert(
   preferences: {
     thresholds?: number[];
@@ -46,14 +62,54 @@ function chooseAlert(
 
   if (diff < 0) {
     if (preferences.overdue_enabled === false) return null;
-    return { key: "overdue", threshold: 0, diff };
+
+    const overdueMinutes = Math.max(
+      1,
+      Math.ceil(Math.abs(diff) / 60000),
+    );
+
+    if (overdueMinutes <= 1) {
+      return { key: "overdue-1m", diff, critical: true };
+    }
+    if (overdueMinutes <= 5) {
+      return { key: "overdue-5m", diff, critical: true };
+    }
+    if (overdueMinutes <= 15) {
+      return { key: "overdue-15m", diff, critical: true };
+    }
+    if (overdueMinutes <= 30) {
+      return { key: "overdue-30m", diff, critical: true };
+    }
+    if (overdueMinutes <= 60) {
+      return { key: "overdue-1h", diff, critical: true };
+    }
+
+    return { key: "overdue-late", diff, critical: false };
+  }
+
+  const remainingMinutes = Math.max(0, Math.ceil(diff / 60000));
+
+  if (remainingMinutes <= 1) {
+    return { key: "due-now", diff, critical: true };
+  }
+  if (remainingMinutes <= 5) {
+    return { key: "before-5m", diff, critical: true };
+  }
+  if (remainingMinutes <= 15) {
+    return { key: "before-15m", diff, critical: true };
+  }
+  if (remainingMinutes <= 30) {
+    return { key: "before-30m", diff, critical: true };
+  }
+  if (remainingMinutes <= 60) {
+    return { key: "before-1h", diff, threshold: 1, critical: true };
   }
 
   const thresholds = (Array.isArray(preferences.thresholds)
     ? preferences.thresholds
     : [24, 3, 1])
     .map(Number)
-    .filter((value) => Number.isFinite(value) && value > 0)
+    .filter((value) => Number.isFinite(value) && value > 1)
     .sort((a, b) => a - b);
 
   const threshold = thresholds.find(
@@ -61,21 +117,14 @@ function chooseAlert(
   );
 
   if (!threshold) return null;
+
   return {
     key: `before-${threshold}h`,
     threshold,
     diff,
+    critical: false,
   };
 }
-
-function overdueText(diff: number) {
-  const minutes = Math.max(1, Math.ceil(Math.abs(diff) / 60000));
-  if (minutes < 60) return `Vencio hace ${minutes} min`;
-  const hours = Math.ceil(minutes / 60);
-  if (hours < 24) return `Vencio hace ${hours} h`;
-  return `Vencio hace ${Math.ceil(hours / 24)} d`;
-}
-
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -229,25 +278,32 @@ Deno.serve(async (request) => {
     const courseName = String(payload.courseNameSnapshot || "").trim();
 
     const notification =
-      alert.key === "overdue"
+      alert.key.startsWith("overdue")
         ? {
             title: "Tarea atrasada",
             body: `${taskTitle} · ${overdueText(alert.diff)}`,
           }
-        : {
-            title: "Entrega proxima",
-            body:
-              `${taskTitle} vence en menos de ${alert.threshold} h` +
-              (courseName ? ` · ${courseName}` : ""),
-          };
-
+        : alert.key === "due-now"
+          ? {
+              title: "Entrega ahora",
+              body:
+                `${taskTitle} vence ahora` +
+                (courseName ? ` · ${courseName}` : ""),
+            }
+          : {
+              title: "Entrega proxima",
+              body:
+                `${taskTitle} vence en ${humanRemaining(alert.diff)}` +
+                (courseName ? ` · ${courseName}` : ""),
+            };
     const pushPayload = JSON.stringify({
       ...notification,
-      tag: `kaoru-task-${row.entity_id}-${dueMs}-${alert.key}`,
+      tag: `kaoru-task-${row.entity_id}-${dueMs}`,
       url: appUrl,
       taskId: String(row.entity_id),
       dueAt: dueIso,
       alertKey: alert.key,
+      renotify: Boolean(alert.critical),
     });
 
     let successfulForTask = 0;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-41';
+const CACHE_NAME = 'kaoru-archive-reader-shell-42';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
@@ -253,7 +253,7 @@ self.addEventListener('push',event=>{
     icon:new URL('./logo.png',self.registration.scope).href,
     badge:new URL('./logo.png',self.registration.scope).href,
     tag:payload.tag||'kaoru-task-push',
-    renotify:false,
+    renotify:Boolean(payload.renotify),
     data:{
       ...payload,
       url:payload.url||new URL('./#tasks',self.registration.scope).href
