@@ -219,6 +219,20 @@ function sanitizeNode(node, outputDocument) {
 
   const element = outputDocument.createElement(tag);
 
+  if (tag === 'div') {
+    const sourceClasses = String(node.getAttribute('class') || '')
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (sourceClasses.includes('userstuff2')) {
+      element.setAttribute('class', 'reader-story-body');
+    }
+
+    if (sourceClasses.includes('endnote-link')) {
+      element.setAttribute('class', 'reader-note-link');
+    }
+  }
+
   if (tag === 'a') {
     const href = safeHref(node.getAttribute('href'));
 
