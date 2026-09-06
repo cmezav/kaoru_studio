@@ -1,6 +1,11 @@
 # Kaoru's Studio
 
 Kaoru's Studio es una suite creativa de escritorio para trabajar con siluetas, tipografía, imágenes, color, iluminación, escenas 3D y composiciones multicapa.
+## Versión estable
+
+**2026.09.06-stable**
+
+Esta versión consolida la suite creativa junto con Task Studio, Archive Reader y Kaoru Cloud. La sincronización entre laptop y celular, el progreso de lectura, los cambios offline y los recordatorios Web Push fueron validados antes de marcar esta versión como estable.
 
 ## Studios
 
@@ -11,6 +16,8 @@ Kaoru's Studio es una suite creativa de escritorio para trabajar con siluetas, t
 - **3D Lighting Studio** — modelos, anatomía y estudio de iluminación 3D.
 - **Image Combiner Studio** — lienzos, capas, recorte, máscaras, grupos y composición.
 - **Galería** — proyectos, plantillas y reapertura de trabajos editables.
+- **Task Studio** — tareas académicas y personales, notas, archivos, avisos y sincronización.
+- **Archive Reader** — lectura EPUB/PDF, progreso exacto, biblioteca privada y modo offline.
 
 ## Navegación
 
@@ -59,3 +66,6 @@ Los Studios que admiten proyectos editables pueden guardarlos en la Galería y r
 ## Recursos de terceros
 
 Las licencias y atribuciones necesarias para modelos y recursos de terceros se mantienen en los documentos correspondientes del repositorio.
+## Kaoru Cloud
+
+Task Studio y Archive Reader pueden compartir una misma Kaoru Account. Los datos se guardan localmente primero y se sincronizan de forma privada entre dispositivos cuando hay conexión. Los cambios realizados offline se reconcilian al recuperar Internet.

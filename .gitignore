@@ -1,0 +1,11 @@
+# Kaoru Studio - archivos locales / generados
+supabase/.temp/
+KAORU_AUDITORIA_PASO_22A_LOCAL.txt
+KAORU_PUSH_EDGE_SECRETS_LOCAL.env
+KAORU_PUSH_CRON_LOCAL.sql
+.env
+.env.*
+!.env.example
+*.log
+Thumbs.db
+.DS_Store

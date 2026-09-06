@@ -1,0 +1,14 @@
+KAORU STUDIO
+Version: 2026.09.06-stable
+Estado: estable
+Fecha: 2026-09-06
+
+Incluye:
+- Kaoru Cloud con aislamiento por cuenta
+- Task Studio con sincronizacion laptop/celular
+- Tareas personales Sin curso
+- Web Push de recordatorios
+- Archive Reader EPUB/PDF
+- Progreso exacto sincronizado
+- Trabajo offline y reconciliacion al reconectar
+- Studios creativos y 3D Lighting
