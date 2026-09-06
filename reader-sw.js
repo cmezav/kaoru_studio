@@ -1,10 +1,12 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-46-notify-bg-20260906';
+const CACHE_NAME = 'kaoru-archive-reader-shell-47-notify-icons-20260906';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
   './',
   './index.html',
   './logo.png',
+  './kaoru-notification-icon.png',
+  './kaoru-notification-badge.png',
   './icono-kaoru.png',
   './vendor/react.production.min.js',
   './vendor/react-dom.production.min.js',
@@ -102,6 +104,8 @@ function isReaderShell(path) {
     path === '' ||
     path === 'index.html' ||
     path === 'logo.png' ||
+    path === 'kaoru-notification-icon.png' ||
+    path === 'kaoru-notification-badge.png' ||
     path === 'icono-kaoru.png' ||
     path === 'vendor/react.production.min.js' ||
     path === 'vendor/react-dom.production.min.js' ||
@@ -266,8 +270,9 @@ self.addEventListener('push',event=>{
   const title=payload.title||'Kaoru Task Studio';
   const options={
     body:payload.body||'Tienes una tarea pendiente.',
-    icon:new URL('./icono-kaoru.png',self.registration.scope).href,
-    badge:new URL('./icono-kaoru.png',self.registration.scope).href,
+    icon:new URL('./kaoru-notification-icon.png',self.registration.scope).href,
+    badge:new URL('./kaoru-notification-badge.png',self.registration.scope).href,
+    color:'#845ef7',
     tag:payload.tag||'kaoru-task-push',
     renotify:Boolean(payload.renotify),
     requireInteraction:Boolean(payload.requireInteraction),

@@ -2043,7 +2043,7 @@ async function ensureServiceWorker(){
   }
 }
 async function showSystemNotification(title,body,tag,data={}){
-  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../icono-kaoru.png',badge:'../../icono-kaoru.png',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
+  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../kaoru-notification-icon.png',badge:'../../kaoru-notification-badge.png',color:'#845ef7',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
 }
 async function testSystemNotification(){
   if(!('Notification'in window)){
