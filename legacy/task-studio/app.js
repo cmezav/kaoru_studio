@@ -23,7 +23,7 @@ const els={
   taskSearch:$('taskSearch'),mobileCourseChips:$('mobileCourseChips'),taskList:$('taskList'),taskEmpty:$('taskEmpty'),
   detailPane:$('detailPane'),detailEmpty:$('detailEmpty'),taskDetail:$('taskDetail'),closeDetailBtn:$('closeDetailBtn'),detailCompleteBtn:$('detailCompleteBtn'),detailCourseDot:$('detailCourseDot'),detailCourse:$('detailCourse'),detailKind:$('detailKind'),detailTitle:$('detailTitle'),detailProfessor:$('detailProfessor'),detailDue:$('detailDue'),restoreTaskBtn:$('restoreTaskBtn'),editTaskBtn:$('editTaskBtn'),deleteTaskBtn:$('deleteTaskBtn'),
   addLinkBtn:$('addLinkBtn'),addFileBtn:$('addFileBtn'),taskFileInput:$('taskFileInput'),taskDocs:$('taskDocs'),linkForm:$('linkForm'),linkLabel:$('linkLabel'),linkUrl:$('linkUrl'),cancelLinkBtn:$('cancelLinkBtn'),
-  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontPickerBtn:$('fontPickerBtn'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
+  addNoteBtn:$('addNoteBtn'),richToolbar:$('richToolbar'),blockFormat:$('blockFormat'),fontSizeSelect:$('fontSizeSelect'),fontSizeInput:$('fontSizeInput'),fontPickerBtn:$('fontPickerBtn'),fontSelect:$('fontSelect'),fontScopeSelect:$('fontScopeSelect'),refreshFontsBtn:$('refreshFontsBtn'),textColorInput:$('textColorInput'),highlightColorInput:$('highlightColorInput'),insertNoteImageBtn:$('insertNoteImageBtn'),noteImageInput:$('noteImageInput'),noteThread:$('noteThread'),
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
   settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
@@ -1216,6 +1216,7 @@ function renderNoteThread(task){
       before this fix or arrived from Kaoru Cloud.
     */
     kaoruSyncListMarkerFonts(editor);
+    kaoruSyncListMarkerSizes(editor);
 
 
     hydrateNoteImages(task,note,editor).catch(err=>{
@@ -1340,10 +1341,7 @@ els.blockFormat.addEventListener(
   ()=>execRich('formatBlock',`<${els.blockFormat.value}>`)
 );
 
-els.fontSizeSelect.addEventListener(
-  'change',
-  ()=>execRich('fontSize',els.fontSizeSelect.value)
-);
+
 
 /* === KAORU NOTE FONT WORDLIKE V4 START === */
 
@@ -1353,6 +1351,8 @@ let kaoruFontToolbarBusyUntil=0;
 let kaoruFontMenu=null;
 let kaoruTypingFontFamily='';
 let kaoruTypingEditor=null;
+let kaoruTypingFontSizePx=0;
+let kaoruTypingSizeEditor=null;
 
 function kaoruFontFormattingBusy(){
   return Date.now()<kaoruFontToolbarBusyUntil;
@@ -2225,7 +2225,8 @@ window.addEventListener(
 function kaoruInsertStyledText(
   editor,
   text,
-  fontFamily
+  fontFamily='',
+  fontSizePx=0
 ){
   const sel=window.getSelection();
 
@@ -2242,48 +2243,65 @@ function kaoruInsertStyledText(
 
   range.deleteContents();
 
-  let node=range.startContainer;
-  let offset=range.startOffset;
+  const node=range.startContainer;
+  const offset=range.startOffset;
 
-  if(
-    node.nodeType===Node.TEXT_NODE&&
-    kaoruNormalizeFontName(
-      getComputedStyle(
-        node.parentElement
-      ).fontFamily
-    )===kaoruNormalizeFontName(
-      fontFamily
-    )
-  ){
-    node.insertData(
-      offset,
-      text
-    );
+  if(node.nodeType===Node.TEXT_NODE){
+    const parent=node.parentElement||editor;
+    const computed=getComputedStyle(parent);
 
-    const next=document.createRange();
-    next.setStart(
-      node,
-      offset+text.length
-    );
-    next.collapse(true);
+    const familyMatches=
+      !fontFamily||
+      kaoruNormalizeFontName(
+        computed.fontFamily
+      )===kaoruNormalizeFontName(
+        fontFamily
+      );
 
-    sel.removeAllRanges();
-    sel.addRange(next);
+    const currentPx=
+      parseFloat(computed.fontSize)||0;
 
-    state.savedRange=
-      next.cloneRange();
+    const sizeMatches=
+      !fontSizePx||
+      Math.abs(currentPx-fontSizePx)<0.5;
 
-    kaoruFontRange=
-      next.cloneRange();
+    if(familyMatches&&sizeMatches){
+      node.insertData(offset,text);
 
-    kaoruFontEditor=editor;
+      const next=document.createRange();
+      next.setStart(
+        node,
+        offset+text.length
+      );
+      next.collapse(true);
 
-    return true;
+      sel.removeAllRanges();
+      sel.addRange(next);
+
+      state.savedRange=
+        next.cloneRange();
+
+      kaoruFontRange=
+        next.cloneRange();
+
+      kaoruFontEditor=editor;
+
+      return true;
+    }
   }
 
   const span=document.createElement('span');
-  span.dataset.kaoruFont='1';
-  span.style.fontFamily=fontFamily;
+
+  if(fontFamily){
+    span.dataset.kaoruFont='1';
+    span.style.fontFamily=fontFamily;
+  }
+
+  if(fontSizePx){
+    span.dataset.kaoruSize='1';
+    span.style.fontSize=
+      `${fontSizePx}px`;
+  }
 
   const textNode=
     document.createTextNode(text);
@@ -2311,7 +2329,6 @@ function kaoruInsertStyledText(
 
   return true;
 }
-
 els.noteThread.addEventListener(
   'beforeinput',
   event=>{
@@ -2319,11 +2336,19 @@ els.noteThread.addEventListener(
       '.note-editor'
     );
 
-    if(
-      !editor||
-      editor!==kaoruTypingEditor||
-      !kaoruTypingFontFamily
-    )return;
+    if(!editor)return;
+
+    const activeFont=
+      editor===kaoruTypingEditor
+        ?kaoruTypingFontFamily
+        :'';
+
+    const activeSize=
+      editor===kaoruTypingSizeEditor
+        ?kaoruTypingFontSizePx
+        :0;
+
+    if(!activeFont&&!activeSize)return;
 
     if(
       ![
@@ -2354,7 +2379,8 @@ els.noteThread.addEventListener(
       !kaoruInsertStyledText(
         editor,
         event.data,
-        kaoruTypingFontFamily
+        activeFont,
+        activeSize
       )
     )return;
 
@@ -2376,13 +2402,10 @@ els.noteThread.addEventListener(
       );
     }
 
-    editor.dispatchEvent(
-      inputEvent
-    );
+    editor.dispatchEvent(inputEvent);
   },
   true
 );
-
 document.addEventListener(
   'selectionchange',
   ()=>{
@@ -2439,6 +2462,536 @@ els.noteThread.addEventListener(
 kaoruBuildFontMenu();
 
 /* === KAORU NOTE FONT WORDLIKE V4 END === */
+/* === KAORU NOTE SIZE WORDLIKE V1 START === */
+
+function kaoruClampFontSize(value){
+  const parsed=Number(value);
+
+  if(!Number.isFinite(parsed)){
+    return 16;
+  }
+
+  return Math.max(
+    6,
+    Math.min(
+      200,
+      Math.round(parsed)
+    )
+  );
+}
+
+function kaoruDetectedSizeAtRange(
+  range,
+  editor
+){
+  if(!range||!editor)return 16;
+
+  const element=kaoruElementAtCaret(
+    range,
+    editor
+  )||editor;
+
+  const px=parseFloat(
+    getComputedStyle(element).fontSize
+  );
+
+  return kaoruClampFontSize(
+    Number.isFinite(px)
+      ?px
+      :16
+  );
+}
+
+function kaoruUpdateSizeIndicator(){
+  const editor=state.activeEditor;
+
+  if(
+    !editor||
+    !els.fontSizeInput||
+    !els.fontSizeSelect
+  )return;
+
+  const sel=window.getSelection();
+
+  if(
+    !sel||
+    !sel.rangeCount||
+    !kaoruRangeBelongsToEditor(
+      sel.getRangeAt(0),
+      editor
+    )
+  )return;
+
+  const range=sel.getRangeAt(0);
+
+  const px=kaoruDetectedSizeAtRange(
+    range,
+    editor
+  );
+
+  els.fontSizeInput.value=String(px);
+
+  const exact=[
+    ...els.fontSizeSelect.options
+  ].find(option=>
+    Number(option.value)===px
+  );
+
+  els.fontSizeSelect.value=
+    exact?.value||'';
+
+  if(range.collapsed){
+    kaoruTypingFontSizePx=px;
+    kaoruTypingSizeEditor=editor;
+  }
+}
+
+function kaoruSetListMarkerSize(
+  li,
+  px
+){
+  if(!li||!px)return;
+
+  li.style.setProperty(
+    '--kaoru-marker-size',
+    `${px}px`
+  );
+}
+
+function kaoruApplyMarkerSizeForRange(
+  range,
+  editor,
+  px
+){
+  for(const li of kaoruListItemsForRange(
+    range,
+    editor
+  )){
+    kaoruSetListMarkerSize(li,px);
+  }
+}
+
+function kaoruSyncListMarkerSizes(editor){
+  if(!editor)return;
+
+  for(const li of editor.querySelectorAll(
+    'li'
+  )){
+    const styled=li.querySelector(
+      '[data-kaoru-size],[style*="font-size"],font[size]'
+    );
+
+    const source=styled||li;
+
+    const px=parseFloat(
+      getComputedStyle(source).fontSize
+    );
+
+    if(Number.isFinite(px)&&px>0){
+      kaoruSetListMarkerSize(
+        li,
+        kaoruClampFontSize(px)
+      );
+    }
+  }
+}
+
+function kaoruConvertSize7Fonts(
+  editor,
+  px,
+  originalRange
+){
+  for(const font of[
+    ...editor.querySelectorAll(
+      'font[size="7"]'
+    )
+  ]){
+    const preexisting=
+      font.dataset
+        .kaoruPreexistingSize7==='1';
+
+    font.removeAttribute(
+      'data-kaoru-preexisting-size7'
+    );
+
+    let shouldConvert=!preexisting;
+
+    if(preexisting&&originalRange){
+      try{
+        shouldConvert=
+          originalRange.intersectsNode(font);
+      }catch(_){}
+    }
+
+    if(!shouldConvert)continue;
+
+    const span=document.createElement('span');
+
+    span.dataset.kaoruSize='1';
+
+    const face=font.getAttribute('face');
+    const style=font.getAttribute('style');
+
+    if(style){
+      span.setAttribute('style',style);
+    }
+
+    if(face){
+      span.style.fontFamily=face;
+    }
+
+    span.style.fontSize=`${px}px`;
+
+    while(font.firstChild){
+      span.appendChild(font.firstChild);
+    }
+
+    font.replaceWith(span);
+  }
+}
+
+function kaoruApplySizeToSelection(
+  editor,
+  px
+){
+  const range=kaoruRestoreFontRange(editor);
+  if(!range)return false;
+
+  kaoruApplyMarkerSizeForRange(
+    range.cloneRange(),
+    editor,
+    px
+  );
+
+  if(range.collapsed){
+    kaoruTypingFontSizePx=px;
+    kaoruTypingSizeEditor=editor;
+
+    state.savedRange=
+      range.cloneRange();
+
+    kaoruFontRange=
+      range.cloneRange();
+
+    kaoruFontEditor=editor;
+
+    return true;
+  }
+
+  const originalRange=
+    range.cloneRange();
+
+  for(const font of editor.querySelectorAll(
+    'font[size="7"]'
+  )){
+    font.dataset
+      .kaoruPreexistingSize7='1';
+  }
+
+  try{
+    document.execCommand(
+      'styleWithCSS',
+      false,
+      false
+    );
+  }catch(_){}
+
+  try{
+    document.execCommand(
+      'fontSize',
+      false,
+      '7'
+    );
+  }finally{
+    try{
+      document.execCommand(
+        'styleWithCSS',
+        false,
+        true
+      );
+    }catch(_){}
+  }
+
+  kaoruConvertSize7Fonts(
+    editor,
+    px,
+    originalRange
+  );
+
+  const sel=window.getSelection();
+
+  if(sel&&sel.rangeCount){
+    state.savedRange=
+      sel.getRangeAt(0).cloneRange();
+
+    kaoruFontRange=
+      state.savedRange.cloneRange();
+
+    kaoruFontEditor=editor;
+  }
+
+  saveActiveEditor();
+
+  return true;
+}
+
+function kaoruStripSizeOverrides(root){
+  if(!root)return;
+
+  for(const element of root.querySelectorAll(
+    '[style],font[size]'
+  )){
+    if(element.style?.fontSize){
+      element.style.removeProperty(
+        'font-size'
+      );
+
+      if(!element.getAttribute('style')){
+        element.removeAttribute('style');
+      }
+    }
+
+    if(element.tagName==='FONT'){
+      element.removeAttribute('size');
+    }
+
+    element.removeAttribute(
+      'data-kaoru-size'
+    );
+  }
+}
+
+function kaoruApplySizeToWholeEditor(
+  editor,
+  px
+){
+  if(!editor)return;
+
+  kaoruStripSizeOverrides(editor);
+
+  let wrapper=null;
+
+  if(
+    editor.childNodes.length===1&&
+    editor.firstElementChild&&
+    (
+      editor.firstElementChild.dataset
+        ?.kaoruFontScope==='all'||
+      editor.firstElementChild.dataset
+        ?.kaoruSizeScope==='all'
+    )
+  ){
+    wrapper=editor.firstElementChild;
+  }else{
+    wrapper=document.createElement('div');
+
+    while(editor.firstChild){
+      wrapper.appendChild(editor.firstChild);
+    }
+
+    editor.appendChild(wrapper);
+  }
+
+  wrapper.dataset.kaoruSizeScope='all';
+  wrapper.style.fontSize=`${px}px`;
+
+  for(const li of editor.querySelectorAll(
+    'li'
+  )){
+    kaoruSetListMarkerSize(li,px);
+  }
+}
+
+async function kaoruApplySizeToCurrentNote(px){
+  const editor=state.activeEditor;
+  const task=taskById(state.selectedTaskId);
+
+  if(!editor||!task)return;
+
+  const note=(task.notes||[]).find(
+    item=>item.id===editor.dataset.noteId
+  );
+
+  if(!note)return;
+
+  kaoruApplySizeToWholeEditor(
+    editor,
+    px
+  );
+
+  note.html=serializeNoteHtml(editor);
+  note.updatedAt=now();
+  task.updatedAt=now();
+
+  await dbPut(TASK_STORE,task);
+
+  kaoruTypingFontSizePx=px;
+  kaoruTypingSizeEditor=editor;
+}
+
+async function kaoruApplySizeToWholeThread(px){
+  const task=taskById(state.selectedTaskId);
+  if(!task)return;
+
+  let changed=false;
+
+  for(const editor of els.noteThread
+    .querySelectorAll('.note-editor')){
+    const note=(task.notes||[]).find(
+      item=>item.id===editor.dataset.noteId
+    );
+
+    if(!note)continue;
+
+    kaoruApplySizeToWholeEditor(
+      editor,
+      px
+    );
+
+    note.html=serializeNoteHtml(editor);
+    note.updatedAt=now();
+    changed=true;
+  }
+
+  if(!changed)return;
+
+  task.updatedAt=now();
+  await dbPut(TASK_STORE,task);
+}
+
+async function kaoruApplySelectedSize(
+  rawValue
+){
+  const px=kaoruClampFontSize(rawValue);
+
+  els.fontSizeInput.value=String(px);
+
+  const exact=[
+    ...els.fontSizeSelect.options
+  ].find(option=>
+    Number(option.value)===px
+  );
+
+  els.fontSizeSelect.value=
+    exact?.value||'';
+
+  const scope=
+    els.fontScopeSelect?.value||
+    'selection';
+
+  if(scope==='thread'){
+    await kaoruApplySizeToWholeThread(px);
+
+    els.fontScopeSelect.value='selection';
+    kaoruEndFontToolbarInteraction();
+    return;
+  }
+
+  if(scope==='note'){
+    await kaoruApplySizeToCurrentNote(px);
+
+    els.fontScopeSelect.value='selection';
+    kaoruEndFontToolbarInteraction();
+    return;
+  }
+
+  const editor=state.activeEditor;
+  if(!editor)return;
+
+  kaoruApplySizeToSelection(
+    editor,
+    px
+  );
+
+  kaoruTypingFontSizePx=px;
+  kaoruTypingSizeEditor=editor;
+
+  kaoruEndFontToolbarInteraction();
+}
+
+for(const control of[
+  els.fontSizeSelect,
+  els.fontSizeInput
+]){
+  control?.addEventListener(
+    'pointerdown',
+    ()=>{
+      kaoruBeginFontToolbarInteraction();
+    }
+  );
+}
+
+els.fontSizeSelect?.addEventListener(
+  'change',
+  ()=>{
+    if(!els.fontSizeSelect.value)return;
+
+    const px=kaoruClampFontSize(
+      els.fontSizeSelect.value
+    );
+
+    els.fontSizeInput.value=String(px);
+
+    kaoruApplySelectedSize(px)
+      .catch(err=>console.warn(
+        'Kaoru cambio de tamano',
+        err
+      ));
+  }
+);
+
+els.fontSizeInput?.addEventListener(
+  'change',
+  ()=>{
+    kaoruApplySelectedSize(
+      els.fontSizeInput.value
+    ).catch(err=>console.warn(
+      'Kaoru tamano manual',
+      err
+    ));
+  }
+);
+
+els.fontSizeInput?.addEventListener(
+  'keydown',
+  event=>{
+    if(event.key!=='Enter')return;
+
+    event.preventDefault();
+
+    kaoruApplySelectedSize(
+      els.fontSizeInput.value
+    ).catch(err=>console.warn(
+      'Kaoru tamano manual',
+      err
+    ));
+  }
+);
+
+document.addEventListener(
+  'selectionchange',
+  ()=>{
+    kaoruUpdateSizeIndicator();
+  }
+);
+
+els.noteThread.addEventListener(
+  'focusin',
+  event=>{
+    const editor=event.target?.closest?.(
+      '.note-editor'
+    );
+
+    if(!editor)return;
+
+    setTimeout(
+      kaoruUpdateSizeIndicator,
+      0
+    );
+  }
+);
+
+/* === KAORU NOTE SIZE WORDLIKE V1 END === */
 
 els.textColorInput.addEventListener(
   'input',

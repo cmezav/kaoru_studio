@@ -1630,3 +1630,54 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU LIST MARKER FONT V2 END === */
+
+/* === KAORU FONT SIZE INPUT V1 START === */
+
+.kaoru-font-size-custom{
+  display:inline-flex;
+  align-items:center;
+  height:34px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface);
+  overflow:hidden;
+}
+
+.kaoru-font-size-custom input{
+  width:54px;
+  height:100%;
+  padding:0 4px 0 8px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:var(--text);
+  font:inherit;
+  font-size:13px;
+  text-align:right;
+}
+
+.kaoru-font-size-custom span{
+  padding-right:7px;
+  font-size:11px;
+  opacity:.65;
+}
+
+.note-editor li::marker{
+  font-size:var(
+    --kaoru-marker-size,
+    inherit
+  );
+}
+
+@media(max-width:900px){
+  .kaoru-font-size-custom{
+    height:38px;
+  }
+
+  .kaoru-font-size-custom input{
+    width:58px;
+    font-size:16px;
+  }
+}
+
+/* === KAORU FONT SIZE INPUT V1 END === */

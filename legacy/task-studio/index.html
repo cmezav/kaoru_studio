@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=task-list-marker-font-v2-20260906-1">
+<link rel="stylesheet" href="./styles.css?cache=task-font-size-wordlike-20260906-1">
 <script>
 (function(){
   try{
@@ -165,16 +165,21 @@
               <option value="h3">Subtítulo</option>
               <option value="h2">Título</option>
             </select>
-            <select id="fontSizeSelect" title="Tamaño">
-              <option value="2">12</option>
-              <option value="3" selected>16</option>
-              <option value="4">18</option>
-              <option value="5">24</option>
-              <option value="6">32</option>
+            <select id="fontSizeSelect" title="Tama&ntilde;o de letra">
+              <option value="">Tama&ntilde;o</option>
+              <option value="12">12</option>
+              <option value="16" selected>16</option>
+              <option value="18">18</option>
+              <option value="24">24</option>
+              <option value="32">32</option>
             </select>
+            <label class="kaoru-font-size-custom" title="Escribir tama&ntilde;o exacto">
+              <input id="fontSizeInput" type="number" min="6" max="200" step="1" value="16" inputmode="numeric" aria-label="Tama&ntilde;o exacto de letra">
+              <span>px</span>
+            </label>
             <button id="fontPickerBtn" class="kaoru-font-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false" title="Tipografia">Tipografia</button>
             <select id="fontSelect" class="kaoru-font-native-select" aria-hidden="true" tabindex="-1"><option value="">Tipografia</option></select>
-            <select id="fontScopeSelect" title="Aplicar tipografia a">
+            <select id="fontScopeSelect" title="Aplicar formato a">
               <option value="selection" selected>Seleccion / escribir</option>
               <option value="note">Toda la nota</option>
               <option value="thread">Todo el hilo</option>
@@ -366,6 +371,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=task-font-v2-editor-stable-20260906-2"></script>
 <script src="./task-push.js?cache=kaoru-stable-20260906"></script>
-<script src="./app.js?cache=task-list-marker-font-v2-20260906-1"></script>
+<script src="./app.js?cache=task-font-size-wordlike-20260906-1"></script>
 </body>
 </html>
