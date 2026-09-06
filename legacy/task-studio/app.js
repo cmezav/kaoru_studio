@@ -27,7 +27,7 @@ const els={
   scheduleModal:$('scheduleModal'),scheduleEmpty:$('scheduleEmpty'),scheduleInput:$('scheduleInput'),scheduleViewer:$('scheduleViewer'),scheduleImage:$('scheduleImage'),scheduleZoom:$('scheduleZoom'),scheduleZoomValue:$('scheduleZoomValue'),scheduleReplaceInput:$('scheduleReplaceInput'),deleteScheduleBtn:$('deleteScheduleBtn'),
   taskModal:$('taskModal'),taskModalTitle:$('taskModalTitle'),taskForm:$('taskForm'),taskTitleInput:$('taskTitleInput'),taskCourseSelect:$('taskCourseSelect'),taskKindSelect:$('taskKindSelect'),taskDueInput:$('taskDueInput'),taskTeacherPreview:$('taskTeacherPreview'),
   settingsModal:$('settingsModal'),newCourseInlineBtn:$('newCourseInlineBtn'),courseForm:$('courseForm'),courseIdInput:$('courseIdInput'),courseNameInput:$('courseNameInput'),courseColorInput:$('courseColorInput'),theoryProfessorInput:$('theoryProfessorInput'),hasLabInput:$('hasLabInput'),sameProfessorInput:$('sameProfessorInput'),labProfessorGroup:$('labProfessorGroup'),labProfessorInput:$('labProfessorInput'),courseNotesInput:$('courseNotesInput'),cancelCourseBtn:$('cancelCourseBtn'),courseSettingsList:$('courseSettingsList'),
-  requestNotificationBtn:$('requestNotificationBtn'),notificationStatus:$('notificationStatus'),summaryIntervalSelect:$('summaryIntervalSelect'),
+  requestNotificationBtn:$('requestNotificationBtn'),testNotificationBtn:testNotificationBtn,notificationStatus:$('notificationStatus'),summaryIntervalSelect:$('summaryIntervalSelect'),
   cloudSignedOut:$('cloudSignedOut'),cloudSignedIn:$('cloudSignedIn'),cloudStateCard:$('cloudStateCard'),cloudStateText:$('cloudStateText'),cloudStateDetail:$('cloudStateDetail'),cloudAuthForm:$('cloudAuthForm'),cloudEmailInput:$('cloudEmailInput'),cloudPasswordInput:$('cloudPasswordInput'),cloudCreateBtn:$('cloudCreateBtn'),cloudSignOutBtn:$('cloudSignOutBtn'),cloudAuthMessage:$('cloudAuthMessage'),cloudUserEmail:$('cloudUserEmail'),cloudSyncText:$('cloudSyncText'),cloudQueueCount:$('cloudQueueCount')
 };
 
@@ -130,6 +130,14 @@ function localDateTimeValue(value){
   const pad=n=>String(n).padStart(2,'0');return`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 function parseDue(value){if(!value)return null;const d=new Date(value);return Number.isNaN(d.getTime())?null:d.getTime();}
+function dueDeadline(value){
+  const due=parseDue(value);
+  if(!due)return null;
+  const d=new Date(due);
+  /* datetime-local guarda hasta minutos: vence al final de ese minuto. */
+  if(d.getSeconds()===0&&d.getMilliseconds()===0)return due+59999;
+  return due;
+}
 function formatDue(value){
   if(!value)return'Sin fecha de entrega';const d=new Date(value);if(Number.isNaN(d.getTime()))return'Sin fecha de entrega';
   return new Intl.DateTimeFormat('es-PE',{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(d);
@@ -137,12 +145,26 @@ function formatDue(value){
 function startOfToday(){const d=new Date();d.setHours(0,0,0,0);return d.getTime();}
 function endOfToday(){return startOfToday()+dayMs-1;}
 function dueClass(task){
-  const due=parseDue(task.dueAt);if(!due||task.completed)return'';if(due<now())return'overdue';if(due<=endOfToday())return'today';if(due<=now()+3*dayMs)return'soon';return'';
+  const due=dueDeadline(task.dueAt);if(!due||task.completed)return'';if(due<now())return'overdue';if(due<=endOfToday())return'today';if(due<=now()+3*dayMs)return'soon';return'';
 }
 function relativeDue(task){
-  const due=parseDue(task.dueAt);if(!due)return'Sin plazo';if(task.completed)return`Completada ${task.completedAt?new Intl.DateTimeFormat('es-PE',{day:'2-digit',month:'short'}).format(new Date(task.completedAt)):''}`.trim();
-  const diff=due-now();if(diff<0){const h=Math.ceil(Math.abs(diff)/3600000);return h<24?`Atrasada ${h} h`:`Atrasada ${Math.ceil(h/24)} d`;}
-  if(due<=endOfToday())return'Hoy';const tomorrowEnd=endOfToday()+dayMs;if(due<=tomorrowEnd)return'Mañana';const days=Math.ceil(diff/dayMs);return`En ${days} días`;
+  const due=dueDeadline(task.dueAt);
+  if(!due)return'Sin plazo';
+  if(task.completed)return`Completada ${task.completedAt?new Intl.DateTimeFormat('es-PE',{day:'2-digit',month:'short'}).format(new Date(task.completedAt)):''}`.trim();
+  const diff=due-now();
+  if(diff<0){
+    const minutes=Math.max(1,Math.ceil(Math.abs(diff)/60000));
+    if(minutes<60)return`Atrasada ${minutes} min`;
+    const hours=Math.ceil(minutes/60);
+    if(hours<24)return`Atrasada ${hours} h`;
+    return`Atrasada ${Math.ceil(hours/24)} d`;
+  }
+  if(diff<=60000)return'Vence ahora';
+  if(diff<3600000)return`En ${Math.max(1,Math.ceil(diff/60000))} min`;
+  if(due<=endOfToday())return'Hoy';
+  const tomorrowEnd=endOfToday()+dayMs;
+  if(due<=tomorrowEnd)return'Mañana';
+  return`En ${Math.ceil(diff/dayMs)} días`;
 }
 function noteDate(ts){return new Intl.DateTimeFormat('es-PE',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ts||now()));}
 
@@ -162,7 +184,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){const open=document
 
 function counts(){
   const pending=state.tasks.filter(t=>!t.completed);const completed=state.tasks.filter(t=>t.completed);const todayStart=startOfToday(),todayEnd=endOfToday();
-  const overdue=pending.filter(t=>{const d=parseDue(t.dueAt);return d&&d<now();});
+  const overdue=pending.filter(t=>{const d=dueDeadline(t.dueAt);return d&&d<now();});
   const today=pending.filter(t=>{const d=parseDue(t.dueAt);return d&&d>=todayStart&&d<=todayEnd;});
   const week=pending.filter(t=>{const d=parseDue(t.dueAt);return d&&d>=now()&&d<=now()+7*dayMs;});
   return{pending,completed,overdue,today,week};
@@ -1740,21 +1762,41 @@ function syncNotificationUI(){els.notificationStatus.textContent=notificationPer
 async function saveNotificationConfig(){await setSetting('notificationConfig',state.notificationConfig);syncNotificationUI();}
 async function ensureServiceWorker(){if(!('serviceWorker'in navigator))return null;try{await navigator.serviceWorker.register('../../reader-sw.js?cache=34');return await navigator.serviceWorker.ready;}catch(err){console.warn('No se pudo registrar el service worker',err);return null;}}
 async function showSystemNotification(title,body,tag,data={}){
-  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:'../../#tasks'}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
+  if(!('Notification'in window)||Notification.permission!=='granted')return;const options={body,tag,icon:'../../logo.png',badge:'../../logo.png',data:{...data,url:new URL('../../#tasks',location.href).href}};const reg=await ensureServiceWorker();try{if(reg?.showNotification){await reg.showNotification(title,options);return;}const n=new Notification(title,options);n.onclick=()=>{window.focus();};}catch(err){console.warn('No se pudo mostrar notificación',err);}
+}
+async function testSystemNotification(){
+  if(!('Notification'in window)){
+    alert('Este navegador no permite notificaciones web.');
+    return;
+  }
+  if(Notification.permission!=='granted'){
+    alert('Primero pulsa Activar notificaciones y permite los avisos del sitio.');
+    return;
+  }
+  await showSystemNotification(
+    'Prueba de Kaoru',
+    'Las notificaciones del sistema estan funcionando.',
+    `task-notification-test-${Date.now()}`
+  );
 }
 async function requestNotifications(){
   if(!('Notification'in window)){alert('Este navegador no permite notificaciones web.');return;}const permission=await Notification.requestPermission();state.notificationConfig.enabled=permission==='granted';state.notificationConfig.lastSummaryAt=now();await saveNotificationConfig();if(permission==='granted')await showSystemNotification('Task Studio listo','Los recordatorios están activados. Te avisaré de tus tareas mientras Kaoru permanezca abierto.','task-studio-enabled');
 }
-els.requestNotificationBtn.addEventListener('click',requestNotifications);els.notificationBtn.addEventListener('click',()=>{openSettings(false);setTimeout(()=>document.querySelector('.notification-settings')?.scrollIntoView({behavior:'smooth',block:'start'}),80);});els.summaryIntervalSelect.addEventListener('change',async()=>{state.notificationConfig.intervalHours=Number(els.summaryIntervalSelect.value)||3;await saveNotificationConfig();});document.querySelectorAll('[data-threshold]').forEach(cb=>cb.addEventListener('change',async()=>{state.notificationConfig.thresholds=[...document.querySelectorAll('[data-threshold]:checked')].map(x=>Number(x.dataset.threshold)).sort((a,b)=>b-a);await saveNotificationConfig();}));
+els.requestNotificationBtn.addEventListener('click',requestNotifications);els.testNotificationBtn?.addEventListener('click',testSystemNotification);els.notificationBtn.addEventListener('click',()=>{openSettings(false);setTimeout(()=>document.querySelector('.notification-settings')?.scrollIntoView({behavior:'smooth',block:'start'}),80);});els.summaryIntervalSelect.addEventListener('change',async()=>{state.notificationConfig.intervalHours=Number(els.summaryIntervalSelect.value)||3;await saveNotificationConfig();});document.querySelectorAll('[data-threshold]').forEach(cb=>cb.addEventListener('change',async()=>{state.notificationConfig.thresholds=[...document.querySelectorAll('[data-threshold]:checked')].map(x=>Number(x.dataset.threshold)).sort((a,b)=>b-a);await saveNotificationConfig();}));
 function readNotificationLog(){try{return JSON.parse(localStorage.getItem('kaoru-task-notification-log')||'{}')||{};}catch(_){return{};}}
 function writeNotificationLog(log){try{localStorage.setItem('kaoru-task-notification-log',JSON.stringify(log));}catch(_){}}
 async function checkNotifications(){
   if(!state.notificationConfig.enabled||!('Notification'in window)||Notification.permission!=='granted')return;const pending=state.tasks.filter(t=>!t.completed);if(!pending.length)return;const log=readNotificationLog(),current=now();
   const interval=(state.notificationConfig.intervalHours||3)*3600000;if(current-(state.notificationConfig.lastSummaryAt||0)>=interval){const sorted=[...pending].sort((a,b)=>(parseDue(a.dueAt)||Infinity)-(parseDue(b.dueAt)||Infinity));const next=sorted[0];await showSystemNotification(`Tienes ${pending.length} tarea${pending.length===1?'':'s'} pendiente${pending.length===1?'':'s'}`,next?`Próxima: ${next.title} · ${relativeDue(next)}`:'Revisa Task Studio.','task-summary');state.notificationConfig.lastSummaryAt=current;await setSetting('notificationConfig',state.notificationConfig);}
-  for(const task of pending){const due=parseDue(task.dueAt);if(!due)continue;const hours=(due-current)/3600000;if(hours<0){const key=`${task.id}:${task.dueAt}:overdue`;if(!log[key]){await showSystemNotification('Tarea atrasada',`${task.title} ya pasó de plazo.`,`task-${task.id}-overdue`,{taskId:task.id});log[key]=current;}continue;}for(const threshold of(state.notificationConfig.thresholds||[])){if(hours<=threshold){const key=`${task.id}:${task.dueAt}:${threshold}`;if(!log[key]){const ctx=taskContext(task);await showSystemNotification(`Entrega en menos de ${threshold} h`,`${task.title} · ${ctx.courseName}`,`task-${task.id}-${threshold}`,{taskId:task.id});log[key]=current;}break;}}}
+  for(const task of pending){const due=dueDeadline(task.dueAt);if(!due)continue;const hours=(due-current)/3600000;if(hours<0){const key=`${task.id}:${task.dueAt}:overdue`;if(!log[key]){await showSystemNotification('Tarea atrasada',`${task.title} ya pasó de plazo.`,`task-${task.id}-overdue`,{taskId:task.id});log[key]=current;}continue;}for(const threshold of(state.notificationConfig.thresholds||[])){if(hours<=threshold){const key=`${task.id}:${task.dueAt}:${threshold}`;if(!log[key]){const ctx=taskContext(task);await showSystemNotification(`Entrega en menos de ${threshold} h`,`${task.title} · ${ctx.courseName}`,`task-${task.id}-${threshold}`,{taskId:task.id});log[key]=current;}break;}}}
   writeNotificationLog(log);
 }
 
+/* KAORU_NOTIFICATION_WAKE_CHECK_V1 */
+window.addEventListener('focus',()=>checkNotifications().catch(()=>{}));
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden)checkNotifications().catch(()=>{});
+});
 els.mobileCourseBtn.addEventListener('click',()=>openSettings(false));els.closeCoursesBtn.addEventListener('click',closeMobileCourses);
 function closeMobileCourses(){els.courseSidebar?.classList.remove('mobile-open');}
 document.querySelector('.course-filter[data-course="all"]')?.addEventListener('click',()=>selectCourseFilter('all'));els.completedFilterBtn.addEventListener('click',()=>selectCourseFilter('completed'));els.pendingViewBtn.addEventListener('click',()=>selectCourseFilter('all'));els.historyViewBtn.addEventListener('click',()=>selectCourseFilter('completed'));
@@ -1989,7 +2031,7 @@ async function init(){
   try{
     state.courses=await dbGetAll(COURSE_STORE);state.tasks=await dbGetAll(TASK_STORE);state.notificationConfig={...state.notificationConfig,...(await getSetting('notificationConfig',{}))};await migrateLegacyNoteImages();await loadSchedule();await loadTaskFonts();renderCourseSettings();renderTaskList();renderDetail();syncNotificationUI();installNavigationShortcuts();await initTaskCloud();
     if(EMBEDDED)window.parent.postMessage({type:'kaoru:studio-ready',studio:'tasks',theme:document.documentElement.dataset.theme||'day'},'*');
-    ensureServiceWorker();checkNotifications();setInterval(checkNotifications,60000);
+    ensureServiceWorker();checkNotifications();setInterval(checkNotifications,15000);
   }catch(err){console.error(err);alert('Task Studio no pudo iniciar correctamente. Revisa la consola para más detalles.');}
 }
 

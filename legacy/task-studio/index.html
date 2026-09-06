@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark">
 <title>Kaoru's Studio — Task Studio</title>
 <link rel="icon" href="../../logo.png" type="image/png">
-<link rel="stylesheet" href="./styles.css?cache=task-notes-encoding-1">
+<link rel="stylesheet" href="./styles.css?cache=task-notifications-step21-2">
 <script>
 (function(){
   try{
@@ -341,8 +341,9 @@
       <section class="settings-section notification-settings">
         <span class="mini-kicker">NOTIFICACIONES</span>
         <h3>Recordatorios externos</h3>
-        <p>Mientras Kaoru esté abierto, puede mostrar avisos del sistema aunque estés en otra pestaña.</p>
+        <p>Kaoru puede mostrar avisos del sistema aunque estes en otra pestana o aplicacion, siempre que Task Studio siga activo en el navegador.</p>
         <button id="requestNotificationBtn" class="notification-permission-btn" type="button">🔔 Activar notificaciones</button>
+        <button id="testNotificationBtn" class="notification-test-btn" type="button">Probar notificacion</button>
         <div id="notificationStatus" class="notification-status"></div>
         <label class="field"><span>Resumen de pendientes</span><select id="summaryIntervalSelect"><option value="1">Cada 1 hora</option><option value="3" selected>Cada 3 horas</option><option value="6">Cada 6 horas</option><option value="12">Cada 12 horas</option></select></label>
         <div class="thresholds">
@@ -358,6 +359,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4"></script>
 <script src="./task-cloud.js?cache=kaoru-cloud-security-1"></script>
-<script src="./app.js?cache=task-notes-encoding-1"></script>
+<script src="./app.js?cache=task-notifications-step21-2"></script>
 </body>
 </html>
