@@ -196,6 +196,14 @@ function sanitizeNode(node, outputDocument) {
 
   const tag = node.tagName.toLowerCase();
 
+  if (tag === 'img') {
+    const marker = outputDocument.createElement('span');
+    marker.setAttribute('class', 'reader-media-break');
+    marker.setAttribute('role', 'separator');
+    marker.setAttribute('aria-label', 'Contenido visual del original');
+    return marker;
+  }
+
   if (DROP.has(tag)) return null;
 
   if (!ALLOWED.has(tag)) {
@@ -237,6 +245,38 @@ function sanitizeBody(xhtml) {
   Array.from(input.body ? input.body.childNodes : []).forEach((node) => {
     const safe = sanitizeNode(node, output);
     if (safe) container.appendChild(safe);
+  });
+
+  /*
+    El EPUB puede traer ilustraciones, banners o comics. Kaoru no
+    inserta esas imagenes dentro del HTML sanitizado, pero tampoco
+    deja un hueco visual vacio: conserva un unico separador discreto.
+  */
+  Array.from(container.querySelectorAll('.reader-media-break')).forEach((marker) => {
+    let previous = marker.previousSibling;
+
+    while (previous && (
+      (previous.nodeType === Node.TEXT_NODE && !String(previous.textContent || '').trim()) ||
+      (previous.nodeType === Node.ELEMENT_NODE && previous.tagName === 'BR')
+    )) {
+      previous = previous.previousSibling;
+    }
+
+    if (
+      previous?.nodeType === Node.ELEMENT_NODE &&
+      previous.classList.contains('reader-media-break')
+    ) {
+      marker.remove();
+    }
+  });
+
+  Array.from(container.querySelectorAll('blockquote')).forEach((quote) => {
+    if (
+      quote.querySelector('.reader-media-break') &&
+      !String(quote.textContent || '').trim()
+    ) {
+      quote.classList.add('reader-media-only');
+    }
   });
 
   return container.innerHTML;
