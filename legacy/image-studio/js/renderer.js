@@ -140,142 +140,111 @@ function alphaMask(source){
   return mask
 }
 
-function copyMask(mask){
-  const out=F.canvas(mask.width,mask.height);
-  out.getContext('2d',{alpha:true}).drawImage(mask,0,0);
-  return out
-}
+function buildPerimeterBlurMask(width,height,opt,scaleFactor=1){
+  const intensity=clamp(
+    number(opt.intensity,75)/100,
+    0,
+    1
+  );
 
-function morphMask(mask,distance,operation){
-  const amount=Math.max(0,number(distance,0));
-  const out=copyMask(mask);
-
-  if(amount<=.25){
-    return out
-  }
-
-  const ctx=out.getContext('2d',{alpha:true});
-  const diagonal=amount*.70710678;
-  const offsets=[
-    [amount,0],
-    [-amount,0],
-    [0,amount],
-    [0,-amount],
-    [diagonal,diagonal],
-    [-diagonal,diagonal],
-    [diagonal,-diagonal],
-    [-diagonal,-diagonal]
-  ];
-
-  ctx.globalCompositeOperation=
-    operation==='erode'
-      ?'destination-in'
-      :'source-over';
-
-  for(const [dx,dy] of offsets){
-    ctx.drawImage(mask,dx,dy)
-  }
-
-  ctx.globalCompositeOperation='source-over';
-  return out
-}
-
-function subtractMask(a,b){
-  const out=copyMask(a);
-  const ctx=out.getContext('2d',{alpha:true});
-  ctx.globalCompositeOperation='destination-out';
-  ctx.drawImage(b,0,0);
-  ctx.globalCompositeOperation='source-over';
-  return out
-}
-
-function blurMask(mask,radius){
-  if(radius<=.25){
-    return copyMask(mask)
-  }
-
-  const out=F.canvas(mask.width,mask.height);
-  const ctx=out.getContext('2d',{alpha:true});
-  ctx.filter=`blur(${Math.min(120,radius)}px)`;
-  ctx.drawImage(mask,0,0);
-  ctx.filter='none';
-  return out
-}
-
-function buildAlphaContourMask(source,opt,scaleFactor=1){
-  const inside=Math.max(
-    .5,
+  const safeBand=Math.max(
+    0,
     number(opt.width,48)*
     scaleFactor
   );
 
-  const outside=Math.max(
+  const transition=Math.max(
+    1,
+    number(opt.feather,18)*
+    scaleFactor
+  );
+
+  const extra=Math.max(
     0,
     number(opt.roundness,0)*
     scaleFactor
   );
 
-  const feather=Math.max(
-    0,
-    number(opt.feather,18)*
-    scaleFactor
+  const minSide=Math.min(width,height);
+
+  const edgeStrength=Math.max(
+    0.06,
+    Math.min(
+      0.48,
+      (safeBand+transition+extra)/
+      Math.max(1,minSide)
+    )
   );
 
-  const radius=Math.max(
-    0,
-    number(opt.radius,16)*
-    scaleFactor
+  const innerRatio=clamp(
+    1-(edgeStrength*2),
+    0.12,
+    0.92
   );
 
-  const softness=Math.max(
-    .5,
-    radius+feather
+  const innerWidth=Math.max(
+    1,
+    Math.round(width*innerRatio)
   );
 
-  const alpha=alphaMask(source);
+  const innerHeight=Math.max(
+    1,
+    Math.round(height*innerRatio)
+  );
+
+  const x=(width-innerWidth)/2;
+  const y=(height-innerHeight)/2;
+
+  const mask=F.canvas(width,height);
+  const ctx=mask.getContext('2d',{alpha:true});
+
+  ctx.clearRect(0,0,width,height);
+
+  const blurRadius=Math.max(
+    2,
+    transition+safeBand+extra
+  );
 
   /*
-    Feather real del contorno:
-    - innerCore preserva el centro totalmente nítido;
-    - hardEdge es la franja dura original;
-    - softEdge es esa misma zona, pero suavizada con blur SOLO en alfa.
-    Esto se comporta más como un suavizado de silueta y evita el efecto
-    de imagen encogida o fantasma translúcido.
+    Zona blanca = mantiene la fuente nítida.
+    Al difuminar este rectángulo central, su alfa cae suavemente
+    hacia el perímetro y genera la transición de profundidad.
   */
-  const innerCore=morphMask(
-    alpha,
-    inside,
-    'erode'
+  ctx.filter=`blur(${Math.min(220,blurRadius)}px)`;
+  ctx.fillStyle='rgba(255,255,255,1)';
+  ctx.fillRect(
+    x,
+    y,
+    innerWidth,
+    innerHeight
   );
+  ctx.filter='none';
 
-  const outerBase=outside>0
-    ?morphMask(
-        alpha,
-        outside,
-        'dilate'
+  if(intensity<1){
+    const image=ctx.getImageData(
+      0,
+      0,
+      width,
+      height
+    );
+
+    const data=image.data;
+
+    for(let i=3;i<data.length;i+=4){
+      data[i]=Math.round(
+        data[i]+
+        ((255-data[i])*(1-intensity))
       )
-    :copyMask(alpha);
+    }
 
-  const hardEdge=subtractMask(
-    outerBase,
-    innerCore
-  );
-
-  const softOuter=blurMask(
-    outerBase,
-    softness
-  );
-
-  const softEdge=subtractMask(
-    softOuter,
-    innerCore
-  );
-
-  return {
-    innerCore,
-    hardEdge,
-    softEdge
+    ctx.putImageData(
+      image,
+      0,
+      0
+    )
   }
+
+  return mask
 }
 
 function applyContourBlur(source,opt,scaleFactor=1){
@@ -287,66 +256,80 @@ function applyContourBlur(source,opt,scaleFactor=1){
     1
   );
 
-  const softness=Math.max(
+  const blurRadius=Math.max(
     0,
-    (
-      number(opt.radius,16)+
-      number(opt.feather,18)
-    )*scaleFactor
+    number(opt.radius,16)*
+    scaleFactor
   );
 
   if(
     !opt.enabled||
     intensity<=0||
-    softness<=0
+    blurRadius<=0
   ){
     return source
   }
 
-  const {
-    innerCore,
-    hardEdge,
-    softEdge
-  }=buildAlphaContourMask(
-    source,
+  const width=source.width;
+  const height=source.height;
+
+  const sharpMask=buildPerimeterBlurMask(
+    width,
+    height,
     opt,
     scaleFactor
   );
 
-  const finalMask=F.canvas(
-    source.width,
-    source.height
-  );
-  const mctx=finalMask.getContext('2d',{alpha:true});
+  const alpha=alphaMask(source);
 
   /*
-    Mezcla correcta:
-    - centro 100% intacto
-    - parte del borde duro original
-    - parte del borde suavizado
-    Así el blur se siente como feather del borde,
-    no como encogimiento de toda la imagen.
+    La máscara de nitidez respeta también el alfa original,
+    para no inventar contenido fuera de un PNG transparente.
   */
-  mctx.drawImage(innerCore,0,0);
+  const sharpAlpha=F.canvas(width,height);
+  const sactx=sharpAlpha.getContext('2d',{alpha:true});
+  sactx.drawImage(sharpMask,0,0);
+  sactx.globalCompositeOperation='destination-in';
+  sactx.drawImage(alpha,0,0);
+  sactx.globalCompositeOperation='source-over';
 
-  if(intensity<1){
-    mctx.save();
-    mctx.globalAlpha=1-intensity;
-    mctx.drawImage(hardEdge,0,0);
-    mctx.restore()
-  }
+  /*
+    Capa borrosa completa.
+    El centro se vuelve a cubrir después con la fuente original
+    mediante sharpAlpha.
+  */
+  const blurred=F.canvas(width,height);
+  const bctx=blurred.getContext('2d',{alpha:true});
+  bctx.filter=`blur(${Math.min(180,blurRadius)}px)`;
+  bctx.drawImage(source,0,0);
+  bctx.filter='none';
 
-  mctx.save();
-  mctx.globalAlpha=intensity;
-  mctx.drawImage(softEdge,0,0);
-  mctx.restore();
-
-  const out=F.canvas(source.width,source.height);
+  const out=F.canvas(width,height);
   const ctx=out.getContext('2d',{alpha:true});
-  ctx.drawImage(source,0,0);
+
+  ctx.drawImage(blurred,0,0);
+
+  /*
+    Para PNG conservamos la transparencia original y evitamos halos
+    rectangulares fuera del contenido real.
+  */
   ctx.globalCompositeOperation='destination-in';
-  ctx.drawImage(finalMask,0,0);
+  ctx.drawImage(alpha,0,0);
   ctx.globalCompositeOperation='source-over';
+
+  /*
+    Fuente original solamente donde la máscara todavía es fuerte.
+    Por eso el centro queda 100% nítido y el blur aumenta
+    gradualmente al acercarse a los bordes.
+  */
+  const sharpLayer=F.canvas(width,height);
+  const shctx=sharpLayer.getContext('2d',{alpha:true});
+  shctx.drawImage(source,0,0);
+  shctx.globalCompositeOperation='destination-in';
+  shctx.drawImage(sharpAlpha,0,0);
+  shctx.globalCompositeOperation='source-over';
+
+  ctx.drawImage(sharpLayer,0,0);
 
   return out
 }
