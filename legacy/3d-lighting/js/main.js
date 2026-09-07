@@ -6,7 +6,7 @@ import {
 import {
   detectWebGL,
   create3dScene
-} from './scene3d.js?v=6.5';
+} from './scene3d.js?v=atmosphere-simple-v5';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,
@@ -27,6 +27,7 @@ import {
   save3dToGallery,
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
+import { THREE_ATMOSPHERES, build3dAtmosphere } from './atmospheres3d.js?cache=atmosphere-simple-v5';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -65,6 +66,8 @@ const elements = {
   paletteBridge:
     byId('paletteBridgeStatus'),
   toast: byId('toast'),
+  atmosphereGrid: byId('atmosphereGrid'),
+  advancedToggle: byId('advancedToggleBtn'),
 
   lightingEnabled:
     byId('lightingEnabled'),
@@ -658,7 +661,94 @@ function renderPalettePreview(
   }
 }
 
+function renderAtmospheres3d(
+  state
+) {
+  if (!elements.atmosphereGrid) {
+    return;
+  }
+
+  if (
+    !elements.atmosphereGrid
+      .childElementCount
+  ) {
+    elements.atmosphereGrid
+      .replaceChildren(
+        ...THREE_ATMOSPHERES.map(
+          (preset) => {
+            const button =
+              document.createElement(
+                'button'
+              );
+
+            button.type = 'button';
+            button.className =
+              'atmosphere-3d-card';
+
+            button.dataset.atmosphere =
+              preset.id;
+
+            button.style.setProperty(
+              '--atmo-bg',
+              preset.scene.background
+            );
+
+            button.style.setProperty(
+              '--atmo-floor',
+              preset.scene.floor
+            );
+
+            button.style.setProperty(
+              '--atmo-light',
+              preset.lighting.key.color
+            );
+
+            button.innerHTML = `
+              <span class="atmosphere-3d-preview" aria-hidden="true">
+                <i></i>
+              </span>
+              <span>
+                <strong>${preset.name}</strong>
+                <small>${preset.description}</small>
+              </span>
+            `;
+
+            return button;
+          }
+        )
+      );
+  }
+
+  const active =
+    state.scene?.atmosphere?.id ||
+    'custom';
+
+  document.body.dataset.atmosphere =
+    state.scene?.atmosphere?.weather ||
+    active;
+
+  elements.atmosphereGrid
+    .querySelectorAll(
+      '[data-atmosphere]'
+    )
+    .forEach((button) => {
+      const selected =
+        button.dataset.atmosphere ===
+        active;
+
+      button.classList.toggle(
+        'is-active',
+        selected
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(selected)
+      );
+    });
+}
 function renderState(state) {
+  renderAtmospheres3d(state);
   const model =
     state.selectedModel === 'custom'
       ? {
@@ -878,6 +968,10 @@ async function updateEngineFromState(
 
   engine.setGridVisible(
     state.scene.gridVisible
+  );
+
+  engine.setAtmosphere?.(
+    state.scene?.atmosphere
   );
 
   engine.setShadowsEnabled(
@@ -1507,6 +1601,55 @@ elements.shadowToggle.addEventListener(
   }
 );
 
+elements.atmosphereGrid?.addEventListener(
+  'click',
+  (event) => {
+    const button =
+      event.target.closest(
+        '[data-atmosphere]'
+      );
+
+    if (!button) return;
+
+    const result =
+      build3dAtmosphere(
+        button.dataset.atmosphere,
+        store.getState().lighting
+      );
+
+    store.setState((state) => ({
+      ...state,
+      scene: {
+        ...state.scene,
+        atmosphere: {
+          ...result.scene
+        }
+      },
+      lighting: {
+        ...result.lighting
+      }
+    }));
+
+    toast(
+      `Ambiente: ${result.preset.name}`
+    );
+  }
+);
+
+elements.advancedToggle?.addEventListener(
+  'click',
+  () => {
+    const open =
+      document.body.classList.toggle(
+        'three-advanced-open'
+      );
+
+    elements.advancedToggle.textContent =
+      open
+        ? 'Ocultar opciones'
+        : 'Mas opciones';
+  }
+);
 elements.resetCamera.addEventListener(
   'click',
   () => {
@@ -2024,6 +2167,8 @@ async function start() {
             state.camera.preset,
           lighting:
             state.lighting,
+          atmosphere:
+            state.scene?.atmosphere,
           material:
             state.material,
           onLightTransform(

@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=current">
+  <link rel="stylesheet" href="./styles.css?cache=atmosphere-simple-v5-20260906">
 
   <script type="importmap">
   {
@@ -43,8 +43,9 @@
     <aside class="three-panel three-controls">
       <section class="intro">
         <span class="eyebrow">3D LIGHTING STUDIO</span>
-        <h1>Studio 3D completo</h1>
-        <p>Modelos, paletas Light Lab, luces, proyectos, Galeria e importacion local en un mismo flujo.</p>
+        <h1>Modelo, ambiente y luces</h1>
+        <p>Elige una atmosfera y ajusta sus luces. Lo tecnico queda disponible cuando lo necesites.</p>
+        <button id="advancedToggleBtn" class="advanced-toggle-3d" type="button">Mas opciones</button>
       </section>
 
       <section class="control-section">
@@ -52,10 +53,10 @@
 
         <div id="modelCards" class="model-cards"></div>
 
-        <button id="importModelBtn" class="wide-action import-model-action" type="button">Importar GLB / GLTF local</button>
+        <button id="importModelBtn" class="wide-action import-model-action advanced-only" type="button">Importar GLB / GLTF local</button>
         <input id="customModelInput" type="file" accept=".glb,.gltf,.bin,image/png,image/jpeg,image/webp" multiple hidden>
-        <p id="customModelStatus" class="help">Ningun modelo local cargado</p>
-        <p class="help">Para GLTF selecciona a la vez el .gltf, .bin y sus texturas. El archivo permanece local salvo que guardes/exportes el proyecto.</p>
+        <p id="customModelStatus" class="help advanced-only">Ningun modelo local cargado</p>
+        <p class="help advanced-only">Para GLTF selecciona a la vez el .gltf, .bin y sus texturas. El archivo permanece local salvo que guardes/exportes el proyecto.</p>
       </section>
 
       <section class="control-section">
@@ -67,7 +68,13 @@
         </div>
       </section>
 
-      <section class="control-section lightlab-bridge-section">
+      <section class="control-section atmosphere-3d-section">
+        <div class="section-heading"><span>03</span><h2>Ambiente</h2></div>
+        <p class="help">El fondo y la iluminacion cambian juntos.</p>
+        <div id="atmosphereGrid" class="atmosphere-3d-grid" aria-label="Ambientes 3D"></div>
+      </section>
+
+<section class="control-section lightlab-bridge-section advanced-only">
         <div class="section-heading"><span>03</span><h2>Paletas Light Lab</h2></div>
 
         <select id="paletteLibrarySelect" class="bridge-select">
@@ -110,7 +117,7 @@
 
         <div class="lighting-master">
           <label><span>Iluminacion</span><input id="lightingEnabled" type="checkbox" checked></label>
-          <label><span>Mostrar luces 3D</span><input id="showLightHelpers" type="checkbox" checked></label>
+          <label class="advanced-only"><span>Mostrar luces 3D</span><input id="showLightHelpers" type="checkbox" checked></label>
         </div>
 
         <div id="lightList" class="light-list"></div>
@@ -143,24 +150,24 @@
             <input id="lightElevation" type="range" min="-85" max="85" step="1" value="48">
           </label>
 
-          <label class="range-control">
+          <label class="range-control advanced-only">
             <span>Distancia <output id="lightDistanceOut">5.2</output></span>
             <input id="lightDistance" type="range" min="1.5" max="12" step="0.1" value="5.2">
           </label>
 
-          <label class="range-control">
+          <label class="range-control advanced-only">
             <span>Suavidad <output id="lightSoftnessOut">45%</output></span>
             <input id="lightSoftness" type="range" min="0" max="100" step="1" value="45">
           </label>
 
-          <div class="light-editor-actions">
+          <div class="light-editor-actions advanced-only">
             <button id="duplicateLightBtn" type="button">Duplicar</button>
             <button id="deleteLightBtn" type="button">Eliminar</button>
           </div>
         </div>
       </section>
 
-      <section class="control-section environment-section">
+      <section class="control-section environment-section advanced-only">
         <div class="section-heading"><span>05</span><h2>Ambiente y rebotes</h2></div>
 
         <div class="environment-grid">
@@ -214,7 +221,7 @@
         </div>
       </section>
 
-      <section class="control-section scene-controls">
+      <section class="control-section scene-controls advanced-only">
         <div class="section-heading"><span>06</span><h2>Escena y camara</h2></div>
 
         <div id="cameraPresetButtons" class="camera-presets">
@@ -382,7 +389,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=male-body-fbx"></script>
+  <script type="module" src="./js/main.js?cache=atmosphere-simple-v5-20260906"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

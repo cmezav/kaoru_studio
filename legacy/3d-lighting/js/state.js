@@ -1,4 +1,4 @@
-export const THREE_STUDIO_STATE_VERSION = 6;
+export const THREE_STUDIO_STATE_VERSION = 7;
 
 export function createInitial3dState() {
   return {
@@ -22,7 +22,15 @@ export function createInitial3dState() {
     scene: {
       gridVisible: true,
       shadowsEnabled: true,
-      edgesVisible: false
+      edgesVisible: false,
+      atmosphere: {
+        id: 'day',
+        background: '#8CBED7',
+        fog: '#8CBED7',
+        floor: '#7F8274',
+        exposure: 1.12,
+        weather: 'clear'
+      }
     },
     material: {
       paletteBridgeReady: true,

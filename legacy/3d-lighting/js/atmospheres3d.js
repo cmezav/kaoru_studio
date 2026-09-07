@@ -1,0 +1,289 @@
+export const THREE_ATMOSPHERES = [
+  {
+    id:'day',
+    name:'D\u00eda',
+    description:'Claro y natural.',
+    scene:{
+      background:'#8CBED7',
+      fog:'#8CBED7',
+      floor:'#7F8274',
+      exposure:1.12,
+      weather:'clear'
+    },
+    lighting:{
+      ambient:{color:'#CDE6F3',intensity:24},
+      shadow:{color:'#4D5868',intensity:24},
+      bounce:{color:'#E4C49A',intensity:16},
+      rim:{color:'#EAF7FF',intensity:10},
+      key:{color:'#FFF1C9',intensity:88,azimuth:38,elevation:52,distance:5.2,softness:56},
+      fill:{color:'#A8D4EE',intensity:26,azimuth:-58,elevation:20,distance:5.8,softness:78}
+    }
+  },
+  {
+    id:'dawn',
+    name:'Amanecer',
+    description:'Rosa suave y luz baja.',
+    scene:{
+      background:'#8B6E83',
+      fog:'#8B6E83',
+      floor:'#695B58',
+      exposure:1.04,
+      weather:'clear'
+    },
+    lighting:{
+      ambient:{color:'#A88BA6',intensity:20},
+      shadow:{color:'#4D3D55',intensity:34},
+      bounce:{color:'#E89376',intensity:24},
+      rim:{color:'#FFD7BD',intensity:14},
+      key:{color:'#FFB18D',intensity:72,azimuth:-62,elevation:12,distance:5.5,softness:64},
+      fill:{color:'#B7A8C8',intensity:18,azimuth:52,elevation:18,distance:6,softness:82}
+    }
+  },
+  {
+    id:'afternoon',
+    name:'Tarde',
+    description:'Dorada y lateral.',
+    scene:{
+      background:'#6D99A8',
+      fog:'#6D99A8',
+      floor:'#7B6950',
+      exposure:1.08,
+      weather:'clear'
+    },
+    lighting:{
+      ambient:{color:'#A8C3CD',intensity:18},
+      shadow:{color:'#514A4B',intensity:32},
+      bounce:{color:'#DFA45E',intensity:22},
+      rim:{color:'#FFE8B9',intensity:8},
+      key:{color:'#FFD06E',intensity:94,azimuth:-72,elevation:24,distance:5.2,softness:42},
+      fill:{color:'#9FC3D5',intensity:20,azimuth:54,elevation:15,distance:6.2,softness:76}
+    }
+  },
+  {
+    id:'sunset',
+    name:'Atardecer',
+    description:'Naranja y violeta.',
+    scene:{
+      background:'#583A52',
+      fog:'#583A52',
+      floor:'#4B3134',
+      exposure:1.02,
+      weather:'clear'
+    },
+    lighting:{
+      ambient:{color:'#755A82',intensity:18},
+      shadow:{color:'#2D2036',intensity:48},
+      bounce:{color:'#D76C52',intensity:24},
+      rim:{color:'#FFB879',intensity:18},
+      key:{color:'#FF8F53',intensity:90,azimuth:-56,elevation:14,distance:5.3,softness:46},
+      fill:{color:'#6C7DDB',intensity:36,azimuth:64,elevation:28,distance:5.8,softness:62}
+    }
+  },
+  {
+    id:'night',
+    name:'Noche',
+    description:'Azul profundo.',
+    scene:{
+      background:'#081426',
+      fog:'#081426',
+      floor:'#111B27',
+      exposure:.88,
+      weather:'night'
+    },
+    lighting:{
+      ambient:{color:'#193C6A',intensity:22},
+      shadow:{color:'#090F21',intensity:58},
+      bounce:{color:'#2E5378',intensity:8},
+      rim:{color:'#9EDFFF',intensity:26},
+      key:{color:'#7DBAFF',intensity:56,azimuth:42,elevation:58,distance:5.3,softness:54},
+      fill:{color:'#31558B',intensity:16,azimuth:-52,elevation:14,distance:6.2,softness:84}
+    }
+  },
+  {
+    id:'moon',
+    name:'Luna',
+    description:'Fr\u00edo con contraluz.',
+    scene:{
+      background:'#050C19',
+      fog:'#050C19',
+      floor:'#11151D',
+      exposure:.82,
+      weather:'moon'
+    },
+    lighting:{
+      ambient:{color:'#182A4C',intensity:14},
+      shadow:{color:'#060A14',intensity:68},
+      bounce:{color:'#223B56',intensity:6},
+      rim:{color:'#CDEBFF',intensity:68},
+      key:{color:'#A8D7FF',intensity:32,azimuth:168,elevation:48,distance:5.8,softness:46},
+      fill:{color:'#385777',intensity:12,azimuth:-34,elevation:12,distance:6.4,softness:84}
+    }
+  },
+  {
+    id:'cloudy',
+    name:'Nublado',
+    description:'Suave y desaturado.',
+    scene:{
+      background:'#89969D',
+      fog:'#89969D',
+      floor:'#737A78',
+      exposure:.98,
+      weather:'cloudy'
+    },
+    lighting:{
+      ambient:{color:'#B1BDC2',intensity:30},
+      shadow:{color:'#5D666B',intensity:26},
+      bounce:{color:'#AEB8B4',intensity:14},
+      rim:{color:'#DBE2E3',intensity:6},
+      key:{color:'#DDE4E4',intensity:48,azimuth:8,elevation:64,distance:5.4,softness:90},
+      fill:{color:'#BFC9CA',intensity:28,azimuth:-60,elevation:30,distance:6.2,softness:94}
+    }
+  },
+  {
+    id:'rain',
+    name:'Lluvia',
+    description:'Fr\u00edo, gris y h\u00famedo.',
+    scene:{
+      background:'#445A68',
+      fog:'#526873',
+      floor:'#3F4D4E',
+      exposure:.90,
+      weather:'rain'
+    },
+    lighting:{
+      ambient:{color:'#607B89',intensity:24},
+      shadow:{color:'#273640',intensity:46},
+      bounce:{color:'#56757D',intensity:10},
+      rim:{color:'#A6D9E7',intensity:16},
+      key:{color:'#A9D5E4',intensity:44,azimuth:26,elevation:68,distance:5.6,softness:86},
+      fill:{color:'#6D8D99',intensity:18,azimuth:-58,elevation:18,distance:6.2,softness:90}
+    }
+  },
+  {
+    id:'storm',
+    name:'Tormenta',
+    description:'Oscuro y dram\u00e1tico.',
+    scene:{
+      background:'#141E2E',
+      fog:'#1C2A3B',
+      floor:'#252B2E',
+      exposure:.82,
+      weather:'storm'
+    },
+    lighting:{
+      ambient:{color:'#324D6A',intensity:14},
+      shadow:{color:'#0E1522',intensity:70},
+      bounce:{color:'#35516A',intensity:6},
+      rim:{color:'#C7E9FF',intensity:34},
+      key:{color:'#C0E8FF',intensity:86,azimuth:-46,elevation:70,distance:5.2,softness:18},
+      fill:{color:'#435E7B',intensity:12,azimuth:70,elevation:22,distance:6.2,softness:74}
+    }
+  },
+  {
+    id:'fog',
+    name:'Niebla',
+    description:'Bajo contraste y aire gris.',
+    scene:{
+      background:'#A8B0B1',
+      fog:'#BDC3C2',
+      floor:'#858A87',
+      exposure:.96,
+      fogNear:5,
+      fogFar:18,
+      weather:'fog'
+    },
+    lighting:{
+      ambient:{color:'#C1C8C6',intensity:36},
+      shadow:{color:'#747C7D',intensity:18},
+      bounce:{color:'#C5C8C3',intensity:20},
+      rim:{color:'#E3E6E3',intensity:8},
+      key:{color:'#E2E5DF',intensity:38,azimuth:-10,elevation:56,distance:5.5,softness:96},
+      fill:{color:'#C9CDCA',intensity:26,azimuth:54,elevation:28,distance:6,softness:96}
+    }
+  },
+  {
+    id:'warm-room',
+    name:'Interior c\u00e1lido',
+    description:'Luz amarilla de habitaci\u00f3n.',
+    scene:{
+      background:'#4B332A',
+      fog:'#4B332A',
+      floor:'#5D4638',
+      exposure:1.00,
+      weather:'indoor'
+    },
+    lighting:{
+      ambient:{color:'#745647',intensity:24},
+      shadow:{color:'#302124',intensity:44},
+      bounce:{color:'#D38A52',intensity:24},
+      rim:{color:'#F2B777',intensity:8},
+      key:{color:'#FFC46E',intensity:72,azimuth:-38,elevation:30,distance:5.2,softness:62},
+      fill:{color:'#A56B4A',intensity:18,azimuth:56,elevation:16,distance:6.2,softness:82}
+    }
+  }
+];
+
+export function atmosphere3dById(id){
+  return THREE_ATMOSPHERES.find(
+    item=>item.id===id
+  )||THREE_ATMOSPHERES[0];
+}
+
+function makeLight(
+  id,
+  name,
+  config
+){
+  return{
+    id,
+    name,
+    color:config.color,
+    intensity:config.intensity,
+    azimuth:config.azimuth,
+    elevation:config.elevation,
+    distance:config.distance,
+    softness:config.softness,
+    enabled:true
+  };
+}
+
+export function build3dAtmosphere(
+  id,
+  currentLighting={}
+){
+  const preset=
+    atmosphere3dById(id);
+
+  const config=
+    preset.lighting;
+
+  return{
+    preset,
+    scene:{
+      id:preset.id,
+      ...preset.scene
+    },
+    lighting:{
+      enabled:true,
+      showHelpers:
+        currentLighting.showHelpers??true,
+      selectedLightId:'key',
+      ambient:{...config.ambient},
+      shadow:{...config.shadow},
+      bounce:{...config.bounce},
+      rim:{...config.rim},
+      lights:[
+        makeLight(
+          'key',
+          'Luz principal',
+          config.key
+        ),
+        makeLight(
+          'fill',
+          'Relleno',
+          config.fill
+        )
+      ]
+    }
+  };
+}

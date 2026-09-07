@@ -278,6 +278,7 @@ export async function create3dScene(
 
   let loadVersion = 0;
   let disposed = false;
+  let currentAtmosphere = null;
 
   function clearSubject() {
     subjectRoot.traverse((object) => {
@@ -811,7 +812,69 @@ export async function create3dScene(
     camera.updateProjectionMatrix();
   }
 
+  function setAtmosphere(
+    config = null
+  ) {
+    if (!config) {
+      currentAtmosphere = null;
+      return;
+    }
+
+    currentAtmosphere = {
+      ...config
+    };
+
+    const background =
+      config.background ||
+      '#15121A';
+
+    const fogColor =
+      config.fog ||
+      background;
+
+    scene.background.set(
+      background
+    );
+
+    if (scene.fog) {
+      scene.fog.color.set(
+        fogColor
+      );
+
+      scene.fog.near =
+        Number(
+          config.fogNear ?? 12
+        );
+
+      scene.fog.far =
+        Number(
+          config.fogFar ?? 30
+        );
+    }
+
+    floorMaterial.color.set(
+      config.floor ||
+      '#29242F'
+    );
+
+    renderer.toneMappingExposure =
+      Math.max(
+        .35,
+        Math.min(
+          2.2,
+          Number(
+            config.exposure ?? 1.05
+          )
+        )
+      );
+  }
   function applyTheme(theme) {
+    if (currentAtmosphere) {
+      setAtmosphere(
+        currentAtmosphere
+      );
+      return;
+    }
     const night = theme === 'night';
 
     scene.background.set(
@@ -916,6 +979,12 @@ export async function create3dScene(
     'day'
   );
 
+  if (options.atmosphere) {
+    setAtmosphere(
+      options.atmosphere
+    );
+  }
+
   resize();
 
   return {
@@ -931,6 +1000,7 @@ export async function create3dScene(
     setGridVisible,
     setEdgesVisible,
     setShadowsEnabled,
+    setAtmosphere,
     setCameraPreset,
     applyLightingState,
     setSelectedLight,

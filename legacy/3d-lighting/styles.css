@@ -209,3 +209,203 @@ button,input{font:inherit;color:inherit}
   background:linear-gradient(135deg,var(--three-surface),var(--three-accent));
   box-shadow:inset -2px -2px 4px rgba(0,0,0,.18);
 }
+/* === KAORU 3D ATMOSPHERES SIMPLE V5 === */
+
+.advanced-toggle-3d{
+  width:100%;
+  margin-top:10px;
+  min-height:36px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface-2);
+  color:var(--text);
+  font-weight:800;
+  cursor:pointer;
+}
+
+.atmosphere-3d-grid{
+  display:grid;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+  gap:7px;
+  margin-top:9px;
+}
+
+.atmosphere-3d-card{
+  min-width:0;
+  padding:0;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:var(--surface-2);
+  color:var(--text);
+  text-align:left;
+  cursor:pointer;
+}
+
+.atmosphere-3d-card:hover,
+.atmosphere-3d-card.is-active{
+  border-color:var(--accent);
+}
+
+.atmosphere-3d-card.is-active{
+  box-shadow:
+    0 0 0 2px
+    color-mix(
+      in srgb,
+      var(--accent) 18%,
+      transparent
+    );
+}
+
+.atmosphere-3d-preview{
+  position:relative;
+  display:block;
+  height:50px;
+  overflow:hidden;
+  background:
+    linear-gradient(
+      180deg,
+      var(--atmo-bg),
+      color-mix(
+        in srgb,
+        var(--atmo-bg) 72%,
+        var(--atmo-floor)
+      )
+    );
+}
+
+.atmosphere-3d-preview::before{
+  content:"";
+  position:absolute;
+  width:30px;
+  height:30px;
+  left:16%;
+  top:8px;
+  border-radius:50%;
+  background:
+    radial-gradient(
+      circle,
+      var(--atmo-light) 0 12%,
+      color-mix(
+        in srgb,
+        var(--atmo-light) 38%,
+        transparent
+      ) 13% 42%,
+      transparent 72%
+    );
+}
+
+.atmosphere-3d-preview::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:13px;
+  background:var(--atmo-floor);
+  opacity:.72;
+}
+
+.atmosphere-3d-card>span:last-child{
+  display:block;
+  padding:7px 8px;
+}
+
+.atmosphere-3d-card strong,
+.atmosphere-3d-card small{
+  display:block;
+}
+
+.atmosphere-3d-card strong{
+  font-size:10.5px;
+}
+
+.atmosphere-3d-card small{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:8.5px;
+  line-height:1.25;
+}
+
+body:not(.three-advanced-open)
+.advanced-only{
+  display:none!important;
+}
+
+.viewport-card{
+  position:relative;
+  overflow:hidden;
+}
+
+.viewport-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .2s ease;
+}
+
+body[data-atmosphere="rain"]
+.viewport-card::after{
+  opacity:.24;
+  background:
+    repeating-linear-gradient(
+      105deg,
+      transparent 0 18px,
+      rgba(202,235,248,.38) 19px 20px,
+      transparent 21px 38px
+    );
+}
+
+body[data-atmosphere="storm"]
+.viewport-card::after{
+  opacity:.30;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(23,38,62,.12),
+      rgba(5,10,18,.28)
+    ),
+    repeating-linear-gradient(
+      105deg,
+      transparent 0 24px,
+      rgba(210,239,255,.28) 25px 26px,
+      transparent 27px 48px
+    );
+}
+
+body[data-atmosphere="fog"]
+.viewport-card::after{
+  opacity:.38;
+  background:
+    radial-gradient(
+      ellipse at 40% 40%,
+      rgba(238,243,241,.36),
+      rgba(213,221,219,.14) 55%,
+      transparent 78%
+    );
+}
+
+body[data-atmosphere="moon"]
+.viewport-card::after{
+  opacity:.15;
+  background:
+    radial-gradient(
+      circle at 18% 15%,
+      rgba(218,240,255,.65) 0 2%,
+      rgba(163,209,240,.18) 3% 14%,
+      transparent 32%
+    );
+}
+
+@media(max-width:760px){
+  .atmosphere-3d-grid{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+}
+
+/* === /KAORU 3D ATMOSPHERES SIMPLE V5 === */
