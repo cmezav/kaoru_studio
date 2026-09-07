@@ -236,7 +236,7 @@ const KAORU_CREATIVE_ATMO_FILTERS = {
 };
 
 function kaoruCreativeAtmosphereTags(preset){
-  const tags=new Set();
+  const tags=new Set(preset?.tags||[]);
   const id=preset?.id||'';
   const type=
     preset?.scene?.effect?.type||

@@ -1,7 +1,87 @@
 const env=(value)=>({color:value[0],intensity:value[1]});
 const dl=(value)=>({color:value[0],intensity:value[1],azimuth:value[2],elevation:value[3],distance:value[5]??5.4,softness:value[4]});
+
+const EXTRA_PRESET_TAGS={
+  'ref-diafana-base':['natural'],
+  'ref-cenital-calida':['natural','dramatic'],
+  'ref-lateral-complementaria':['color','dramatic'],
+  'ref-causticas-inferiores':['pattern','fantasy','color'],
+  'ref-frontal-neutra':['natural'],
+  'ref-lateral-derecha-difusa':['natural'],
+  'ref-follaje-dappled':['natural','pattern','dramatic'],
+  'ref-nocturno-escotopico':['color','dramatic'],
+  'ref-golden-hour-rasante':['natural','dramatic'],
+  'ref-halo-retro':['color','dramatic','fantasy'],
+  'ref-division-lineal':['pattern','dramatic','color'],
+  'ref-sombras-intersectantes':['pattern','dramatic'],
+  'ref-local-plana':['natural'],
+  'ref-frontal-superior-calida':['natural'],
+  'ref-underlight-cobrizo':['dramatic','color'],
+  'ref-top-light-dura':['natural','dramatic'],
+  'ref-banda-sombra-transversal':['pattern','dramatic'],
+  'ref-rim-cian-sombra-calida':['color','dramatic'],
+  'ref-moteado-dorado':['pattern','natural','dramatic'],
+  'ref-cian-rebote-inferior':['color','dramatic'],
+  'ref-synthwave-bilateral':['color','dramatic','fantasy'],
+  'ref-division-diagonal':['pattern','dramatic'],
+  'ref-mapa-grisaceo':['natural'],
+  'ref-dia-nublado-extremo':['natural'],
+  'ref-flash-frontal':['dramatic'],
+  'ref-submarina-caustica':['pattern','fantasy','color'],
+  'ref-cenital-solar-alto':['natural','dramatic'],
+  'ref-retro-calida-masiva':['dramatic','color'],
+  'ref-blacklight-emisivo':['fantasy','color','dramatic','pattern'],
+  'ref-split-yellow-blue':['color','dramatic'],
+  'ref-subiluminacion-invertida':['color','dramatic'],
+  'ref-lateral-cortante-calida':['natural','dramatic'],
+  'ref-abisal-frio':['color','dramatic'],
+  'ref-moteado-organico-suave':['pattern','natural'],
+  'ref-plano-teal-beige':['natural'],
+  'ref-flash-frio':['dramatic','color'],
+  'ref-rejilla-inclinada':['pattern','dramatic'],
+  'ref-luz-45-estandar':['natural'],
+  'ref-rim-fill-complementario':['color','dramatic'],
+  'ref-midday-lima':['natural','dramatic'],
+  'ref-division-oblicua':['color','dramatic','pattern'],
+  'ref-doble-rim-neon':['color','dramatic','fantasy'],
+  'ref-malla-ortogonal':['pattern','dramatic'],
+  'ref-dispersion-espectral':['fantasy','color','pattern'],
+  'ref-prisma-real':['fantasy','color','pattern'],
+  'ref-recorte-acuatico-multiple':['fantasy','color','pattern','dramatic']
+};
+
+function extraPresetTags(id,c={}){
+  const tags=new Set(EXTRA_PRESET_TAGS[id]||[]);
+  const type=c.effect?.type||'none';
+
+  if([
+    'stripe','window','leaves','blinds',
+    'bokeh','circles','sparkles',
+    'underwater','caustics'
+  ].includes(type)){
+    tags.add('pattern');
+  }
+
+  if([
+    'iridescent','rainbow',
+    'underwater','caustics',
+    'sparkles','bokeh','circles'
+  ].includes(type)){
+    tags.add('fantasy');
+  }
+
+  if([
+    'split','neon',
+    'iridescent','rainbow'
+  ].includes(type)){
+    tags.add('color');
+  }
+
+  return [...tags];
+}
+
 const mk=(id,name,description,c={})=>({
-  id,group:'creative',name,description,
+  id,group:'creative',tags:extraPresetTags(id,c),name,description,
   scene:{background:c.background||'#2A2630',fog:c.fog||c.background||'#2A2630',floor:c.floor||'#242127',exposure:c.exposure??1,weather:'clear',...(c.effect?{effect:c.effect}:{})},
   lighting:{
     ambient:env(c.ambient||['#777777',20]),shadow:env(c.shadow||['#202020',45]),bounce:env(c.bounce||['#555555',12]),rim:env(c.rim||['#FFFFFF',10]),

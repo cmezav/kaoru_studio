@@ -198,6 +198,9 @@ const SHARED_CREATIVE_ATMOSPHERES =
       return {
         id: preset.id,
         group: 'creative',
+        tags: Array.isArray(preset.tags)
+          ? [...preset.tags]
+          : [],
         name: preset.name,
         description:
           preset.description,
