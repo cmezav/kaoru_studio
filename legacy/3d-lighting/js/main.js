@@ -28,7 +28,7 @@ import {
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
 import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=creative-catalog-v1-20260906';
-import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-real-v1';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-controls-v1-20260906';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -90,6 +90,17 @@ const elements = {
   atmosphereEffectAngleOut: byId('atmosphereEffectAngleOut'),
   atmosphereEffectScale: byId('atmosphereEffectScale'),
   atmosphereEffectScaleOut: byId('atmosphereEffectScaleOut'),
+  atmosphereProjectorLight: byId('atmosphereProjectorLight'),
+  atmosphereEffectX: byId('atmosphereEffectX'),
+  atmosphereEffectXOut: byId('atmosphereEffectXOut'),
+  atmosphereEffectY: byId('atmosphereEffectY'),
+  atmosphereEffectYOut: byId('atmosphereEffectYOut'),
+  atmosphereEffectBlur: byId('atmosphereEffectBlur'),
+  atmosphereEffectBlurOut: byId('atmosphereEffectBlurOut'),
+  atmosphereEffectContrast: byId('atmosphereEffectContrast'),
+  atmosphereEffectContrastOut: byId('atmosphereEffectContrastOut'),
+  atmosphereEffectDensity: byId('atmosphereEffectDensity'),
+  atmosphereEffectDensityOut: byId('atmosphereEffectDensityOut'),
   resetAtmosphere: byId('resetAtmosphereBtn'),  advancedToggle: byId('advancedToggleBtn'),
 
   lightingEnabled:
@@ -1043,6 +1054,78 @@ function renderAtmospheres3d(
     elements.atmosphereEffectScaleOut
       .textContent=
         `${Math.round(scale)}%`;
+
+    const projectorLightId=
+      effect.lightId||
+      state.lighting?.lights?.[0]?.id||
+      '';
+
+    if(elements.atmosphereProjectorLight){
+      const optionsSignature=
+        (state.lighting?.lights||[])
+          .map(
+            light=>
+              `${light.id}:${light.name}`
+          )
+          .join('|');
+
+      if(
+        elements.atmosphereProjectorLight
+          .dataset.signature!==
+        optionsSignature
+      ){
+        elements.atmosphereProjectorLight
+          .dataset.signature=
+            optionsSignature;
+
+        elements.atmosphereProjectorLight
+          .replaceChildren(
+            ...(state.lighting?.lights||[])
+              .map(light=>{
+                const option=
+                  document.createElement(
+                    'option'
+                  );
+
+                option.value=light.id;
+                option.textContent=
+                  light.name||'Luz';
+
+                return option;
+              })
+          );
+      }
+
+      if(
+        document.activeElement !==
+        elements.atmosphereProjectorLight
+      ){
+        elements.atmosphereProjectorLight.value=
+          projectorLightId;
+      }
+    }
+
+    [
+      [elements.atmosphereEffectX,elements.atmosphereEffectXOut,Number(effect.offsetX||0),'%'],
+      [elements.atmosphereEffectY,elements.atmosphereEffectYOut,Number(effect.offsetY||0),'%'],
+      [elements.atmosphereEffectBlur,elements.atmosphereEffectBlurOut,Number(effect.blur??8),'%'],
+      [elements.atmosphereEffectContrast,elements.atmosphereEffectContrastOut,Number(effect.contrast??70),'%'],
+      [elements.atmosphereEffectDensity,elements.atmosphereEffectDensityOut,Number(effect.density??50),'%']
+    ].forEach(
+      ([input,output,value,suffix])=>{
+        if(
+          input &&
+          document.activeElement !== input
+        ){
+          input.value=String(value);
+        }
+
+        if(output){
+          output.textContent=
+            `${Math.round(value)}${suffix}`;
+        }
+      }
+    );
   }
 }
 function renderState(state) {
@@ -1978,10 +2061,30 @@ function kaoruPatchAtmosphereEffect(
       opacity:0,
       angle:0,
       scale:100,
+      blur:8,
+      offsetX:0,
+      offsetY:0,
+      contrast:70,
+      density:50,
       ...(state.scene?.atmosphere
         ?.effect||{}),
+      ...(state.lighting?.projector||{}),
       ...patch
     };
+
+    const projector=
+      projectorFromEffect(
+        effect
+      );
+
+    if(
+      !projector.lightId
+    ){
+      projector.lightId=
+        state.lighting
+          .lights?.[0]?.id||
+        'key';
+    }
 
     return{
       ...state,
@@ -1995,15 +2098,7 @@ function kaoruPatchAtmosphereEffect(
       },
       lighting:{
         ...state.lighting,
-        projector:{
-          ...projectorFromEffect(
-            effect
-          ),
-          lightId:
-            state.lighting
-              .lights?.[0]?.id||
-            'key'
-        }
+        projector
       }
     };
   });
@@ -2157,6 +2252,45 @@ elements.atmosphereEffectScale?.addEventListener(
             .value
         )
     });
+  }
+);
+
+elements.atmosphereProjectorLight
+  ?.addEventListener(
+    'change',
+    ()=>{
+      kaoruPatchAtmosphereEffect({
+        lightId:
+          elements.atmosphereProjectorLight
+            .value
+      });
+    }
+  );
+
+[
+  [elements.atmosphereEffectX,elements.atmosphereEffectXOut,'offsetX','%'],
+  [elements.atmosphereEffectY,elements.atmosphereEffectYOut,'offsetY','%'],
+  [elements.atmosphereEffectBlur,elements.atmosphereEffectBlurOut,'blur','%'],
+  [elements.atmosphereEffectContrast,elements.atmosphereEffectContrastOut,'contrast','%'],
+  [elements.atmosphereEffectDensity,elements.atmosphereEffectDensityOut,'density','%']
+].forEach(
+  ([input,output,key,suffix])=>{
+    input?.addEventListener(
+      'input',
+      ()=>{
+        const value=
+          Number(input.value);
+
+        if(output){
+          output.textContent=
+            `${Math.round(value)}${suffix}`;
+        }
+
+        kaoruPatchAtmosphereEffect({
+          [key]:value
+        });
+      }
+    );
   }
 );
 

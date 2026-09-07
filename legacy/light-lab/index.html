@@ -164,6 +164,11 @@
                     <input id="atmoEffectBHex" type="text" maxlength="7" value="#7C3AED">
                   </div>
                 </label>
+
+                <label>
+                  <span>Luz que proyecta</span>
+                  <select id="atmoProjectorLight"></select>
+                </label>
               </div>
 
               <label class="light-atmo-range">
@@ -178,7 +183,32 @@
 
               <label class="light-atmo-range">
                 <span>Escala <output id="atmoEffectScaleOut">100%</output></span>
-                <input id="atmoEffectScale" type="range" min="40" max="240" value="100">
+                <input id="atmoEffectScale" type="range" min="20" max="300" value="100">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Posición X <output id="atmoEffectXOut">0%</output></span>
+                <input id="atmoEffectX" type="range" min="-100" max="100" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Posición Y <output id="atmoEffectYOut">0%</output></span>
+                <input id="atmoEffectY" type="range" min="-100" max="100" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Desenfoque <output id="atmoEffectBlurOut">8%</output></span>
+                <input id="atmoEffectBlur" type="range" min="0" max="100" value="8">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Contraste <output id="atmoEffectContrastOut">70%</output></span>
+                <input id="atmoEffectContrast" type="range" min="0" max="100" value="70">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Densidad <output id="atmoEffectDensityOut">50%</output></span>
+                <input id="atmoEffectDensity" type="range" min="0" max="100" value="50">
               </label>
 
               <p class="base-help">
@@ -355,7 +385,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=creative-catalog-v1-20260906"></script>
+  <script type="module" src="./js/main.js?cache=projector-controls-v1-20260906"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>

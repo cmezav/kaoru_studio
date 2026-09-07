@@ -7,7 +7,7 @@ import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
 import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=projector-real-v1';
-import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-real-v1';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-controls-v1-20260906';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
@@ -77,9 +77,12 @@ const elements = {
   atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
   atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
   atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
-  atmoEffectBColor: byId('atmoEffectBColor'), atmoEffectBHex: byId('atmoEffectBHex'), atmoEffectOpacity: byId('atmoEffectOpacity'),
+  atmoEffectBColor: byId('atmoEffectBColor'), atmoEffectBHex: byId('atmoEffectBHex'), atmoProjectorLight: byId('atmoProjectorLight'), atmoEffectOpacity: byId('atmoEffectOpacity'),
   atmoEffectOpacityOut: byId('atmoEffectOpacityOut'), atmoEffectAngle: byId('atmoEffectAngle'), atmoEffectAngleOut: byId('atmoEffectAngleOut'),
-  atmoEffectScale: byId('atmoEffectScale'), atmoEffectScaleOut: byId('atmoEffectScaleOut'), resetAtmosphere: byId('resetAtmosphereBtn'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
+  atmoEffectScale: byId('atmoEffectScale'), atmoEffectScaleOut: byId('atmoEffectScaleOut'),
+  atmoEffectX: byId('atmoEffectX'), atmoEffectXOut: byId('atmoEffectXOut'), atmoEffectY: byId('atmoEffectY'), atmoEffectYOut: byId('atmoEffectYOut'),
+  atmoEffectBlur: byId('atmoEffectBlur'), atmoEffectBlurOut: byId('atmoEffectBlurOut'), atmoEffectContrast: byId('atmoEffectContrast'), atmoEffectContrastOut: byId('atmoEffectContrastOut'),
+  atmoEffectDensity: byId('atmoEffectDensity'), atmoEffectDensityOut: byId('atmoEffectDensityOut'), resetAtmosphere: byId('resetAtmosphereBtn'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
   resetParams: byId('resetParamsBtn'), previewTitle: byId('previewTitle'), paletteName: byId('paletteName'), swatchGrid: byId('swatchGrid'),
   paletteViewTabs: byId('paletteViewTabs'), comparisonGrid: byId('comparisonGrid'),
   canvas: byId('previewCanvas'), modeLabel: byId('previewModeLabel'), previewTabs: byId('previewTabs'),
@@ -339,6 +342,82 @@ function syncAtmosphereEditor(
   elements.atmoEffectScaleOut
     .textContent =
       `${scale}%`;
+
+  const projectorLightId =
+    effect.lightId ||
+    lighting.lights?.[0]?.id ||
+    '';
+
+  if(elements.atmoProjectorLight){
+    const optionsSignature =
+      lighting.lights
+        .map(
+          (light) =>
+            `${light.id}:${light.name}`
+        )
+        .join('|');
+
+    if(
+      elements.atmoProjectorLight
+        .dataset.signature !==
+      optionsSignature
+    ){
+      elements.atmoProjectorLight
+        .dataset.signature =
+          optionsSignature;
+
+      elements.atmoProjectorLight
+        .replaceChildren(
+          ...lighting.lights.map(
+            (light)=>{
+              const option =
+                document.createElement(
+                  'option'
+                );
+
+              option.value=light.id;
+              option.textContent=
+                light.name ||
+                'Luz';
+
+              return option;
+            }
+          )
+        );
+    }
+
+    if(
+      document.activeElement !==
+      elements.atmoProjectorLight
+    ){
+      elements.atmoProjectorLight.value =
+        projectorLightId;
+    }
+  }
+
+  const extraControls=[
+    [elements.atmoEffectX,elements.atmoEffectXOut,Number(effect.offsetX||0),'%'],
+    [elements.atmoEffectY,elements.atmoEffectYOut,Number(effect.offsetY||0),'%'],
+    [elements.atmoEffectBlur,elements.atmoEffectBlurOut,Number(effect.blur??8),'%'],
+    [elements.atmoEffectContrast,elements.atmoEffectContrastOut,Number(effect.contrast??70),'%'],
+    [elements.atmoEffectDensity,elements.atmoEffectDensityOut,Number(effect.density??50),'%']
+  ];
+
+  extraControls.forEach(
+    ([input,output,value,suffix])=>{
+      if(
+        input &&
+        document.activeElement !== input
+      ){
+        input.value=String(value);
+      }
+
+      if(output){
+        output.textContent=
+          `${Math.round(value)}${suffix}`;
+      }
+    }
+  );
 }
 
 function patchAtmosphereBackdrop(
@@ -383,7 +462,13 @@ function patchAtmosphereEffect(
       opacity:0,
       angle:0,
       scale:100,
+      blur:8,
+      offsetX:0,
+      offsetY:0,
+      contrast:70,
+      density:50,
       ...(backdrop.effect || {}),
+      ...(state.lighting.projector || {}),
       ...changes
     };
 
@@ -394,6 +479,7 @@ function patchAtmosphereEffect(
 
     if(
       projector.enabled &&
+      !projector.lightId &&
       state.lighting.lights?.[0]
     ){
       projector.lightId=
@@ -1369,6 +1455,44 @@ elements.atmoEffectScale
       });
     }
   );
+
+elements.atmoProjectorLight
+  ?.addEventListener(
+    'change',
+    ()=>{
+      patchAtmosphereEffect({
+        lightId:
+          elements.atmoProjectorLight.value
+      });
+    }
+  );
+
+[
+  [elements.atmoEffectX,elements.atmoEffectXOut,'offsetX','%'],
+  [elements.atmoEffectY,elements.atmoEffectYOut,'offsetY','%'],
+  [elements.atmoEffectBlur,elements.atmoEffectBlurOut,'blur','%'],
+  [elements.atmoEffectContrast,elements.atmoEffectContrastOut,'contrast','%'],
+  [elements.atmoEffectDensity,elements.atmoEffectDensityOut,'density','%']
+].forEach(
+  ([input,output,key,suffix])=>{
+    input?.addEventListener(
+      'input',
+      ()=>{
+        const value=
+          Number(input.value);
+
+        if(output){
+          output.textContent=
+            `${Math.round(value)}${suffix}`;
+        }
+
+        patchAtmosphereEffect({
+          [key]:value
+        });
+      }
+    );
+  }
+);
 
 elements.resetAtmosphere
   .addEventListener(

@@ -146,6 +146,11 @@
                   <input id="atmosphereEffectBHex" type="text" maxlength="7" value="#7C3AED">
                 </div>
               </label>
+
+              <label>
+                <span>Luz que proyecta</span>
+                <select id="atmosphereProjectorLight"></select>
+              </label>
             </div>
 
             <label class="range-control compact">
@@ -165,7 +170,32 @@
 
             <label class="range-control compact">
               <span>Escala del patron <output id="atmosphereEffectScaleOut">100%</output></span>
-              <input id="atmosphereEffectScale" type="range" min="40" max="240" step="1" value="100">
+              <input id="atmosphereEffectScale" type="range" min="20" max="300" step="1" value="100">
+            </label>
+
+            <label class="range-control compact">
+              <span>Posicion X <output id="atmosphereEffectXOut">0%</output></span>
+              <input id="atmosphereEffectX" type="range" min="-100" max="100" step="1" value="0">
+            </label>
+
+            <label class="range-control compact">
+              <span>Posicion Y <output id="atmosphereEffectYOut">0%</output></span>
+              <input id="atmosphereEffectY" type="range" min="-100" max="100" step="1" value="0">
+            </label>
+
+            <label class="range-control compact">
+              <span>Desenfoque <output id="atmosphereEffectBlurOut">8%</output></span>
+              <input id="atmosphereEffectBlur" type="range" min="0" max="100" step="1" value="8">
+            </label>
+
+            <label class="range-control compact">
+              <span>Contraste <output id="atmosphereEffectContrastOut">70%</output></span>
+              <input id="atmosphereEffectContrast" type="range" min="0" max="100" step="1" value="70">
+            </label>
+
+            <label class="range-control compact">
+              <span>Densidad <output id="atmosphereEffectDensityOut">50%</output></span>
+              <input id="atmosphereEffectDensity" type="range" min="0" max="100" step="1" value="50">
             </label>
 
             <p class="help">Las luces del estilo siguen siendo editables en la seccion Luces directas. Ambiente, sombra, rebote y rim siguen en Mas opciones.</p>
@@ -489,7 +519,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=creative-catalog-v1-20260906"></script>
+  <script type="module" src="./js/main.js?cache=projector-controls-v1-20260906"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

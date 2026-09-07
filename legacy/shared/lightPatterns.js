@@ -32,6 +32,7 @@ export function normalizeLightProjector(value={}){
     offsetX:clamp(value.offsetX??0,-100,100),
     offsetY:clamp(value.offsetY??0,-100,100),
     contrast:clamp(value.contrast??70,0,100),
+    density:clamp(value.density??50,0,100),
     lightId:value.lightId||null
   };
 }
@@ -53,7 +54,7 @@ export function lightProjectorSignature(value={}){
   const p=normalizeLightProjector(value);
   return JSON.stringify([
     p.enabled,p.type,p.colorA,p.colorB,p.intensity,p.angle,p.scale,
-    p.blur,p.offsetX,p.offsetY,p.contrast,p.lightId
+    p.blur,p.offsetX,p.offsetY,p.contrast,p.density,p.lightId
   ]);
 }
 
@@ -94,6 +95,7 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
   const ox=(p.offsetX/100)*width*.42;
   const oy=(p.offsetY/100)*height*.42;
   const alpha=Math.max(.18,p.contrast/100);
+  const density=p.density/100;
 
   ctx.save();
   ctx.translate(width*.5+ox,height*.5+oy);
@@ -139,7 +141,8 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
   }
 
   if(p.type==='leaves'){
-    for(let i=0;i<18;i++){
+    const leafCount=Math.round(6+density*30);
+    for(let i=0;i<leafCount;i++){
       const x=((i*37)%100)/100*width-width*.5;
       const y=((i*61+17)%100)/100*height-height*.5;
       ctx.fillStyle=i%3===0?p.colorB:p.colorA;
@@ -151,15 +154,16 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
 
   if(p.type==='blinds'){
     ctx.fillStyle=p.colorA;
-    const gap=Math.max(18,height*.095);
-    const beam=Math.max(6,gap*.34);
+    const gap=Math.max(10,height*(.16-density*.11));
+    const beam=Math.max(5,gap*(.22+density*.28));
     for(let y=-height;y<height;y+=gap){
       ctx.fillRect(-width,y,width*2,beam);
     }
   }
 
   if(p.type==='bokeh'||p.type==='circles'){
-    for(let i=0;i<13;i++){
+    const circleCount=Math.round(5+density*25);
+    for(let i=0;i<circleCount;i++){
       const x=((i*43+9)%100)/100*width-width*.5;
       const y=((i*71+13)%100)/100*height-height*.5;
       const r=(.025+((i*17)%28)/1000)*Math.min(width,height);
@@ -175,7 +179,8 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
   }
 
   if(p.type==='sparkles'){
-    for(let i=0;i<20;i++){
+    const sparkleCount=Math.round(8+density*42);
+    for(let i=0;i<sparkleCount;i++){
       const x=((i*47+11)%100)/100*width-width*.5;
       const y=((i*67+23)%100)/100*height-height*.5;
       const r=(i%5===0?Math.min(width,height)*.035:Math.min(width,height)*.009);
@@ -219,8 +224,9 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
 
   if(p.type==='underwater'||p.type==='caustics'){
     ctx.lineCap='round';
-    for(let row=0;row<9;row++){
-      const y=-height*.42+row*height*.105;
+    const rowCount=Math.round(4+density*12);
+    for(let row=0;row<rowCount;row++){
+      const y=-height*.44+row*(height*.88/Math.max(1,rowCount-1));
       ctx.strokeStyle=row%2?p.colorA:p.colorB;
       ctx.lineWidth=Math.max(3,width*.012);
       ctx.beginPath();

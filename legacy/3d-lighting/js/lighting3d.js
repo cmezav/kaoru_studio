@@ -1,5 +1,5 @@
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { drawLightProjectorPattern, lightProjectorSignature, normalizeLightProjector, projectorIsMulticolor } from '../../shared/lightPatterns.js?cache=projector-real-v1';
+import { drawLightProjectorPattern, lightProjectorSignature, normalizeLightProjector, projectorIsMulticolor } from '../../shared/lightPatterns.js?cache=projector-controls-v1-20260906';
 
 export const LIGHTING3D_PHASE = 5;
 export const MAX_3D_LIGHTS = 8;
@@ -270,9 +270,61 @@ export function createLightingRig(options) {
           {cookie:true}
         );
 
+        let textureSource=canvas;
+
+        if(projector.blur>0){
+          const blurCanvas=
+            document.createElement(
+              'canvas'
+            );
+
+          blurCanvas.width=
+            canvas.width;
+
+          blurCanvas.height=
+            canvas.height;
+
+          const blurCtx=
+            blurCanvas.getContext(
+              '2d'
+            );
+
+          if(blurCtx){
+            const blurPx=
+              Math.round(
+                projector.blur*.16
+              );
+
+            blurCtx.fillStyle=
+              '#000000';
+
+            blurCtx.fillRect(
+              0,
+              0,
+              blurCanvas.width,
+              blurCanvas.height
+            );
+
+            blurCtx.filter=
+              `blur(${blurPx}px)`;
+
+            blurCtx.drawImage(
+              canvas,
+              0,
+              0
+            );
+
+            blurCtx.filter=
+              'none';
+
+            textureSource=
+              blurCanvas;
+          }
+        }
+
         const texture=
           new THREE.CanvasTexture(
-            canvas
+            textureSource
           );
 
         if(
