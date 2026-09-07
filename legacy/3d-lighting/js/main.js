@@ -35,11 +35,13 @@ import {
   isFavoriteLightingPreset,
   listCustomLightingPresets,
   saveCustomLightingPreset,
-  toggleFavoriteLightingPreset
-} from '../../shared/lightingPresetLibrary.js?cache=preset-library-v5-20260907';
+  toggleFavoriteLightingPreset,
+  exportLightingPresetLibraryData,
+  importLightingPresetLibraryData
+} from '../../shared/lightingPresetLibrary.js?cache=preset-transfer-v11-20260907';
 import {
   createStudioHistory
-} from '../../shared/studioHistory.js?cache=lighting-history-v9-20260907';
+} from '../../shared/studioHistory.js?cache=history-transient-v11-20260907';
 
 const store = create3dStore();
 const studioHistory3d =
@@ -4708,3 +4710,303 @@ store.subscribe(
 
 kaoruSyncVisualLight3d();
 /* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+
+/* === KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+const kaoruBeforeButton3d=
+  document.getElementById(
+    'beforeLighting3d'
+  );
+
+const kaoruExportPresets3d=
+  document.getElementById(
+    'exportLightingPresets3d'
+  );
+
+const kaoruImportPresets3d=
+  document.getElementById(
+    'importLightingPresets3d'
+  );
+
+const kaoruImportPresetsFile3d=
+  document.getElementById(
+    'importLightingPresetsFile3d'
+  );
+
+let kaoruBeforeLighting3d=null;
+
+function kaoruEnterBefore3d(){
+  if(kaoruBeforeLighting3d){
+    return;
+  }
+
+  kaoruBeforeLighting3d=
+    structuredClone(
+      store.getState()
+        .lighting
+    );
+
+  studioHistory3d.withoutRecording(
+    ()=>{
+      store.setState(state=>({
+        ...state,
+        lighting:{
+          ...state.lighting,
+          enabled:false
+        }
+      }));
+    }
+  );
+
+  kaoruBeforeButton3d
+    ?.classList.add(
+      'is-before'
+    );
+
+  if(kaoruBeforeButton3d){
+    kaoruBeforeButton3d.textContent=
+      'ANTES · sin iluminación';
+  }
+}
+
+function kaoruExitBefore3d(){
+  if(!kaoruBeforeLighting3d){
+    return;
+  }
+
+  const restore=
+    structuredClone(
+      kaoruBeforeLighting3d
+    );
+
+  kaoruBeforeLighting3d=null;
+
+  studioHistory3d.withoutRecording(
+    ()=>{
+      store.setState(state=>({
+        ...state,
+        lighting:restore
+      }));
+    }
+  );
+
+  kaoruBeforeButton3d
+    ?.classList.remove(
+      'is-before'
+    );
+
+  if(kaoruBeforeButton3d){
+    kaoruBeforeButton3d.textContent=
+      '◐ Mantén para ver Antes';
+  }
+}
+
+function kaoruBindBeforeHold3d(){
+  if(!kaoruBeforeButton3d)return;
+
+  kaoruBeforeButton3d
+    .addEventListener(
+      'pointerdown',
+      (event)=>{
+        event.preventDefault();
+
+        kaoruBeforeButton3d
+          .setPointerCapture(
+            event.pointerId
+          );
+
+        kaoruEnterBefore3d();
+      }
+    );
+
+  [
+    'pointerup',
+    'pointercancel'
+  ].forEach(type=>{
+    kaoruBeforeButton3d
+      .addEventListener(
+        type,
+        (event)=>{
+          if(
+            kaoruBeforeButton3d
+              .hasPointerCapture(
+                event.pointerId
+              )
+          ){
+            kaoruBeforeButton3d
+              .releasePointerCapture(
+                event.pointerId
+              );
+          }
+
+          kaoruExitBefore3d();
+        }
+      );
+  });
+
+  kaoruBeforeButton3d
+    .addEventListener(
+      'keydown',
+      (event)=>{
+        if(
+          event.repeat||
+          !(
+            event.key===' '||
+            event.key==='Enter'
+          )
+        ){
+          return;
+        }
+
+        event.preventDefault();
+        kaoruEnterBefore3d();
+      }
+    );
+
+  kaoruBeforeButton3d
+    .addEventListener(
+      'keyup',
+      (event)=>{
+        if(
+          !(
+            event.key===' '||
+            event.key==='Enter'
+          )
+        ){
+          return;
+        }
+
+        event.preventDefault();
+        kaoruExitBefore3d();
+      }
+    );
+
+  kaoruBeforeButton3d
+    .addEventListener(
+      'blur',
+      kaoruExitBefore3d
+    );
+}
+
+function kaoruPresetLibraryFilename(){
+  const date=
+    new Date()
+      .toISOString()
+      .slice(0,10);
+
+  return(
+    `KAORU-LIGHTING-PRESETS-${date}.json`
+  );
+}
+
+function kaoruDownloadPresetLibrary3d(){
+  const data=
+    exportLightingPresetLibraryData();
+
+  const blob=
+    new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      ],
+      {
+        type:'application/json'
+      }
+    );
+
+  const url=
+    URL.createObjectURL(blob);
+
+  const link=
+    document.createElement('a');
+
+  link.href=url;
+  link.download=
+    kaoruPresetLibraryFilename();
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(
+    ()=>URL.revokeObjectURL(url),
+    1000
+  );
+
+  toast(
+    `${data.presets.length} presets exportados`
+  );
+}
+
+async function kaoruImportPresetLibrary3d(
+  file
+){
+  if(!file)return;
+
+  const text=
+    await file.text();
+
+  const data=
+    JSON.parse(text);
+
+  const result=
+    importLightingPresetLibraryData(
+      data
+    );
+
+  elements.creativeAtmosphereGrid
+    ?.replaceChildren();
+
+  renderAtmospheres3d(
+    store.getState()
+  );
+
+  toast(
+    `${result.imported} presets importados`
+  );
+}
+
+kaoruExportPresets3d
+  ?.addEventListener(
+    'click',
+    kaoruDownloadPresetLibrary3d
+  );
+
+kaoruImportPresets3d
+  ?.addEventListener(
+    'click',
+    ()=>{
+      kaoruImportPresetsFile3d
+        ?.click();
+    }
+  );
+
+kaoruImportPresetsFile3d
+  ?.addEventListener(
+    'change',
+    async()=>{
+      const file=
+        kaoruImportPresetsFile3d
+          .files?.[0];
+
+      try{
+        await kaoruImportPresetLibrary3d(
+          file
+        );
+      }catch(error){
+        console.error(error);
+
+        toast(
+          error?.message||
+          'No se pudo importar'
+        );
+      }finally{
+        kaoruImportPresetsFile3d.value='';
+      }
+    }
+  );
+
+kaoruBindBeforeHold3d();
+/* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */

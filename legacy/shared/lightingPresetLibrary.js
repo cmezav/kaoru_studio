@@ -164,3 +164,175 @@ export function deleteCustomLightingPreset(
 
   return true;
 }
+
+export function exportLightingPresetLibraryData(){
+  const presets=
+    readJson(
+      CUSTOM_KEY,
+      []
+    );
+
+  return{
+    type:'kaoru-lighting-preset-library',
+    version:1,
+    exportedAt:
+      new Date().toISOString(),
+    favorites:
+      favoriteLightingPresetIds(),
+    presets:
+      Array.isArray(presets)
+        ?presets
+            .filter(
+              item=>
+                item&&
+                item.id&&
+                item.snapshot&&
+                (
+                  item.studio==='light'||
+                  item.studio==='3d'
+                )
+            )
+            .map(clone)
+        :[]
+  };
+}
+
+export function importLightingPresetLibraryData(
+  payload
+){
+  if(
+    !payload||
+    typeof payload!=='object'||
+    payload.type!==
+      'kaoru-lighting-preset-library'||
+    !Array.isArray(payload.presets)
+  ){
+    throw new Error(
+      'El archivo no es una biblioteca de presets de Kaoru.'
+    );
+  }
+
+  const current=
+    readJson(
+      CUSTOM_KEY,
+      []
+    );
+
+  const byId=
+    new Map(
+      (
+        Array.isArray(current)
+          ?current
+          :[]
+      )
+        .filter(
+          item=>
+            item&&
+            item.id&&
+            item.snapshot
+        )
+        .map(
+          item=>[
+            item.id,
+            item
+          ]
+        )
+    );
+
+  let imported=0;
+
+  payload.presets
+    .slice(0,240)
+    .forEach((raw)=>{
+      if(
+        !raw||
+        !raw.id||
+        !raw.snapshot||
+        !(
+          raw.studio==='light'||
+          raw.studio==='3d'
+        )
+      ){
+        return;
+      }
+
+      const record={
+        id:String(raw.id),
+        studio:raw.studio,
+        name:
+          String(
+            raw.name||
+            'Mi preset'
+          ).slice(0,80),
+        description:
+          String(
+            raw.description||
+            'Variante personalizada'
+          ).slice(0,240),
+        snapshot:
+          clone(raw.snapshot),
+        createdAt:
+          Number(
+            raw.createdAt||
+            Date.now()
+          ),
+        updatedAt:
+          Number(
+            raw.updatedAt||
+            Date.now()
+          )
+      };
+
+      byId.set(
+        record.id,
+        record
+      );
+
+      imported+=1;
+    });
+
+  const merged=
+    [...byId.values()]
+      .sort(
+        (a,b)=>
+          Number(b.updatedAt||0)-
+          Number(a.updatedAt||0)
+      )
+      .slice(0,240);
+
+  writeJson(
+    CUSTOM_KEY,
+    merged
+  );
+
+  const favorites=
+    new Set(
+      favoriteLightingPresetIds()
+    );
+
+  if(
+    Array.isArray(
+      payload.favorites
+    )
+  ){
+    payload.favorites
+      .filter(Boolean)
+      .forEach(
+        id=>
+          favorites.add(
+            String(id)
+          )
+      );
+  }
+
+  writeJson(
+    FAVORITES_KEY,
+    [...favorites]
+  );
+
+  return{
+    imported,
+    total:merged.length,
+    favorites:favorites.size
+  };
+}

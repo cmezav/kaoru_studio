@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=visual-light-v10-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=before-transfer-v11-20260907">
 
   <script type="importmap">
   {
@@ -146,6 +146,12 @@
           <button id="saveCustomAtmosphere3d" type="button">Guardar variante</button>
         </div>
 
+
+        <div class="preset-transfer-actions">
+          <button id="exportLightingPresets3d" type="button">Exportar Mis presets</button>
+          <button id="importLightingPresets3d" type="button">Importar presets</button>
+          <input id="importLightingPresetsFile3d" type="file" accept=".json,application/json" hidden>
+        </div>
         <details class="atmosphere-editor">
           <summary>Editar estilo seleccionado</summary>
           <div class="atmosphere-editor-body">
@@ -320,6 +326,8 @@
         </div>
 
         <div id="lightList" class="light-list"></div>
+
+        <button id="beforeLighting3d" class="before-lighting-btn" type="button">◐ Mantén para ver Antes</button>
 
         <div class="light-position-tools">
           <div class="light-position-head">
@@ -606,7 +614,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=visual-light-v10-20260907"></script>
+  <script type="module" src="./js/main.js?cache=before-transfer-v11-20260907"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

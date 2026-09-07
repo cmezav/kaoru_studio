@@ -14,11 +14,13 @@ import {
   isFavoriteLightingPreset,
   listCustomLightingPresets,
   saveCustomLightingPreset,
-  toggleFavoriteLightingPreset
-} from '../../shared/lightingPresetLibrary.js?cache=preset-library-v5-20260907';
+  toggleFavoriteLightingPreset,
+  exportLightingPresetLibraryData,
+  importLightingPresetLibraryData
+} from '../../shared/lightingPresetLibrary.js?cache=preset-transfer-v11-20260907';
 import {
   createStudioHistory
-} from '../../shared/studioHistory.js?cache=lighting-history-v9-20260907';
+} from '../../shared/studioHistory.js?cache=history-transient-v11-20260907';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
@@ -3568,3 +3570,303 @@ store.subscribe(
 
 kaoruSyncVisualLight();
 /* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+
+/* === KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+const kaoruBeforeButtonLight=
+  document.getElementById(
+    'beforeLightingLight'
+  );
+
+const kaoruExportPresetsLight=
+  document.getElementById(
+    'exportLightingPresetsLight'
+  );
+
+const kaoruImportPresetsLight=
+  document.getElementById(
+    'importLightingPresetsLight'
+  );
+
+const kaoruImportPresetsFileLight=
+  document.getElementById(
+    'importLightingPresetsFileLight'
+  );
+
+let kaoruBeforeLightingLight=null;
+
+function kaoruEnterBeforeLight(){
+  if(kaoruBeforeLightingLight){
+    return;
+  }
+
+  kaoruBeforeLightingLight=
+    structuredClone(
+      store.getState()
+        .lighting
+    );
+
+  studioHistoryLight.withoutRecording(
+    ()=>{
+      store.setState(state=>({
+        ...state,
+        lighting:{
+          ...state.lighting,
+          enabled:false
+        }
+      }));
+    }
+  );
+
+  kaoruBeforeButtonLight
+    ?.classList.add(
+      'is-before'
+    );
+
+  if(kaoruBeforeButtonLight){
+    kaoruBeforeButtonLight.textContent=
+      'ANTES · sin iluminación';
+  }
+}
+
+function kaoruExitBeforeLight(){
+  if(!kaoruBeforeLightingLight){
+    return;
+  }
+
+  const restore=
+    structuredClone(
+      kaoruBeforeLightingLight
+    );
+
+  kaoruBeforeLightingLight=null;
+
+  studioHistoryLight.withoutRecording(
+    ()=>{
+      store.setState(state=>({
+        ...state,
+        lighting:restore
+      }));
+    }
+  );
+
+  kaoruBeforeButtonLight
+    ?.classList.remove(
+      'is-before'
+    );
+
+  if(kaoruBeforeButtonLight){
+    kaoruBeforeButtonLight.textContent=
+      '◐ Mantén para ver Antes';
+  }
+}
+
+function kaoruBindBeforeHoldLight(){
+  if(!kaoruBeforeButtonLight)return;
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'pointerdown',
+      (event)=>{
+        event.preventDefault();
+
+        kaoruBeforeButtonLight
+          .setPointerCapture(
+            event.pointerId
+          );
+
+        kaoruEnterBeforeLight();
+      }
+    );
+
+  [
+    'pointerup',
+    'pointercancel'
+  ].forEach(type=>{
+    kaoruBeforeButtonLight
+      .addEventListener(
+        type,
+        (event)=>{
+          if(
+            kaoruBeforeButtonLight
+              .hasPointerCapture(
+                event.pointerId
+              )
+          ){
+            kaoruBeforeButtonLight
+              .releasePointerCapture(
+                event.pointerId
+              );
+          }
+
+          kaoruExitBeforeLight();
+        }
+      );
+  });
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'keydown',
+      (event)=>{
+        if(
+          event.repeat||
+          !(
+            event.key===' '||
+            event.key==='Enter'
+          )
+        ){
+          return;
+        }
+
+        event.preventDefault();
+        kaoruEnterBeforeLight();
+      }
+    );
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'keyup',
+      (event)=>{
+        if(
+          !(
+            event.key===' '||
+            event.key==='Enter'
+          )
+        ){
+          return;
+        }
+
+        event.preventDefault();
+        kaoruExitBeforeLight();
+      }
+    );
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'blur',
+      kaoruExitBeforeLight
+    );
+}
+
+function kaoruPresetLibraryFilenameLight(){
+  const date=
+    new Date()
+      .toISOString()
+      .slice(0,10);
+
+  return(
+    `KAORU-LIGHTING-PRESETS-${date}.json`
+  );
+}
+
+function kaoruDownloadPresetLibraryLight(){
+  const data=
+    exportLightingPresetLibraryData();
+
+  const blob=
+    new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      ],
+      {
+        type:'application/json'
+      }
+    );
+
+  const url=
+    URL.createObjectURL(blob);
+
+  const link=
+    document.createElement('a');
+
+  link.href=url;
+  link.download=
+    kaoruPresetLibraryFilenameLight();
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(
+    ()=>URL.revokeObjectURL(url),
+    1000
+  );
+
+  showToast(
+    `${data.presets.length} presets exportados`
+  );
+}
+
+async function kaoruImportPresetLibraryLight(
+  file
+){
+  if(!file)return;
+
+  const text=
+    await file.text();
+
+  const data=
+    JSON.parse(text);
+
+  const result=
+    importLightingPresetLibraryData(
+      data
+    );
+
+  elements.creativeAtmosphereScenes
+    ?.replaceChildren();
+
+  renderLightingControls(
+    store.getState()
+  );
+
+  showToast(
+    `${result.imported} presets importados`
+  );
+}
+
+kaoruExportPresetsLight
+  ?.addEventListener(
+    'click',
+    kaoruDownloadPresetLibraryLight
+  );
+
+kaoruImportPresetsLight
+  ?.addEventListener(
+    'click',
+    ()=>{
+      kaoruImportPresetsFileLight
+        ?.click();
+    }
+  );
+
+kaoruImportPresetsFileLight
+  ?.addEventListener(
+    'change',
+    async()=>{
+      const file=
+        kaoruImportPresetsFileLight
+          .files?.[0];
+
+      try{
+        await kaoruImportPresetLibraryLight(
+          file
+        );
+      }catch(error){
+        console.error(error);
+
+        showToast(
+          error?.message||
+          'No se pudo importar'
+        );
+      }finally{
+        kaoruImportPresetsFileLight.value='';
+      }
+    }
+  );
+
+kaoruBindBeforeHoldLight();
+/* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */

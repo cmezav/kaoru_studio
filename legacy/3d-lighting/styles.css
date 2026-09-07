@@ -1992,3 +1992,73 @@ body[data-atmo-effect="underwater"]
   cursor:default;
 }
 /* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+
+/* === KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+.before-lighting-btn{
+  width:100%;
+  min-height:32px;
+  margin:7px 0 9px;
+  border:1px solid
+    var(--line,var(--three-line,rgba(127,127,127,.28)));
+  border-radius:9px;
+  background:
+    var(--surface,var(--three-surface,#fff));
+  color:inherit;
+  font-size:8.5px;
+  font-weight:850;
+  cursor:pointer;
+  user-select:none;
+  touch-action:none;
+}
+
+.before-lighting-btn:hover,
+.before-lighting-btn.is-before{
+  border-color:
+    var(--accent,var(--lab-accent,currentColor));
+  color:
+    var(--accent,var(--lab-accent,currentColor));
+}
+
+.before-lighting-btn.is-before{
+  background:
+    color-mix(
+      in srgb,
+      var(--accent,var(--lab-accent,currentColor)) 9%,
+      transparent
+    );
+}
+
+.preset-transfer-actions{
+  display:grid;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+  gap:7px;
+  margin:7px 0 10px;
+}
+
+.preset-transfer-actions button{
+  min-height:31px;
+  border:1px solid
+    var(--line,var(--three-line,rgba(127,127,127,.28)));
+  border-radius:9px;
+  background:
+    var(--surface,var(--three-surface,#fff));
+  color:inherit;
+  font-size:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.preset-transfer-actions button:hover{
+  border-color:
+    var(--accent,var(--lab-accent,currentColor));
+  color:
+    var(--accent,var(--lab-accent,currentColor));
+}
+
+@media(max-width:560px){
+  .preset-transfer-actions{
+    grid-template-columns:1fr;
+  }
+}
+/* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */

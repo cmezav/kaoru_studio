@@ -132,6 +132,7 @@ export function createStudioHistory(
   let pending=null;
   let timer=null;
   let applying=false;
+  let suspended=0;
 
   const listeners=
     new Set();
@@ -185,9 +186,12 @@ export function createStudioHistory(
 
   const unsubscribeStore=
     store.subscribe((state)=>{
-      if(applying){
+      if(applying||suspended>0){
         current=
           snapshotState(state);
+        pending=null;
+        clearTimeout(timer);
+        timer=null;
         return;
       }
 
@@ -290,6 +294,31 @@ export function createStudioHistory(
       listeners.delete(listener);
   }
 
+  function withoutRecording(callback){
+    commitPending();
+
+    suspended+=1;
+
+    try{
+      return callback();
+    }finally{
+      suspended=
+        Math.max(
+          0,
+          suspended-1
+        );
+
+      clearTimeout(timer);
+      timer=null;
+      pending=null;
+
+      current=
+        snapshotState(
+          store.getState()
+        );
+    }
+  }
+
   function destroy(){
     clearTimeout(timer);
     unsubscribeStore();
@@ -301,6 +330,7 @@ export function createStudioHistory(
     redo,
     clear,
     checkpoint,
+    withoutRecording,
     subscribe,
     destroy,
     status

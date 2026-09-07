@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=visual-light-v10-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=before-transfer-v11-20260907">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -155,6 +155,12 @@
             <button id="saveCustomAtmosphere" type="button">Guardar variante</button>
           </div>
 
+
+          <div class="preset-transfer-actions">
+            <button id="exportLightingPresetsLight" type="button">Exportar Mis presets</button>
+            <button id="importLightingPresetsLight" type="button">Importar presets</button>
+            <input id="importLightingPresetsFileLight" type="file" accept=".json,application/json" hidden>
+          </div>
           <details class="light-atmosphere-editor">
             <summary>Editar ambiente seleccionado</summary>
 
@@ -301,6 +307,8 @@
         </div>
 
         <div id="lightsList" class="lights-list simple-lights-list"></div>
+
+        <button id="beforeLightingLight" class="before-lighting-btn" type="button">◐ Mantén para ver Antes</button>
 
         <div class="light-position-tools">
           <div class="light-position-head">
@@ -472,7 +480,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=visual-light-v10-20260907"></script>
+  <script type="module" src="./js/main.js?cache=before-transfer-v11-20260907"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>
