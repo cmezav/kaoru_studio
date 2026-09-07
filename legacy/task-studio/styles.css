@@ -1737,3 +1737,24 @@ body.notes-expanded .note-editor{
 }
 
 /* === KAORU SIZE VISIBLE SELECTION V3 END === */
+/* === KAORU NOTE AUTO LINKS V1 START === */
+
+.note-editor a[href]{
+  color:#2563eb;
+  text-decoration:underline;
+  text-decoration-thickness:1px;
+  text-underline-offset:2px;
+  cursor:pointer;
+  overflow-wrap:anywhere;
+  word-break:break-word;
+}
+
+[data-theme="night"] .note-editor a[href]{
+  color:#8ab4ff;
+}
+
+.note-editor a[href]:hover{
+  filter:brightness(1.08);
+}
+
+/* === KAORU NOTE AUTO LINKS V1 END === */

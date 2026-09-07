@@ -409,3 +409,549 @@ body[data-atmosphere="moon"]
 }
 
 /* === /KAORU 3D ATMOSPHERES SIMPLE V5 === */
+/* === KAORU CREATIVE ATMOSPHERES EDITABLE V1 === */
+
+.atmosphere-creative-head{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  gap:10px;
+  margin:13px 0 7px;
+}
+
+.atmosphere-creative-head strong,
+.atmosphere-creative-head small{
+  display:block;
+}
+
+.atmosphere-creative-head strong{
+  font-size:11px;
+}
+
+.atmosphere-creative-head small{
+  color:var(--three-muted);
+  font-size:8.5px;
+  text-align:right;
+}
+
+.atmosphere-creative-strip{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding:2px 2px 8px;
+  scroll-snap-type:x proximity;
+  overscroll-behavior-inline:contain;
+}
+
+.atmosphere-creative-strip
+.atmosphere-3d-card{
+  flex:0 0 132px;
+  scroll-snap-align:start;
+}
+
+.atmosphere-3d-preview i{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  opacity:.72;
+}
+
+.atmosphere-3d-card[data-effect="glow"]
+.atmosphere-3d-preview i{
+  background:
+    radial-gradient(
+      circle at 18% 24%,
+      var(--atmo-effect-a),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 82% 72%,
+      var(--atmo-effect-b),
+      transparent 42%
+    );
+}
+
+.atmosphere-3d-card[data-effect="split"]
+.atmosphere-3d-preview i,
+.atmosphere-3d-card[data-effect="neon"]
+.atmosphere-3d-preview i{
+  background:
+    linear-gradient(
+      90deg,
+      var(--atmo-effect-a),
+      transparent 48%,
+      var(--atmo-effect-b)
+    );
+}
+
+.atmosphere-3d-card[data-effect="stripe"]
+.atmosphere-3d-preview i{
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 42%,
+      var(--atmo-effect-a) 45% 55%,
+      transparent 58%
+    );
+}
+
+.atmosphere-3d-card[data-effect="window"]
+.atmosphere-3d-preview i{
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 43%,
+      var(--atmo-effect-b) 44% 50%,
+      transparent 51%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 0 45%,
+      var(--atmo-effect-b) 46% 52%,
+      transparent 53%
+    ),
+    linear-gradient(
+      135deg,
+      var(--atmo-effect-a),
+      transparent 62%
+    );
+}
+
+.atmosphere-3d-card[data-effect="leaves"]
+.atmosphere-3d-preview i{
+  background:
+    radial-gradient(
+      ellipse at 20% 25%,
+      var(--atmo-effect-a) 0 9%,
+      transparent 10%
+    ),
+    radial-gradient(
+      ellipse at 58% 18%,
+      var(--atmo-effect-b) 0 8%,
+      transparent 9%
+    ),
+    radial-gradient(
+      ellipse at 76% 66%,
+      var(--atmo-effect-a) 0 7%,
+      transparent 8%
+    ),
+    radial-gradient(
+      ellipse at 34% 72%,
+      var(--atmo-effect-b) 0 10%,
+      transparent 11%
+    );
+}
+
+.atmosphere-3d-card[data-effect="blinds"]
+.atmosphere-3d-preview i{
+  background:
+    repeating-linear-gradient(
+      0deg,
+      var(--atmo-effect-a) 0 5px,
+      transparent 5px 12px
+    );
+}
+
+.atmosphere-3d-card[data-effect="rim"]
+.atmosphere-3d-preview i{
+  background:
+    radial-gradient(
+      circle at 0 50%,
+      var(--atmo-effect-a),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 100% 50%,
+      var(--atmo-effect-b),
+      transparent 42%
+    );
+}
+
+.atmosphere-3d-card[data-effect="iridescent"]
+.atmosphere-3d-preview i{
+  background:
+    conic-gradient(
+      from 30deg,
+      var(--atmo-effect-a),
+      #9b5cff,
+      #50f0ff,
+      var(--atmo-effect-b),
+      #ffb24d,
+      var(--atmo-effect-a)
+    );
+}
+
+.atmosphere-3d-card[data-effect="rainbow"]
+.atmosphere-3d-preview i{
+  background:
+    linear-gradient(
+      120deg,
+      var(--atmo-effect-a),
+      #ff9f43,
+      #ffe85a,
+      #55d86a,
+      #4fd7ff,
+      #6f70ff,
+      var(--atmo-effect-b)
+    );
+}
+
+.atmosphere-3d-card[data-effect="underwater"]
+.atmosphere-3d-preview i{
+  background:
+    radial-gradient(
+      ellipse at 25% 15%,
+      var(--atmo-effect-a),
+      transparent 22%
+    ),
+    radial-gradient(
+      ellipse at 72% 25%,
+      var(--atmo-effect-b),
+      transparent 26%
+    ),
+    repeating-linear-gradient(
+      115deg,
+      transparent 0 10px,
+      rgba(210,255,255,.38) 11px 12px,
+      transparent 13px 23px
+    );
+}
+
+.atmosphere-editor{
+  margin-top:10px;
+  border:1px solid var(--three-line);
+  border-radius:12px;
+  background:var(--three-surface-2);
+  overflow:hidden;
+}
+
+.atmosphere-editor>summary{
+  cursor:pointer;
+  padding:9px 10px;
+  font-size:10px;
+  font-weight:900;
+  color:var(--three-text);
+}
+
+.atmosphere-editor[open]>summary{
+  border-bottom:1px solid var(--three-line);
+}
+
+.atmosphere-editor-body{
+  display:grid;
+  gap:10px;
+  padding:10px;
+}
+
+.atmosphere-editor-label{
+  padding:6px 8px;
+  border-radius:8px;
+  background:
+    color-mix(
+      in srgb,
+      var(--accent) 10%,
+      transparent
+    );
+  color:var(--accent);
+  font-size:9px;
+  font-weight:900;
+}
+
+.atmosphere-editor-grid{
+  display:grid;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+  gap:8px;
+}
+
+.atmosphere-editor-grid>label{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+
+.atmosphere-editor-grid>label>span{
+  color:var(--three-muted);
+  font-size:8px;
+  font-weight:800;
+}
+
+.atmosphere-editor-grid select{
+  width:100%;
+  min-height:31px;
+  border:1px solid var(--three-line);
+  border-radius:8px;
+  background:var(--three-surface);
+  color:var(--three-text);
+}
+
+.atmosphere-color-row{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:5px;
+}
+
+.atmosphere-color-row input[type="color"]{
+  width:34px;
+  height:31px;
+  padding:2px;
+  border:1px solid var(--three-line);
+  border-radius:8px;
+  background:var(--three-surface);
+}
+
+.atmosphere-color-row input[type="text"]{
+  min-width:0;
+  width:100%;
+  height:31px;
+  padding:0 7px;
+  border:1px solid var(--three-line);
+  border-radius:8px;
+  background:var(--three-surface);
+  color:var(--three-text);
+  font-size:9px;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+
+.viewport-card{
+  --atmo-effect-a:#FFFFFF;
+  --atmo-effect-b:#7C3AED;
+  --atmo-effect-opacity:0;
+  --atmo-effect-angle:0deg;
+  --atmo-effect-angle-cross:90deg;
+  --atmo-effect-size:34px;
+  --atmo-effect-line:7px;
+  --atmo-effect-gap:16px;
+  --atmo-effect-leaf-w:136px;
+  --atmo-effect-leaf-h:102px;
+}
+
+body[data-atmo-effect="glow"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    radial-gradient(
+      circle at 16% 18%,
+      var(--atmo-effect-a),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 82% 76%,
+      var(--atmo-effect-b),
+      transparent 44%
+    );
+  mix-blend-mode:screen;
+}
+
+body[data-atmo-effect="split"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    linear-gradient(
+      var(--atmo-effect-angle),
+      var(--atmo-effect-a),
+      transparent 48%,
+      var(--atmo-effect-b)
+    );
+  mix-blend-mode:soft-light;
+}
+
+body[data-atmo-effect="neon"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    linear-gradient(
+      var(--atmo-effect-angle),
+      var(--atmo-effect-a) 0 34%,
+      transparent 48% 52%,
+      var(--atmo-effect-b) 66% 100%
+    );
+  mix-blend-mode:screen;
+}
+
+body[data-atmo-effect="stripe"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    linear-gradient(
+      var(--atmo-effect-angle),
+      transparent 0 42%,
+      var(--atmo-effect-a) 45% 55%,
+      transparent 58%
+    );
+  mix-blend-mode:screen;
+}
+
+body[data-atmo-effect="window"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    linear-gradient(
+      var(--atmo-effect-angle),
+      transparent 0 42%,
+      var(--atmo-effect-b) 43% 50%,
+      transparent 51%
+    ),
+    linear-gradient(
+      var(--atmo-effect-angle-cross),
+      transparent 0 44%,
+      var(--atmo-effect-b) 45% 52%,
+      transparent 53%
+    ),
+    radial-gradient(
+      circle at 24% 20%,
+      var(--atmo-effect-a),
+      transparent 52%
+    );
+  mix-blend-mode:soft-light;
+}
+
+body[data-atmo-effect="leaves"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    radial-gradient(
+      ellipse at 18% 22%,
+      var(--atmo-effect-a) 0 8%,
+      transparent 9%
+    ),
+    radial-gradient(
+      ellipse at 44% 14%,
+      var(--atmo-effect-b) 0 7%,
+      transparent 8%
+    ),
+    radial-gradient(
+      ellipse at 70% 30%,
+      var(--atmo-effect-a) 0 9%,
+      transparent 10%
+    ),
+    radial-gradient(
+      ellipse at 82% 72%,
+      var(--atmo-effect-b) 0 8%,
+      transparent 9%
+    ),
+    radial-gradient(
+      ellipse at 34% 76%,
+      var(--atmo-effect-a) 0 7%,
+      transparent 8%
+    );
+  background-size:
+    var(--atmo-effect-leaf-w)
+    var(--atmo-effect-leaf-h);
+  mix-blend-mode:soft-light;
+}
+
+body[data-atmo-effect="blinds"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    repeating-linear-gradient(
+      var(--atmo-effect-angle),
+      var(--atmo-effect-a) 0
+        var(--atmo-effect-line),
+      transparent
+        var(--atmo-effect-line)
+        var(--atmo-effect-gap)
+    );
+  mix-blend-mode:soft-light;
+}
+
+body[data-atmo-effect="rim"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    radial-gradient(
+      circle at 0% 50%,
+      var(--atmo-effect-a),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at 100% 50%,
+      var(--atmo-effect-b),
+      transparent 42%
+    );
+  mix-blend-mode:screen;
+}
+
+body[data-atmo-effect="iridescent"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    conic-gradient(
+      from var(--atmo-effect-angle)
+      at 50% 50%,
+      var(--atmo-effect-a),
+      #9B5CFF,
+      #42F3FF,
+      var(--atmo-effect-b),
+      #FFB347,
+      var(--atmo-effect-a)
+    );
+  mix-blend-mode:color-dodge;
+}
+
+body[data-atmo-effect="rainbow"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    linear-gradient(
+      var(--atmo-effect-angle),
+      transparent 0 24%,
+      var(--atmo-effect-a) 28%,
+      #FF9C44 34%,
+      #FFE45B 40%,
+      #57D86C 46%,
+      #4DD7FF 52%,
+      #706BFF 58%,
+      var(--atmo-effect-b) 64%,
+      transparent 68%
+    );
+  mix-blend-mode:screen;
+}
+
+body[data-atmo-effect="underwater"]
+.viewport-card::after{
+  opacity:var(--atmo-effect-opacity);
+  background:
+    radial-gradient(
+      ellipse at 22% 10%,
+      var(--atmo-effect-a),
+      transparent 24%
+    ),
+    radial-gradient(
+      ellipse at 74% 18%,
+      rgba(196,255,255,.76),
+      transparent 20%
+    ),
+    repeating-linear-gradient(
+      var(--atmo-effect-angle),
+      transparent 0
+        var(--atmo-effect-line),
+      rgba(198,255,255,.34)
+        var(--atmo-effect-line)
+        var(--atmo-effect-gap),
+      transparent
+        var(--atmo-effect-gap)
+        var(--atmo-effect-size)
+    ),
+    linear-gradient(
+      180deg,
+      transparent,
+      var(--atmo-effect-b)
+    );
+  mix-blend-mode:screen;
+}
+
+@media(max-width:760px){
+  .atmosphere-creative-strip
+  .atmosphere-3d-card{
+    flex-basis:118px;
+  }
+
+  .atmosphere-editor-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+/* === /KAORU CREATIVE ATMOSPHERES EDITABLE V1 === */

@@ -221,7 +221,460 @@ export const THREE_ATMOSPHERES = [
       fill:{color:'#A56B4A',intensity:18,azimuth:56,elevation:16,distance:6.2,softness:82}
     }
   }
-];
+,
+  {
+    id:'sun-side',
+    group:'creative',
+    name:'Sol lateral',
+    description:'Luz dorada fuerte desde un costado.',
+    scene:{
+      background:'#54453C',
+      fog:'#54453C',
+      floor:'#4D4039',
+      exposure:1.12,
+      weather:'clear',
+      effect:{
+        type:'glow',
+        colorA:'#FFD56F',
+        colorB:'#FF8B4A',
+        opacity:24,
+        angle:-28,
+        scale:120
+      }
+    },
+    lighting:{
+      ambient:{color:'#8B6F68',intensity:18},
+      shadow:{color:'#3B2945',intensity:46},
+      bounce:{color:'#D97A45',intensity:24},
+      rim:{color:'#FFE1A6',intensity:18},
+      key:{color:'#FFD36E',intensity:118,azimuth:-68,elevation:30,distance:5.0,softness:36},
+      fill:{color:'#8E6FA8',intensity:20,azimuth:64,elevation:18,distance:6.0,softness:76},
+      extra:[
+        {id:'sun-rim',name:'Rim dorado',color:'#FF9A3D',intensity:52,azimuth:158,elevation:34,distance:5.8,softness:52}
+      ]
+    }
+  },
+  {
+    id:'leaf-light',
+    group:'creative',
+    name:'Hojas',
+    description:'Manchas verdes y amarillas como luz entre hojas.',
+    scene:{
+      background:'#334136',
+      fog:'#334136',
+      floor:'#2C372E',
+      exposure:.98,
+      weather:'clear',
+      effect:{
+        type:'leaves',
+        colorA:'#F2E95B',
+        colorB:'#7EA94C',
+        opacity:34,
+        angle:-18,
+        scale:110
+      }
+    },
+    lighting:{
+      ambient:{color:'#6F8061',intensity:24},
+      shadow:{color:'#24322A',intensity:52},
+      bounce:{color:'#7FA05A',intensity:20},
+      rim:{color:'#D8E674',intensity:16},
+      key:{color:'#F4E45D',intensity:96,azimuth:-32,elevation:62,distance:5.2,softness:28},
+      fill:{color:'#78A66A',intensity:34,azimuth:68,elevation:24,distance:6.0,softness:68},
+      extra:[
+        {id:'leaf-warm',name:'Destello hoja',color:'#FFC54D',intensity:38,azimuth:-88,elevation:18,distance:5.6,softness:34}
+      ]
+    }
+  },
+  {
+    id:'cool-blue',
+    group:'creative',
+    name:'Azul frio',
+    description:'Azul celeste con sombras violetas.',
+    scene:{
+      background:'#172642',
+      fog:'#172642',
+      floor:'#1B2740',
+      exposure:.92,
+      weather:'clear',
+      effect:{
+        type:'glow',
+        colorA:'#67E8F9',
+        colorB:'#5B6CFF',
+        opacity:26,
+        angle:34,
+        scale:130
+      }
+    },
+    lighting:{
+      ambient:{color:'#365A88',intensity:28},
+      shadow:{color:'#251B49',intensity:56},
+      bounce:{color:'#487DD1',intensity:18},
+      rim:{color:'#74F0FF',intensity:28},
+      key:{color:'#75DFFF',intensity:76,azimuth:42,elevation:50,distance:5.2,softness:58},
+      fill:{color:'#6670FF',intensity:38,azimuth:-66,elevation:22,distance:5.9,softness:72}
+    }
+  },
+  {
+    id:'golden-rim',
+    group:'creative',
+    name:'Amanecer brillante',
+    description:'Contraluz amarillo intenso y sombra profunda.',
+    scene:{
+      background:'#4A382E',
+      fog:'#4A382E',
+      floor:'#3B302C',
+      exposure:1.08,
+      weather:'clear',
+      effect:{
+        type:'rim',
+        colorA:'#FFD000',
+        colorB:'#FF6B1A',
+        opacity:36,
+        angle:-70,
+        scale:120
+      }
+    },
+    lighting:{
+      ambient:{color:'#6A5148',intensity:18},
+      shadow:{color:'#291D35',intensity:62},
+      bounce:{color:'#B95A2C',intensity:18},
+      rim:{color:'#FFD21A',intensity:52},
+      key:{color:'#FFD21A',intensity:128,azimuth:-122,elevation:28,distance:5.2,softness:24},
+      fill:{color:'#684C8F',intensity:20,azimuth:48,elevation:14,distance:6.2,softness:80},
+      extra:[
+        {id:'orange-edge',name:'Borde naranja',color:'#FF761F',intensity:64,azimuth:168,elevation:38,distance:5.6,softness:36}
+      ]
+    }
+  },
+  {
+    id:'pink-lavender',
+    group:'creative',
+    name:'Rosa lavanda',
+    description:'Iluminacion rosa suave con violeta.',
+    scene:{
+      background:'#563954',
+      fog:'#563954',
+      floor:'#493144',
+      exposure:1.02,
+      weather:'clear',
+      effect:{
+        type:'glow',
+        colorA:'#FF8AD8',
+        colorB:'#A879FF',
+        opacity:28,
+        angle:20,
+        scale:135
+      }
+    },
+    lighting:{
+      ambient:{color:'#8A648D',intensity:28},
+      shadow:{color:'#45265B',intensity:42},
+      bounce:{color:'#D468B3',intensity:24},
+      rim:{color:'#D6A0FF',intensity:20},
+      key:{color:'#FF91D8',intensity:72,azimuth:-30,elevation:42,distance:5.2,softness:70},
+      fill:{color:'#A77BFF',intensity:44,azimuth:58,elevation:28,distance:5.8,softness:74}
+    }
+  },
+  {
+    id:'yellow-stripe',
+    group:'creative',
+    name:'Franja amarilla',
+    description:'Base morada con una franja vertical amarilla.',
+    scene:{
+      background:'#291A43',
+      fog:'#291A43',
+      floor:'#241737',
+      exposure:.92,
+      weather:'clear',
+      effect:{
+        type:'stripe',
+        colorA:'#FFE866',
+        colorB:'#6E3CA5',
+        opacity:62,
+        angle:3,
+        scale:82
+      }
+    },
+    lighting:{
+      ambient:{color:'#50306F',intensity:28},
+      shadow:{color:'#1E112E',intensity:64},
+      bounce:{color:'#6A3D9B',intensity:18},
+      rim:{color:'#C980FF',intensity:24},
+      key:{color:'#FFE45A',intensity:104,azimuth:-8,elevation:56,distance:5.0,softness:16},
+      fill:{color:'#7A42C3',intensity:38,azimuth:72,elevation:22,distance:6.0,softness:70}
+    }
+  },
+  {
+    id:'window-cross',
+    group:'creative',
+    name:'Ventana',
+    description:'Luz calida atravesada por marco de ventana.',
+    scene:{
+      background:'#573B34',
+      fog:'#573B34',
+      floor:'#49352F',
+      exposure:1.04,
+      weather:'clear',
+      effect:{
+        type:'window',
+        colorA:'#FFD39A',
+        colorB:'#5C332E',
+        opacity:46,
+        angle:-4,
+        scale:118
+      }
+    },
+    lighting:{
+      ambient:{color:'#7B594F',intensity:24},
+      shadow:{color:'#3B282C',intensity:46},
+      bounce:{color:'#CC744B',intensity:24},
+      rim:{color:'#FFD1A2',intensity:12},
+      key:{color:'#FFC77C',intensity:96,azimuth:-36,elevation:44,distance:5.2,softness:34},
+      fill:{color:'#8C5361',intensity:20,azimuth:58,elevation:20,distance:6.0,softness:80}
+    }
+  },
+  {
+    id:'violet-orange',
+    group:'creative',
+    name:'Violeta y naranja',
+    description:'Dos colores opuestos para un retrato dramatico.',
+    scene:{
+      background:'#2B183D',
+      fog:'#2B183D',
+      floor:'#28192F',
+      exposure:.96,
+      weather:'clear',
+      effect:{
+        type:'split',
+        colorA:'#FF5D2F',
+        colorB:'#5A2A93',
+        opacity:34,
+        angle:90,
+        scale:110
+      }
+    },
+    lighting:{
+      ambient:{color:'#4A2C62',intensity:20},
+      shadow:{color:'#21142F',intensity:60},
+      bounce:{color:'#A43B56',intensity:18},
+      rim:{color:'#FF8A4C',intensity:22},
+      key:{color:'#FF6333',intensity:92,azimuth:-66,elevation:34,distance:5.2,softness:42},
+      fill:{color:'#7D42D6',intensity:72,azimuth:64,elevation:28,distance:5.6,softness:50}
+    }
+  },
+  {
+    id:'olive-crimson',
+    group:'creative',
+    name:'Oliva y carmesi',
+    description:'Verde oliva a un lado y rojo profundo al otro.',
+    scene:{
+      background:'#303226',
+      fog:'#303226',
+      floor:'#2B2924',
+      exposure:.94,
+      weather:'clear',
+      effect:{
+        type:'split',
+        colorA:'#C4C95A',
+        colorB:'#B63A32',
+        opacity:30,
+        angle:84,
+        scale:110
+      }
+    },
+    lighting:{
+      ambient:{color:'#6E7048',intensity:22},
+      shadow:{color:'#2B2328',intensity:52},
+      bounce:{color:'#7D7E42',intensity:18},
+      rim:{color:'#D45B47',intensity:20},
+      key:{color:'#C7CB5D',intensity:74,azimuth:-52,elevation:42,distance:5.2,softness:54},
+      fill:{color:'#C74338',intensity:68,azimuth:66,elevation:30,distance:5.6,softness:50}
+    }
+  },
+  {
+    id:'forest-lowkey',
+    group:'creative',
+    name:'Bosque oscuro',
+    description:'Verde profundo con luz baja y reflejos amarillos.',
+    scene:{
+      background:'#142720',
+      fog:'#142720',
+      floor:'#17231D',
+      exposure:.80,
+      weather:'clear',
+      effect:{
+        type:'leaves',
+        colorA:'#9CAB43',
+        colorB:'#356147',
+        opacity:22,
+        angle:16,
+        scale:145
+      }
+    },
+    lighting:{
+      ambient:{color:'#2C4E42',intensity:18},
+      shadow:{color:'#0F1918',intensity:72},
+      bounce:{color:'#53683A',intensity:14},
+      rim:{color:'#8DBD67',intensity:16},
+      key:{color:'#AAB94F',intensity:48,azimuth:-38,elevation:52,distance:5.2,softness:62},
+      fill:{color:'#2F7B68',intensity:28,azimuth:70,elevation:24,distance:6.0,softness:78}
+    }
+  },
+  {
+    id:'neon-red-cyan',
+    group:'creative',
+    name:'Neon rojo y cian',
+    description:'Rojo de un lado y cian electrico del otro.',
+    scene:{
+      background:'#151127',
+      fog:'#151127',
+      floor:'#171326',
+      exposure:.92,
+      weather:'clear',
+      effect:{
+        type:'neon',
+        colorA:'#FF3C24',
+        colorB:'#20E7FF',
+        opacity:40,
+        angle:90,
+        scale:110
+      }
+    },
+    lighting:{
+      ambient:{color:'#36275B',intensity:20},
+      shadow:{color:'#120C23',intensity:70},
+      bounce:{color:'#A32243',intensity:16},
+      rim:{color:'#39EAFF',intensity:34},
+      key:{color:'#FF3B22',intensity:104,azimuth:-70,elevation:30,distance:5.0,softness:34},
+      fill:{color:'#19E8FF',intensity:108,azimuth:70,elevation:34,distance:5.0,softness:34},
+      extra:[
+        {id:'neon-purple',name:'Rim violeta',color:'#8B3DFF',intensity:42,azimuth:168,elevation:46,distance:5.8,softness:48}
+      ]
+    }
+  },
+  {
+    id:'warm-blinds',
+    group:'creative',
+    name:'Persianas',
+    description:'Franjas horizontales de luz calida.',
+    scene:{
+      background:'#594038',
+      fog:'#594038',
+      floor:'#4A3832',
+      exposure:1.02,
+      weather:'clear',
+      effect:{
+        type:'blinds',
+        colorA:'#FFD49B',
+        colorB:'#5B332D',
+        opacity:50,
+        angle:-7,
+        scale:88
+      }
+    },
+    lighting:{
+      ambient:{color:'#806056',intensity:24},
+      shadow:{color:'#39282B',intensity:48},
+      bounce:{color:'#CC774F',intensity:22},
+      rim:{color:'#F7C191',intensity:10},
+      key:{color:'#FFD093',intensity:92,azimuth:-32,elevation:46,distance:5.2,softness:34},
+      fill:{color:'#8A5960',intensity:22,azimuth:60,elevation:18,distance:6.0,softness:80}
+    }
+  },
+  {
+    id:'iridescent',
+    group:'creative',
+    name:'Iridiscente',
+    description:'Reflejos rosa, cian y violeta.',
+    scene:{
+      background:'#23172A',
+      fog:'#23172A',
+      floor:'#211923',
+      exposure:.94,
+      weather:'clear',
+      effect:{
+        type:'iridescent',
+        colorA:'#FF4FA3',
+        colorB:'#5DEBFF',
+        opacity:32,
+        angle:24,
+        scale:135
+      }
+    },
+    lighting:{
+      ambient:{color:'#4A2C54',intensity:24},
+      shadow:{color:'#1C1224',intensity:58},
+      bounce:{color:'#CE3F8F',intensity:20},
+      rim:{color:'#66ECFF',intensity:38},
+      key:{color:'#FF4FA3',intensity:76,azimuth:-52,elevation:38,distance:5.2,softness:48},
+      fill:{color:'#5DEBFF',intensity:72,azimuth:62,elevation:34,distance:5.4,softness:48},
+      extra:[
+        {id:'iri-violet',name:'Violeta',color:'#8F5BFF',intensity:42,azimuth:160,elevation:52,distance:5.8,softness:52}
+      ]
+    }
+  },
+  {
+    id:'rainbow',
+    group:'creative',
+    name:'Arcoiris',
+    description:'Haz multicolor diagonal sobre luz neutra.',
+    scene:{
+      background:'#5A5152',
+      fog:'#5A5152',
+      floor:'#514849',
+      exposure:1.04,
+      weather:'clear',
+      effect:{
+        type:'rainbow',
+        colorA:'#FF4D5A',
+        colorB:'#6B5BFF',
+        opacity:44,
+        angle:28,
+        scale:145
+      }
+    },
+    lighting:{
+      ambient:{color:'#A69A98',intensity:24},
+      shadow:{color:'#4A3B44',intensity:34},
+      bounce:{color:'#F0A26A',intensity:18},
+      rim:{color:'#9FE6FF',intensity:20},
+      key:{color:'#FFF0D3',intensity:72,azimuth:-28,elevation:48,distance:5.2,softness:66},
+      fill:{color:'#B7D5FF',intensity:28,azimuth:58,elevation:24,distance:6.0,softness:76}
+    }
+  },
+  {
+    id:'underwater',
+    group:'creative',
+    name:'Bajo el mar',
+    description:'Cian y azul con reflejos acuaticos.',
+    scene:{
+      background:'#07364D',
+      fog:'#0A4E68',
+      floor:'#0A3748',
+      exposure:.88,
+      weather:'underwater',
+      effect:{
+        type:'underwater',
+        colorA:'#55F1FF',
+        colorB:'#176BFF',
+        opacity:46,
+        angle:-16,
+        scale:120
+      }
+    },
+    lighting:{
+      ambient:{color:'#0E7892',intensity:32},
+      shadow:{color:'#062738',intensity:62},
+      bounce:{color:'#16A8B7',intensity:22},
+      rim:{color:'#66F4FF',intensity:38},
+      key:{color:'#57EFFF',intensity:82,azimuth:-26,elevation:66,distance:5.2,softness:44},
+      fill:{color:'#1A69FF',intensity:62,azimuth:64,elevation:24,distance:5.8,softness:56},
+      extra:[
+        {id:'water-top',name:'Reflejo superficie',color:'#B9FFFF',intensity:44,azimuth:8,elevation:82,distance:5.5,softness:26}
+      ]
+    }
+  }];
 
 export function atmosphere3dById(id){
   return THREE_ATMOSPHERES.find(
@@ -257,6 +710,11 @@ export function build3dAtmosphere(
   const config=
     preset.lighting;
 
+  const extra=
+    Array.isArray(config.extra)
+      ?config.extra
+      :[];
+
   return{
     preset,
     scene:{
@@ -282,8 +740,18 @@ export function build3dAtmosphere(
           'fill',
           'Relleno',
           config.fill
+        ),
+        ...extra.map(
+          (light,index)=>
+            makeLight(
+              light.id||
+              `creative-${index+1}`,
+              light.name||
+              `Luz ${index+3}`,
+              light
+            )
         )
-      ]
+      ].slice(0,8)
     }
   };
 }

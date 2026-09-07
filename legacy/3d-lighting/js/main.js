@@ -27,7 +27,7 @@ import {
   save3dToGallery,
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
-import { THREE_ATMOSPHERES, build3dAtmosphere } from './atmospheres3d.js?cache=atmosphere-simple-v5';
+import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=creative-editable-v1';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -67,7 +67,29 @@ const elements = {
     byId('paletteBridgeStatus'),
   toast: byId('toast'),
   atmosphereGrid: byId('atmosphereGrid'),
-  advancedToggle: byId('advancedToggleBtn'),
+  creativeAtmosphereGrid: byId('creativeAtmosphereGrid'),
+  viewportCard: document.querySelector('.viewport-card'),
+  atmosphereEditorLabel: byId('atmosphereEditorLabel'),
+  atmosphereBackground: byId('atmosphereBackground'),
+  atmosphereBackgroundHex: byId('atmosphereBackgroundHex'),
+  atmosphereFog: byId('atmosphereFog'),
+  atmosphereFogHex: byId('atmosphereFogHex'),
+  atmosphereFloor: byId('atmosphereFloor'),
+  atmosphereFloorHex: byId('atmosphereFloorHex'),
+  atmosphereEffectType: byId('atmosphereEffectType'),
+  atmosphereEffectA: byId('atmosphereEffectA'),
+  atmosphereEffectAHex: byId('atmosphereEffectAHex'),
+  atmosphereEffectB: byId('atmosphereEffectB'),
+  atmosphereEffectBHex: byId('atmosphereEffectBHex'),
+  atmosphereExposure: byId('atmosphereExposure'),
+  atmosphereExposureOut: byId('atmosphereExposureOut'),
+  atmosphereEffectOpacity: byId('atmosphereEffectOpacity'),
+  atmosphereEffectOpacityOut: byId('atmosphereEffectOpacityOut'),
+  atmosphereEffectAngle: byId('atmosphereEffectAngle'),
+  atmosphereEffectAngleOut: byId('atmosphereEffectAngleOut'),
+  atmosphereEffectScale: byId('atmosphereEffectScale'),
+  atmosphereEffectScaleOut: byId('atmosphereEffectScaleOut'),
+  resetAtmosphere: byId('resetAtmosphereBtn'),  advancedToggle: byId('advancedToggleBtn'),
 
   lightingEnabled:
     byId('lightingEnabled'),
@@ -661,91 +683,356 @@ function renderPalettePreview(
   }
 }
 
-function renderAtmospheres3d(
-  state
-) {
-  if (!elements.atmosphereGrid) {
+/* === KAORU CREATIVE ATMOSPHERES EDITABLE V1 === */
+
+function kaoruPopulateAtmosphereGrid(
+  container,
+  presets
+){
+  if(
+    !container||
+    container.childElementCount
+  ){
     return;
   }
 
-  if (
-    !elements.atmosphereGrid
-      .childElementCount
-  ) {
-    elements.atmosphereGrid
-      .replaceChildren(
-        ...THREE_ATMOSPHERES.map(
-          (preset) => {
-            const button =
-              document.createElement(
-                'button'
-              );
+  container.replaceChildren(
+    ...presets.map(
+      (preset)=>{
+        const button=
+          document.createElement(
+            'button'
+          );
 
-            button.type = 'button';
-            button.className =
-              'atmosphere-3d-card';
+        const effect=
+          preset.scene?.effect||{};
 
-            button.dataset.atmosphere =
-              preset.id;
+        button.type='button';
+        button.className=
+          'atmosphere-3d-card';
 
-            button.style.setProperty(
-              '--atmo-bg',
-              preset.scene.background
-            );
+        button.dataset.atmosphere=
+          preset.id;
 
-            button.style.setProperty(
-              '--atmo-floor',
-              preset.scene.floor
-            );
+        button.dataset.effect=
+          effect.type||'none';
 
-            button.style.setProperty(
-              '--atmo-light',
-              preset.lighting.key.color
-            );
+        button.style.setProperty(
+          '--atmo-bg',
+          preset.scene.background
+        );
 
-            button.innerHTML = `
-              <span class="atmosphere-3d-preview" aria-hidden="true">
-                <i></i>
-              </span>
-              <span>
-                <strong>${preset.name}</strong>
-                <small>${preset.description}</small>
-              </span>
-            `;
+        button.style.setProperty(
+          '--atmo-floor',
+          preset.scene.floor
+        );
 
-            return button;
-          }
-        )
-      );
-  }
+        button.style.setProperty(
+          '--atmo-light',
+          preset.lighting.key.color
+        );
 
-  const active =
-    state.scene?.atmosphere?.id ||
+        button.style.setProperty(
+          '--atmo-effect-a',
+          effect.colorA||'#FFFFFF'
+        );
+
+        button.style.setProperty(
+          '--atmo-effect-b',
+          effect.colorB||'#7C3AED'
+        );
+
+        button.innerHTML=`
+          <span class="atmosphere-3d-preview" aria-hidden="true">
+            <i></i>
+          </span>
+          <span>
+            <strong>${preset.name}</strong>
+            <small>${preset.description}</small>
+          </span>
+        `;
+
+        return button;
+      }
+    )
+  );
+}
+
+function kaoruAtmosphereHex(
+  value,
+  fallback
+){
+  return(
+    normalizeHex(value)||
+    fallback
+  );
+}
+
+function renderAtmospheres3d(
+  state
+){
+  const environmentPresets=
+    THREE_ATMOSPHERES.filter(
+      preset=>
+        preset.group!=='creative'
+    );
+
+  const creativePresets=
+    THREE_ATMOSPHERES.filter(
+      preset=>
+        preset.group==='creative'
+    );
+
+  kaoruPopulateAtmosphereGrid(
+    elements.atmosphereGrid,
+    environmentPresets
+  );
+
+  kaoruPopulateAtmosphereGrid(
+    elements.creativeAtmosphereGrid,
+    creativePresets
+  );
+
+  const atmosphere=
+    state.scene?.atmosphere||{};
+
+  const active=
+    atmosphere.id||
     'custom';
 
-  document.body.dataset.atmosphere =
-    state.scene?.atmosphere?.weather ||
+  const effect=
+    atmosphere.effect||{
+      type:'none',
+      colorA:'#FFFFFF',
+      colorB:'#7C3AED',
+      opacity:0,
+      angle:0,
+      scale:100
+    };
+
+  document.body.dataset.atmosphere=
+    atmosphere.weather||
     active;
 
-  elements.atmosphereGrid
-    .querySelectorAll(
-      '[data-atmosphere]'
+  document.body.dataset.atmoEffect=
+    effect.type||
+    'none';
+
+  const viewportStyle=
+    elements.viewportCard?.style;
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-a',
+    effect.colorA||'#FFFFFF'
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-b',
+    effect.colorB||'#7C3AED'
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-opacity',
+    String(
+      Math.max(
+        0,
+        Math.min(
+          1,
+          Number(effect.opacity||0)/100
+        )
+      )
     )
-    .forEach((button) => {
-      const selected =
-        button.dataset.atmosphere ===
-        active;
+  );
 
-      button.classList.toggle(
-        'is-active',
-        selected
+  const effectAngle=
+    Number(effect.angle||0);
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-angle',
+    `${effectAngle}deg`
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-angle-cross',
+    `${effectAngle+90}deg`
+  );
+
+  const effectSize=
+    Math.max(
+      10,
+      Math.round(
+        Number(effect.scale||100)*
+        .34
+      )
+    );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-size',
+    `${effectSize}px`
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-line',
+    `${Math.max(
+      2,
+      Math.round(effectSize*.20)
+    )}px`
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-gap',
+    `${Math.max(
+      6,
+      Math.round(effectSize*.48)
+    )}px`
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-leaf-w',
+    `${effectSize*4}px`
+  );
+
+  viewportStyle?.setProperty(
+    '--atmo-effect-leaf-h',
+    `${effectSize*3}px`
+  );
+
+  [
+    elements.atmosphereGrid,
+    elements.creativeAtmosphereGrid
+  ].forEach(container=>{
+    container
+      ?.querySelectorAll(
+        '[data-atmosphere]'
+      )
+      .forEach(button=>{
+        const selected=
+          button.dataset.atmosphere===
+          active;
+
+        button.classList.toggle(
+          'is-active',
+          selected
+        );
+
+        button.setAttribute(
+          'aria-pressed',
+          String(selected)
+        );
+      });
+  });
+
+  const preset=
+    atmosphere3dById(active);
+
+  if(elements.atmosphereEditorLabel){
+    elements.atmosphereEditorLabel
+      .textContent=
+        `${
+          preset?.id===active
+            ?preset.name
+            :'Personalizado'
+        } · editable`;
+  }
+
+  const background=
+    kaoruAtmosphereHex(
+      atmosphere.background,
+      '#15121A'
+    );
+
+  const fog=
+    kaoruAtmosphereHex(
+      atmosphere.fog,
+      background
+    );
+
+  const floor=
+    kaoruAtmosphereHex(
+      atmosphere.floor,
+      '#29242F'
+    );
+
+  const effectA=
+    kaoruAtmosphereHex(
+      effect.colorA,
+      '#FFFFFF'
+    );
+
+  const effectB=
+    kaoruAtmosphereHex(
+      effect.colorB,
+      '#7C3AED'
+    );
+
+  if(elements.atmosphereBackground){
+    elements.atmosphereBackground.value=
+      background;
+    elements.atmosphereBackgroundHex.value=
+      background;
+    elements.atmosphereFog.value=fog;
+    elements.atmosphereFogHex.value=fog;
+    elements.atmosphereFloor.value=floor;
+    elements.atmosphereFloorHex.value=floor;
+    elements.atmosphereEffectType.value=
+      effect.type||'none';
+    elements.atmosphereEffectA.value=
+      effectA;
+    elements.atmosphereEffectAHex.value=
+      effectA;
+    elements.atmosphereEffectB.value=
+      effectB;
+    elements.atmosphereEffectBHex.value=
+      effectB;
+
+    const exposure=
+      Number(
+        atmosphere.exposure??1
       );
 
-      button.setAttribute(
-        'aria-pressed',
-        String(selected)
+    elements.atmosphereExposure.value=
+      String(exposure);
+
+    elements.atmosphereExposureOut
+      .textContent=
+        exposure.toFixed(2);
+
+    const opacity=
+      Number(
+        effect.opacity??0
       );
-    });
+
+    elements.atmosphereEffectOpacity.value=
+      String(opacity);
+
+    elements.atmosphereEffectOpacityOut
+      .textContent=
+        `${Math.round(opacity)}%`;
+
+    const angle=
+      Number(
+        effect.angle??0
+      );
+
+    elements.atmosphereEffectAngle.value=
+      String(angle);
+
+    elements.atmosphereEffectAngleOut
+      .textContent=
+        `${Math.round(angle)} deg`;
+
+    const scale=
+      Number(
+        effect.scale??100
+      );
+
+    elements.atmosphereEffectScale.value=
+      String(scale);
+
+    elements.atmosphereEffectScaleOut
+      .textContent=
+        `${Math.round(scale)}%`;
+  }
 }
 function renderState(state) {
   renderAtmospheres3d(state);
@@ -1601,41 +1888,262 @@ elements.shadowToggle.addEventListener(
   }
 );
 
+function kaoruApplyAtmospherePreset(
+  id
+){
+  const result=
+    build3dAtmosphere(
+      id,
+      store.getState().lighting
+    );
+
+  store.setState(state=>({
+    ...state,
+    scene:{
+      ...state.scene,
+      atmosphere:{
+        ...result.scene
+      }
+    },
+    lighting:{
+      ...result.lighting
+    }
+  }));
+
+  toast(
+    `Ambiente: ${result.preset.name}`
+  );
+}
+
+function kaoruAtmosphereClick(
+  event
+){
+  const button=
+    event.target.closest(
+      '[data-atmosphere]'
+    );
+
+  if(!button)return;
+
+  kaoruApplyAtmospherePreset(
+    button.dataset.atmosphere
+  );
+}
+
 elements.atmosphereGrid?.addEventListener(
   'click',
-  (event) => {
-    const button =
-      event.target.closest(
-        '[data-atmosphere]'
-      );
+  kaoruAtmosphereClick
+);
 
-    if (!button) return;
+elements.creativeAtmosphereGrid?.addEventListener(
+  'click',
+  kaoruAtmosphereClick
+);
 
-    const result =
-      build3dAtmosphere(
-        button.dataset.atmosphere,
-        store.getState().lighting
-      );
-
-    store.setState((state) => ({
-      ...state,
-      scene: {
-        ...state.scene,
-        atmosphere: {
-          ...result.scene
-        }
-      },
-      lighting: {
-        ...result.lighting
+function kaoruPatchAtmosphere(
+  patch
+){
+  store.setState(state=>({
+    ...state,
+    scene:{
+      ...state.scene,
+      atmosphere:{
+        ...(state.scene?.atmosphere||{}),
+        ...patch,
+        edited:true
       }
-    }));
+    }
+  }));
+}
 
-    toast(
-      `Ambiente: ${result.preset.name}`
-    );
+function kaoruPatchAtmosphereEffect(
+  patch
+){
+  store.setState(state=>({
+    ...state,
+    scene:{
+      ...state.scene,
+      atmosphere:{
+        ...(state.scene?.atmosphere||{}),
+        edited:true,
+        effect:{
+          type:'none',
+          colorA:'#FFFFFF',
+          colorB:'#7C3AED',
+          opacity:0,
+          angle:0,
+          scale:100,
+          ...(state.scene?.atmosphere
+            ?.effect||{}),
+          ...patch
+        }
+      }
+    }
+  }));
+}
+
+function kaoruBindAtmosphereColor(
+  colorInput,
+  hexInput,
+  apply
+){
+  colorInput?.addEventListener(
+    'input',
+    ()=>{
+      const value=
+        normalizeHex(
+          colorInput.value
+        );
+
+      if(!value)return;
+
+      hexInput.value=value;
+      apply(value);
+    }
+  );
+
+  hexInput?.addEventListener(
+    'change',
+    ()=>{
+      const value=
+        normalizeHex(
+          hexInput.value
+        );
+
+      if(!value){
+        renderAtmospheres3d(
+          store.getState()
+        );
+        toast('HEX invalido.');
+        return;
+      }
+
+      colorInput.value=value;
+      hexInput.value=value;
+      apply(value);
+    }
+  );
+}
+
+kaoruBindAtmosphereColor(
+  elements.atmosphereBackground,
+  elements.atmosphereBackgroundHex,
+  value=>
+    kaoruPatchAtmosphere({
+      background:value
+    })
+);
+
+kaoruBindAtmosphereColor(
+  elements.atmosphereFog,
+  elements.atmosphereFogHex,
+  value=>
+    kaoruPatchAtmosphere({
+      fog:value
+    })
+);
+
+kaoruBindAtmosphereColor(
+  elements.atmosphereFloor,
+  elements.atmosphereFloorHex,
+  value=>
+    kaoruPatchAtmosphere({
+      floor:value
+    })
+);
+
+kaoruBindAtmosphereColor(
+  elements.atmosphereEffectA,
+  elements.atmosphereEffectAHex,
+  value=>
+    kaoruPatchAtmosphereEffect({
+      colorA:value
+    })
+);
+
+kaoruBindAtmosphereColor(
+  elements.atmosphereEffectB,
+  elements.atmosphereEffectBHex,
+  value=>
+    kaoruPatchAtmosphereEffect({
+      colorB:value
+    })
+);
+
+elements.atmosphereEffectType?.addEventListener(
+  'change',
+  ()=>{
+    kaoruPatchAtmosphereEffect({
+      type:
+        elements.atmosphereEffectType
+          .value
+    });
   }
 );
 
+elements.atmosphereExposure?.addEventListener(
+  'input',
+  ()=>{
+    kaoruPatchAtmosphere({
+      exposure:
+        Number(
+          elements.atmosphereExposure
+            .value
+        )
+    });
+  }
+);
+
+elements.atmosphereEffectOpacity?.addEventListener(
+  'input',
+  ()=>{
+    kaoruPatchAtmosphereEffect({
+      opacity:
+        Number(
+          elements.atmosphereEffectOpacity
+            .value
+        )
+    });
+  }
+);
+
+elements.atmosphereEffectAngle?.addEventListener(
+  'input',
+  ()=>{
+    kaoruPatchAtmosphereEffect({
+      angle:
+        Number(
+          elements.atmosphereEffectAngle
+            .value
+        )
+    });
+  }
+);
+
+elements.atmosphereEffectScale?.addEventListener(
+  'input',
+  ()=>{
+    kaoruPatchAtmosphereEffect({
+      scale:
+        Number(
+          elements.atmosphereEffectScale
+            .value
+        )
+    });
+  }
+);
+
+elements.resetAtmosphere?.addEventListener(
+  'click',
+  ()=>{
+    const id=
+      store.getState()
+        .scene?.atmosphere?.id||
+      'day';
+
+    kaoruApplyAtmospherePreset(id);
+  }
+);
 elements.advancedToggle?.addEventListener(
   'click',
   () => {

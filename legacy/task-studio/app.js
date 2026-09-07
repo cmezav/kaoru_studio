@@ -805,8 +805,191 @@ function dataUrlToBlob(dataUrl){
   return new Blob([bytes],{type:mime});
 }
 
+/* === KAORU NOTE AUTO LINKS V1 START === */
+
+function kaoruNoteUrlParts(rawValue){
+  const raw=String(rawValue||'');
+
+  const tailMatch=
+    raw.match(/[),.;!?]+$/);
+
+  const tail=
+    tailMatch?.[0]||'';
+
+  const text=
+    tail
+      ?raw.slice(0,-tail.length)
+      :raw;
+
+  return{
+    text,
+    tail,
+    href:/^www\./i.test(text)
+      ?`https://${text}`
+      :text
+  };
+}
+
+function kaoruLinkifyNoteEditor(root){
+  if(!root)return false;
+
+  const walker=
+    document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node){
+          const value=node.data||'';
+
+          if(
+            !/(?:https?:\/\/|www\.)[^\s<]+/i
+              .test(value)
+          ){
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          const parent=node.parentElement;
+
+          if(
+            !parent||
+            parent.closest(
+              'a,script,style,code,pre'
+            )
+          ){
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+  const nodes=[];
+  let node=null;
+
+  while((node=walker.nextNode())){
+    nodes.push(node);
+  }
+
+  let changed=false;
+
+  for(const textNode of nodes){
+    const value=textNode.data||'';
+
+    const regex=
+      /(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+
+    let match=null;
+    let cursor=0;
+    const fragment=
+      document.createDocumentFragment();
+
+    while((match=regex.exec(value))){
+      const raw=match[0];
+
+      if(match.index>cursor){
+        fragment.appendChild(
+          document.createTextNode(
+            value.slice(
+              cursor,
+              match.index
+            )
+          )
+        );
+      }
+
+      const parts=
+        kaoruNoteUrlParts(raw);
+
+      if(!parts.text){
+        fragment.appendChild(
+          document.createTextNode(raw)
+        );
+        cursor=
+          match.index+
+          raw.length;
+        continue;
+      }
+
+      const anchor=
+        document.createElement('a');
+
+      anchor.href=parts.href;
+      anchor.textContent=parts.text;
+      anchor.target='_blank';
+      anchor.rel='noopener noreferrer';
+      anchor.dataset.kaoruAutoLink='1';
+      anchor.title='Abrir enlace';
+
+      fragment.appendChild(anchor);
+
+      if(parts.tail){
+        fragment.appendChild(
+          document.createTextNode(
+            parts.tail
+          )
+        );
+      }
+
+      cursor=
+        match.index+
+        raw.length;
+
+      changed=true;
+    }
+
+    if(!changed&&cursor===0){
+      continue;
+    }
+
+    if(cursor<value.length){
+      fragment.appendChild(
+        document.createTextNode(
+          value.slice(cursor)
+        )
+      );
+    }
+
+    textNode.replaceWith(fragment);
+  }
+
+  return changed;
+}
+
+function kaoruOpenNoteLink(
+  event,
+  editor
+){
+  const anchor=
+    event.target.closest?.('a[href]');
+
+  if(
+    !anchor||
+    !editor?.contains(anchor)
+  ){
+    return false;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const href=anchor.href;
+
+  if(!href)return false;
+
+  window.open(
+    href,
+    '_blank',
+    'noopener,noreferrer'
+  );
+
+  return true;
+}
+
+/* === KAORU NOTE AUTO LINKS V1 END === */
 function serializeNoteHtml(editor){
   const cloneEditor=editor.cloneNode(true);
+  kaoruLinkifyNoteEditor(cloneEditor);
 
   cloneEditor
     .querySelectorAll(
@@ -1110,6 +1293,7 @@ function kaoruFocusedNoteEditor(){
 }
 
 async function kaoruFinishNoteEdit(task,note,editor){
+  kaoruLinkifyNoteEditor(editor);
   await saveNoteNow(task,note,editor);
 
   if(kaoruFontFormattingBusy())return;
@@ -1190,7 +1374,37 @@ function renderNoteThread(task){
     editor.className='note-editor';
     editor.contentEditable='true';
     editor.dataset.noteId=note.id;
+    editor.addEventListener(
+      'click',
+      (event)=>{
+        kaoruOpenNoteLink(
+          event,
+          editor
+        );
+      }
+    );
+
+    editor.addEventListener(
+      'paste',
+      ()=>{
+        setTimeout(()=>{
+          const changed=
+            kaoruLinkifyNoteEditor(
+              editor
+            );
+
+          if(changed){
+            scheduleNoteSave(
+              task,
+              note,
+              editor
+            );
+          }
+        },0);
+      }
+    );
     editor.innerHTML=note.html||'';
+    kaoruLinkifyNoteEditor(editor);
 
     editor.addEventListener('focus',()=>{
       state.activeEditor=editor;

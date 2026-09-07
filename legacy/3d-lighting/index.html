@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=atmosphere-simple-v5-20260906">
+  <link rel="stylesheet" href="./styles.css?cache=creative-atmospheres-editable-v1-20260906">
 
   <script type="importmap">
   {
@@ -72,6 +72,102 @@
         <div class="section-heading"><span>03</span><h2>Ambiente</h2></div>
         <p class="help">El fondo y la iluminacion cambian juntos.</p>
         <div id="atmosphereGrid" class="atmosphere-3d-grid" aria-label="Ambientes 3D"></div>
+
+        <div class="atmosphere-creative-head">
+          <strong>Estilos creativos</strong>
+          <small>Basados en las referencias de iluminacion.</small>
+        </div>
+        <div id="creativeAtmosphereGrid" class="atmosphere-creative-strip" aria-label="Estilos creativos 3D"></div>
+
+        <details class="atmosphere-editor">
+          <summary>Editar estilo seleccionado</summary>
+          <div class="atmosphere-editor-body">
+            <div id="atmosphereEditorLabel" class="atmosphere-editor-label">Estilo actual</div>
+
+            <div class="atmosphere-editor-grid">
+              <label>
+                <span>Fondo</span>
+                <div class="atmosphere-color-row">
+                  <input id="atmosphereBackground" type="color" value="#15121A">
+                  <input id="atmosphereBackgroundHex" type="text" maxlength="7" value="#15121A">
+                </div>
+              </label>
+
+              <label>
+                <span>Niebla</span>
+                <div class="atmosphere-color-row">
+                  <input id="atmosphereFog" type="color" value="#15121A">
+                  <input id="atmosphereFogHex" type="text" maxlength="7" value="#15121A">
+                </div>
+              </label>
+
+              <label>
+                <span>Suelo</span>
+                <div class="atmosphere-color-row">
+                  <input id="atmosphereFloor" type="color" value="#29242F">
+                  <input id="atmosphereFloorHex" type="text" maxlength="7" value="#29242F">
+                </div>
+              </label>
+
+              <label>
+                <span>Patron</span>
+                <select id="atmosphereEffectType">
+                  <option value="none">Ninguno</option>
+                  <option value="glow">Resplandor</option>
+                  <option value="split">Dos colores</option>
+                  <option value="stripe">Franja</option>
+                  <option value="window">Ventana</option>
+                  <option value="leaves">Hojas</option>
+                  <option value="blinds">Persianas</option>
+                  <option value="neon">Neon</option>
+                  <option value="rim">Contraluz</option>
+                  <option value="iridescent">Iridiscente</option>
+                  <option value="rainbow">Arcoiris</option>
+                  <option value="underwater">Bajo el mar</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Color efecto A</span>
+                <div class="atmosphere-color-row">
+                  <input id="atmosphereEffectA" type="color" value="#FFFFFF">
+                  <input id="atmosphereEffectAHex" type="text" maxlength="7" value="#FFFFFF">
+                </div>
+              </label>
+
+              <label>
+                <span>Color efecto B</span>
+                <div class="atmosphere-color-row">
+                  <input id="atmosphereEffectB" type="color" value="#7C3AED">
+                  <input id="atmosphereEffectBHex" type="text" maxlength="7" value="#7C3AED">
+                </div>
+              </label>
+            </div>
+
+            <label class="range-control compact">
+              <span>Exposicion <output id="atmosphereExposureOut">1.00</output></span>
+              <input id="atmosphereExposure" type="range" min="0.35" max="2.2" step="0.01" value="1">
+            </label>
+
+            <label class="range-control compact">
+              <span>Intensidad del patron <output id="atmosphereEffectOpacityOut">0%</output></span>
+              <input id="atmosphereEffectOpacity" type="range" min="0" max="100" step="1" value="0">
+            </label>
+
+            <label class="range-control compact">
+              <span>Rotacion del patron <output id="atmosphereEffectAngleOut">0 deg</output></span>
+              <input id="atmosphereEffectAngle" type="range" min="-180" max="180" step="1" value="0">
+            </label>
+
+            <label class="range-control compact">
+              <span>Escala del patron <output id="atmosphereEffectScaleOut">100%</output></span>
+              <input id="atmosphereEffectScale" type="range" min="40" max="240" step="1" value="100">
+            </label>
+
+            <p class="help">Las luces del estilo siguen siendo editables en la seccion Luces directas. Ambiente, sombra, rebote y rim siguen en Mas opciones.</p>
+            <button id="resetAtmosphereBtn" class="wide-action" type="button">Restablecer este estilo</button>
+          </div>
+        </details>
       </section>
 
 <section class="control-section lightlab-bridge-section advanced-only">
@@ -389,7 +485,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=atmosphere-simple-v5-20260906"></script>
+  <script type="module" src="./js/main.js?cache=creative-atmospheres-editable-v1-20260906"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>
