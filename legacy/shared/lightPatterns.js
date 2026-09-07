@@ -6,8 +6,8 @@ const cleanHex=(value,fallback)=>{
 };
 
 export const LIGHT_PROJECTOR_TYPES=[
-  'none','glow','flash','split','neon','stripe','window','leaves','blinds',
-  'bokeh','circles','sparkles','rim','iridescent','rainbow','underwater','caustics'
+  'none','glow','flash','split','neon','stripe','window','leaves','blinds','grid',
+  'bokeh','circles','sparkles','blacklight','rim','iridescent','rainbow','underwater','caustics'
 ];
 
 export function normalizeLightProjector(value={}){
@@ -46,7 +46,7 @@ export function projectorFromEffect(effect={}){
 
 export function projectorIsMulticolor(type){
   return[
-    'split','neon','iridescent','rainbow','underwater','caustics'
+    'split','neon','grid','blacklight','iridescent','rainbow','underwater','caustics'
   ].includes(type);
 }
 
@@ -300,6 +300,30 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
     }
   }
 
+
+  if(p.type==='grid'){
+    const minSide=Math.min(width,height);
+    const gapX=Math.max(18,width*(.145-density*.085));
+    const gapY=Math.max(18,height*(.145-density*.085));
+    const line=Math.max(3,minSide*(.008+density*.018));
+    ctx.save();
+    ctx.globalAlpha=alpha*.82;
+    ctx.fillStyle=p.colorA;
+    ctx.fillRect(-width,-height,width*2,height*2);
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=p.colorB;
+    ctx.lineWidth=line;
+    ctx.lineCap='butt';
+    for(let x=-width;x<=width;x+=gapX){
+      ctx.beginPath(); ctx.moveTo(x,-height); ctx.lineTo(x,height); ctx.stroke();
+    }
+    for(let y=-height;y<=height;y+=gapY){
+      ctx.beginPath(); ctx.moveTo(-width,y); ctx.lineTo(width,y); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha=alpha;
+  }
+
   if(p.type==='bokeh'||p.type==='circles'){
     const count=Math.round(5+density*26);
     for(let i=0;i<count;i++){
@@ -341,6 +365,39 @@ export function drawLightProjectorPattern(ctx,width,height,value={},options={}){
         ctx.fill();
       }
     }
+    ctx.globalAlpha=alpha;
+  }
+
+
+  if(p.type==='blacklight'){
+    const minSide=Math.min(width,height);
+    const count=Math.round(10+density*34);
+    ctx.save();
+    ctx.lineCap='round';
+    ctx.lineJoin='round';
+    for(let i=0;i<count;i++){
+      const color=i%2?p.colorA:p.colorB;
+      const x=(rand()-.5)*width*.94;
+      const y=(rand()-.5)*height*.94;
+      const len=minSide*(.035+rand()*.10);
+      const bend=minSide*(.015+rand()*.055);
+      ctx.globalAlpha=alpha*(.62+rand()*.38);
+      ctx.strokeStyle=color;
+      ctx.shadowColor=color;
+      ctx.shadowBlur=Math.max(5,minSide*(.008+rand()*.018));
+      ctx.lineWidth=Math.max(3,minSide*(.006+rand()*.020));
+      ctx.beginPath();
+      ctx.moveTo(x-len*.5,y);
+      ctx.quadraticCurveTo(x+(rand()-.5)*bend,y+(rand()-.5)*bend*2,x+len*.5,y+(rand()-.5)*bend);
+      ctx.stroke();
+      if(rand()>.56){
+        ctx.fillStyle=color;
+        ctx.beginPath();
+        ctx.arc(x+(rand()-.5)*len,y+(rand()-.5)*bend,Math.max(2,minSide*(.004+rand()*.010)),0,Math.PI*2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
     ctx.globalAlpha=alpha;
   }
 

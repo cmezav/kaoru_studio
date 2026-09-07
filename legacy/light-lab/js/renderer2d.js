@@ -1,6 +1,6 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
-import { drawLightProjectorPattern, normalizeLightProjector } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
+import { drawLightProjectorPattern, normalizeLightProjector } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
 
 const MATERIAL_TINTS = {
   gold: '#D6A93D',

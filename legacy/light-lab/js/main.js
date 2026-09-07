@@ -6,8 +6,8 @@ import { renderBasicPreview } from './renderer2d.js?cache=shared-light-v2';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
-import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=extra-preset-tags-v2-20260907';
-import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
+import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=lighting-calibration-v3-20260907';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();

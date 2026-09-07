@@ -1,4 +1,4 @@
-import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
 import { EXTRA_LIGHTING_ATMOSPHERES } from '../../shared/extraLightingAtmospheres.js?cache=extra-light-presets-v1-20260907';
 
 export const THREE_ATMOSPHERES = [
