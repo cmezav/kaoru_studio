@@ -2,11 +2,11 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=atmosphere-simple-v3';
+import { renderBasicPreview } from './renderer2d.js?cache=shared-light-v2';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
-import { LIGHT_ATMOSPHERES, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=atmosphere-simple-v3';
+import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=shared-light-v2';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
@@ -72,7 +72,13 @@ const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
+  atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
+  atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
+  atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
+  atmoEffectBColor: byId('atmoEffectBColor'), atmoEffectBHex: byId('atmoEffectBHex'), atmoEffectOpacity: byId('atmoEffectOpacity'),
+  atmoEffectOpacityOut: byId('atmoEffectOpacityOut'), atmoEffectAngle: byId('atmoEffectAngle'), atmoEffectAngleOut: byId('atmoEffectAngleOut'),
+  atmoEffectScale: byId('atmoEffectScale'), atmoEffectScaleOut: byId('atmoEffectScaleOut'), resetAtmosphere: byId('resetAtmosphereBtn'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
   resetParams: byId('resetParamsBtn'), previewTitle: byId('previewTitle'), paletteName: byId('paletteName'), swatchGrid: byId('swatchGrid'),
   paletteViewTabs: byId('paletteViewTabs'), comparisonGrid: byId('comparisonGrid'),
   canvas: byId('previewCanvas'), modeLabel: byId('previewModeLabel'), previewTabs: byId('previewTabs'),
@@ -155,6 +161,337 @@ function formatLightControlValue(field, value) {
   return String(Math.round(amount));
 }
 
+/* === KAORU LIGHT SHARED 3D CREATIVE V2 === */
+
+function normalizeEffectOpacity(value){
+  const number =
+    Number(value || 0);
+
+  if(number > 1){
+    return Math.max(
+      0,
+      Math.min(
+        1,
+        number / 100
+      )
+    );
+  }
+
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      number
+    )
+  );
+}
+
+function setAtmoColorPair(
+  picker,
+  input,
+  value
+){
+  const hex =
+    normalizeHex(value) ||
+    '#000000';
+
+  if(
+    document.activeElement !==
+    picker
+  ){
+    picker.value = hex;
+  }
+
+  if(
+    document.activeElement !==
+    input
+  ){
+    input.value = hex;
+  }
+}
+
+function syncAtmosphereEditor(
+  lighting
+){
+  const preset =
+    atmosphereById(
+      lighting.atmosphere?.id ||
+      'day'
+    );
+
+  const backdrop =
+    lighting.atmosphere?.backdrop ||
+    preset.backdrop ||
+    {};
+
+  const effect =
+    backdrop.effect || {};
+
+  setAtmoColorPair(
+    elements.atmoTopColor,
+    elements.atmoTopHex,
+    backdrop.top || '#82C9F4'
+  );
+
+  setAtmoColorPair(
+    elements.atmoMidColor,
+    elements.atmoMidHex,
+    backdrop.mid || '#DDF2FF'
+  );
+
+  setAtmoColorPair(
+    elements.atmoBottomColor,
+    elements.atmoBottomHex,
+    backdrop.bottom || '#F4E7BF'
+  );
+
+  setAtmoColorPair(
+    elements.atmoAccentColor,
+    elements.atmoAccentHex,
+    backdrop.accent || '#FFF2B3'
+  );
+
+  const type =
+    effect.type || 'none';
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectType
+  ){
+    elements.atmoEffectType.value =
+      type;
+  }
+
+  setAtmoColorPair(
+    elements.atmoEffectAColor,
+    elements.atmoEffectAHex,
+    effect.colorA || '#FFFFFF'
+  );
+
+  setAtmoColorPair(
+    elements.atmoEffectBColor,
+    elements.atmoEffectBHex,
+    effect.colorB || '#7C3AED'
+  );
+
+  const opacity =
+    Math.round(
+      normalizeEffectOpacity(
+        effect.opacity
+      ) * 100
+    );
+
+  const angle =
+    Number(
+      effect.angle || 0
+    );
+
+  const scaleRaw =
+    Number(
+      effect.scale ?? 100
+    );
+
+  const scale =
+    scaleRaw <= 3
+      ? Math.round(
+          scaleRaw * 100
+        )
+      : Math.round(
+          scaleRaw
+        );
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectOpacity
+  ){
+    elements.atmoEffectOpacity.value =
+      String(opacity);
+  }
+
+  elements.atmoEffectOpacityOut
+    .textContent =
+      `${opacity}%`;
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectAngle
+  ){
+    elements.atmoEffectAngle.value =
+      String(angle);
+  }
+
+  elements.atmoEffectAngleOut
+    .textContent =
+      `${Math.round(angle)}°`;
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectScale
+  ){
+    elements.atmoEffectScale.value =
+      String(scale);
+  }
+
+  elements.atmoEffectScaleOut
+    .textContent =
+      `${scale}%`;
+}
+
+function patchAtmosphereBackdrop(
+  changes
+){
+  store.setState((state)=>({
+    ...state,
+    lighting:{
+      ...state.lighting,
+      sceneId:'custom',
+      atmosphere:{
+        ...(state.lighting
+          .atmosphere || {
+            id:'custom',
+            name:'Personalizado',
+            description:''
+          }),
+        backdrop:{
+          ...(state.lighting
+            .atmosphere
+            ?.backdrop || {}),
+          ...changes
+        }
+      }
+    }
+  }));
+}
+
+function patchAtmosphereEffect(
+  changes
+){
+  store.setState((state)=>{
+    const backdrop =
+      state.lighting
+        .atmosphere
+        ?.backdrop || {};
+
+    return {
+      ...state,
+      lighting:{
+        ...state.lighting,
+        sceneId:'custom',
+        atmosphere:{
+          ...(state.lighting
+            .atmosphere || {
+              id:'custom',
+              name:'Personalizado',
+              description:''
+            }),
+          backdrop:{
+            ...backdrop,
+            effect:{
+              type:'none',
+              colorA:'#FFFFFF',
+              colorB:'#7C3AED',
+              opacity:0,
+              angle:0,
+              scale:100,
+              ...(backdrop.effect || {}),
+              ...changes
+            }
+          }
+        }
+      }
+    };
+  });
+}
+
+function applyAtmosphereColorInput(
+  picker,
+  textInput,
+  property
+){
+  const apply = (raw)=>{
+    const hex =
+      normalizeHex(raw);
+
+    if(!hex)return;
+
+    picker.value = hex;
+    textInput.value = hex;
+
+    patchAtmosphereBackdrop({
+      [property]:hex
+    });
+  };
+
+  picker.addEventListener(
+    'input',
+    ()=>{
+      apply(picker.value);
+    }
+  );
+
+  textInput.addEventListener(
+    'keydown',
+    (event)=>{
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        apply(textInput.value);
+      }
+    }
+  );
+
+  textInput.addEventListener(
+    'focusout',
+    ()=>{
+      apply(textInput.value);
+    }
+  );
+}
+
+function applyEffectColorInput(
+  picker,
+  textInput,
+  property
+){
+  const apply = (raw)=>{
+    const hex =
+      normalizeHex(raw);
+
+    if(!hex)return;
+
+    picker.value = hex;
+    textInput.value = hex;
+
+    patchAtmosphereEffect({
+      [property]:hex
+    });
+  };
+
+  picker.addEventListener(
+    'input',
+    ()=>{
+      apply(picker.value);
+    }
+  );
+
+  textInput.addEventListener(
+    'keydown',
+    (event)=>{
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        apply(textInput.value);
+      }
+    }
+  );
+
+  textInput.addEventListener(
+    'focusout',
+    ()=>{
+      apply(textInput.value);
+    }
+  );
+}
+
+/* === /KAORU LIGHT SHARED 3D CREATIVE V2 === */
 function renderLightingControls(state) {
   const lighting = state.lighting;
   const selected =
@@ -177,7 +514,7 @@ function renderLightingControls(state) {
     !elements.atmosphereScenes.childElementCount
   ) {
     elements.atmosphereScenes.replaceChildren(
-      ...LIGHT_ATMOSPHERES.map((preset) => {
+      ...coreAtmospheres().map((preset) => {
         const button=document.createElement('button');
         button.type='button';
         button.className='atmosphere-card';
@@ -224,6 +561,85 @@ function renderLightingControls(state) {
     elements.atmosphereLabel.textContent=
       atmosphereById(activeAtmosphere).name;
   }
+  if(
+    elements.creativeAtmosphereScenes &&
+    !elements.creativeAtmosphereScenes
+      .childElementCount
+  ){
+    elements.creativeAtmosphereScenes
+      .replaceChildren(
+        ...creativeAtmospheres()
+          .map((preset)=>{
+            const button =
+              document.createElement(
+                'button'
+              );
+
+            button.type='button';
+            button.className=
+              'atmosphere-card atmosphere-card-creative';
+
+            button.dataset.atmosphere=
+              preset.id;
+
+            button.style.setProperty(
+              '--atmo-top',
+              preset.backdrop.top
+            );
+
+            button.style.setProperty(
+              '--atmo-mid',
+              preset.backdrop.mid
+            );
+
+            button.style.setProperty(
+              '--atmo-bottom',
+              preset.backdrop.bottom
+            );
+
+            button.style.setProperty(
+              '--atmo-accent',
+              preset.backdrop.accent
+            );
+
+            button.innerHTML=`
+              <span class="atmosphere-preview" aria-hidden="true">
+                <i></i>
+              </span>
+              <span>
+                <strong>${escapeHtml(preset.name)}</strong>
+                <small>${escapeHtml(preset.description)}</small>
+              </span>
+            `;
+
+            return button;
+          })
+      );
+  }
+
+  elements.creativeAtmosphereScenes
+    ?.querySelectorAll(
+      '[data-atmosphere]'
+    )
+    .forEach((button)=>{
+      const active =
+        button.dataset.atmosphere ===
+        activeAtmosphere;
+
+      button.classList.toggle(
+        'is-active',
+        active
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(active)
+      );
+    });
+
+  syncAtmosphereEditor(
+    lighting
+  );
 if (!elements.lightingScenes.childElementCount) {
     elements.lightingScenes.replaceChildren(
       ...LIGHTING_SCENES.map((scene) => {
@@ -791,6 +1207,176 @@ elements.atmosphereScenes?.addEventListener(
     );
   }
 );
+elements.creativeAtmosphereScenes?.addEventListener(
+  'click',
+  (event)=>{
+    const button =
+      event.target.closest(
+        '[data-atmosphere]'
+      );
+
+    if(!button)return;
+
+    const preset =
+      atmosphereById(
+        button.dataset.atmosphere
+      );
+
+    lightsRenderSignature='';
+
+    store.setState((state)=>({
+      ...state,
+      lighting:
+        buildAtmosphereLighting(
+          preset.id
+        ),
+      ui:{
+        ...state.ui,
+        paletteView:'illuminated'
+      }
+    }));
+
+    showToast(
+      `Estilo: ${preset.name}`
+    );
+  }
+);
+
+applyAtmosphereColorInput(
+  elements.atmoTopColor,
+  elements.atmoTopHex,
+  'top'
+);
+
+applyAtmosphereColorInput(
+  elements.atmoMidColor,
+  elements.atmoMidHex,
+  'mid'
+);
+
+applyAtmosphereColorInput(
+  elements.atmoBottomColor,
+  elements.atmoBottomHex,
+  'bottom'
+);
+
+applyAtmosphereColorInput(
+  elements.atmoAccentColor,
+  elements.atmoAccentHex,
+  'accent'
+);
+
+applyEffectColorInput(
+  elements.atmoEffectAColor,
+  elements.atmoEffectAHex,
+  'colorA'
+);
+
+applyEffectColorInput(
+  elements.atmoEffectBColor,
+  elements.atmoEffectBHex,
+  'colorB'
+);
+
+elements.atmoEffectType
+  .addEventListener(
+    'change',
+    ()=>{
+      patchAtmosphereEffect({
+        type:
+          elements.atmoEffectType
+            .value
+      });
+    }
+  );
+
+elements.atmoEffectOpacity
+  .addEventListener(
+    'input',
+    ()=>{
+      const value =
+        Number(
+          elements.atmoEffectOpacity
+            .value
+        );
+
+      elements.atmoEffectOpacityOut
+        .textContent =
+          `${value}%`;
+
+      patchAtmosphereEffect({
+        opacity:value
+      });
+    }
+  );
+
+elements.atmoEffectAngle
+  .addEventListener(
+    'input',
+    ()=>{
+      const value =
+        Number(
+          elements.atmoEffectAngle
+            .value
+        );
+
+      elements.atmoEffectAngleOut
+        .textContent =
+          `${value}°`;
+
+      patchAtmosphereEffect({
+        angle:value
+      });
+    }
+  );
+
+elements.atmoEffectScale
+  .addEventListener(
+    'input',
+    ()=>{
+      const value =
+        Number(
+          elements.atmoEffectScale
+            .value
+        );
+
+      elements.atmoEffectScaleOut
+        .textContent =
+          `${value}%`;
+
+      patchAtmosphereEffect({
+        scale:value
+      });
+    }
+  );
+
+elements.resetAtmosphere
+  .addEventListener(
+    'click',
+    ()=>{
+      const id =
+        store.getState()
+          .lighting
+          .atmosphere
+          ?.id || 'day';
+
+      store.setState((state)=>({
+        ...state,
+        lighting:
+          buildAtmosphereLighting(
+            id
+          ),
+        ui:{
+          ...state.ui,
+          paletteView:'illuminated'
+        }
+      }));
+
+      showToast(
+        'Estilo restablecido'
+      );
+    }
+  );
 elements.lightingScenes.addEventListener('click',(event)=>{
   const button=event.target.closest('[data-scene]');
   if(!button)return;

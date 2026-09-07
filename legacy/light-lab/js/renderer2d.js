@@ -51,6 +51,464 @@ function highlightColor(colors) { return colorAt(colors, 13, '#FFF2EB'); }
 function rimColor(colors) { return colorAt(colors, 14, '#B8D7FF'); }
 function bounceColor(colors) { return colorAt(colors, 15, '#D48E79'); }
 
+function normalizeAtmosphereEffectOpacity(
+  value
+){
+  const number =
+    Number(value || 0);
+
+  return number > 1
+    ? Math.max(
+        0,
+        Math.min(
+          1,
+          number / 100
+        )
+      )
+    : Math.max(
+        0,
+        Math.min(
+          1,
+          number
+        )
+      );
+}
+
+function renderAtmosphereEffect(
+  ctx,
+  width,
+  height,
+  effect
+){
+  if(
+    !effect ||
+    effect.type === 'none'
+  ){
+    return;
+  }
+
+  const colorA =
+    effect.colorA ||
+    '#FFFFFF';
+
+  const colorB =
+    effect.colorB ||
+    '#7C3AED';
+
+  const opacity =
+    normalizeAtmosphereEffectOpacity(
+      effect.opacity
+    );
+
+  const scaleRaw =
+    Number(
+      effect.scale ?? 100
+    );
+
+  const scale =
+    scaleRaw <= 3
+      ? scaleRaw
+      : scaleRaw / 100;
+
+  const angle =
+    Number(
+      effect.angle || 0
+    ) *
+    Math.PI /
+    180;
+
+  ctx.save();
+  ctx.globalAlpha =
+    opacity;
+
+  if(
+    effect.type === 'glow' ||
+    effect.type === 'rim'
+  ){
+    const glow =
+      ctx.createRadialGradient(
+        width*.20,
+        height*.20,
+        0,
+        width*.20,
+        height*.20,
+        width*.78*scale
+      );
+
+    glow.addColorStop(
+      0,
+      rgba(colorA,.92)
+    );
+
+    glow.addColorStop(
+      .42,
+      rgba(colorA,.24)
+    );
+
+    glow.addColorStop(
+      1,
+      rgba(colorB,0)
+    );
+
+    ctx.fillStyle=glow;
+    ctx.fillRect(
+      0,0,width,height
+    );
+  }
+
+  if(
+    effect.type === 'split' ||
+    effect.type === 'neon'
+  ){
+    const gradient =
+      ctx.createLinearGradient(
+        0,0,width,0
+      );
+
+    gradient.addColorStop(
+      0,
+      rgba(colorA,.92)
+    );
+
+    gradient.addColorStop(
+      .47,
+      rgba(colorA,.08)
+    );
+
+    gradient.addColorStop(
+      .53,
+      rgba(colorB,.08)
+    );
+
+    gradient.addColorStop(
+      1,
+      rgba(colorB,.92)
+    );
+
+    ctx.fillStyle=gradient;
+    ctx.fillRect(
+      0,0,width,height
+    );
+  }
+
+  if(effect.type === 'stripe'){
+    const stripeWidth =
+      Math.max(
+        30,
+        width*.12*scale
+      );
+
+    ctx.translate(
+      width*.5,
+      height*.5
+    );
+
+    ctx.rotate(angle);
+
+    ctx.fillStyle =
+      rgba(colorA,.92);
+
+    ctx.fillRect(
+      -stripeWidth*.5,
+      -height,
+      stripeWidth,
+      height*2
+    );
+  }
+
+  if(effect.type === 'window'){
+    ctx.translate(
+      width*.5,
+      height*.5
+    );
+
+    ctx.rotate(angle);
+
+    ctx.fillStyle =
+      rgba(colorA,.62);
+
+    const beamW =
+      width*.20*scale;
+
+    const beamH =
+      height*.66;
+
+    ctx.fillRect(
+      -beamW*.5,
+      -beamH*.5,
+      beamW,
+      beamH
+    );
+
+    ctx.fillRect(
+      -width*.34,
+      -height*.07,
+      width*.68,
+      height*.14
+    );
+
+    ctx.fillStyle =
+      rgba(colorB,.38);
+
+    ctx.fillRect(
+      -width*.025,
+      -beamH*.5,
+      width*.05,
+      beamH
+    );
+
+    ctx.fillRect(
+      -width*.34,
+      -height*.025,
+      width*.68,
+      height*.05
+    );
+  }
+
+  if(effect.type === 'leaves'){
+    const count=14;
+
+    for(
+      let index=0;
+      index<count;
+      index++
+    ){
+      const x =
+        width *
+        (
+          .08 +
+          (
+            (index*37)%84
+          )/100
+        );
+
+      const y =
+        height *
+        (
+          .06 +
+          (
+            (index*53)%70
+          )/100
+        );
+
+      ctx.fillStyle =
+        rgba(
+          index%2
+            ? colorA
+            : colorB,
+          .50
+        );
+
+      ctx.beginPath();
+
+      ctx.ellipse(
+        x,
+        y,
+        width*.035*scale,
+        height*.075*scale,
+        angle+
+        index*.31,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fill();
+    }
+  }
+
+  if(effect.type === 'blinds'){
+    ctx.translate(
+      width*.5,
+      height*.5
+    );
+
+    ctx.rotate(angle);
+
+    const gap =
+      Math.max(
+        18,
+        height*.09*scale
+      );
+
+    const beam =
+      Math.max(
+        7,
+        gap*.34
+      );
+
+    ctx.fillStyle =
+      rgba(colorA,.68);
+
+    for(
+      let y=-height;
+      y<height;
+      y+=gap
+    ){
+      ctx.fillRect(
+        -width,
+        y,
+        width*2,
+        beam
+      );
+    }
+  }
+
+  if(
+    effect.type ===
+    'iridescent'
+  ){
+    const gradient =
+      ctx.createLinearGradient(
+        width*.10,
+        height*.08,
+        width*.88,
+        height*.90
+      );
+
+    gradient.addColorStop(
+      0,
+      rgba('#FF4FA3',.88)
+    );
+
+    gradient.addColorStop(
+      .32,
+      rgba('#8F5BFF',.82)
+    );
+
+    gradient.addColorStop(
+      .66,
+      rgba('#5DEBFF',.84)
+    );
+
+    gradient.addColorStop(
+      1,
+      rgba('#FFF1A1',.72)
+    );
+
+    ctx.strokeStyle=gradient;
+    ctx.lineWidth=
+      Math.max(
+        24,
+        width*.11*scale
+      );
+
+    ctx.lineCap='round';
+    ctx.beginPath();
+
+    ctx.moveTo(
+      width*.18,
+      height*.12
+    );
+
+    ctx.lineTo(
+      width*.74,
+      height*.88
+    );
+
+    ctx.stroke();
+  }
+
+  if(effect.type === 'rainbow'){
+    const colors=[
+      '#FF4D5A',
+      '#FF9F43',
+      '#FFE85A',
+      '#55D86A',
+      '#4FD7FF',
+      '#6F70FF',
+      '#B45BFF'
+    ];
+
+    ctx.save();
+
+    ctx.translate(
+      width*.5,
+      height*.5
+    );
+
+    ctx.rotate(angle);
+
+    const band =
+      Math.max(
+        10,
+        width*.018*scale
+      );
+
+    const start =
+      -band*
+      colors.length*
+      .5;
+
+    colors.forEach(
+      (color,index)=>{
+        ctx.fillStyle =
+          rgba(color,.90);
+
+        ctx.fillRect(
+          start+
+          index*band,
+          -height,
+          band,
+          height*2
+        );
+      }
+    );
+
+    ctx.restore();
+  }
+
+  if(effect.type === 'underwater'){
+    const spacing =
+      Math.max(
+        24,
+        height*.075*scale
+      );
+
+    for(
+      let y=0;
+      y<height;
+      y+=spacing
+    ){
+      const wave =
+        ctx.createLinearGradient(
+          0,
+          y,
+          width,
+          y+
+          spacing*.4
+        );
+
+      wave.addColorStop(
+        0,
+        rgba(colorA,0)
+      );
+
+      wave.addColorStop(
+        .48,
+        rgba(colorA,.72)
+      );
+
+      wave.addColorStop(
+        1,
+        rgba(colorB,0)
+      );
+
+      ctx.fillStyle=wave;
+
+      ctx.fillRect(
+        0,
+        y,
+        width,
+        Math.max(
+          5,
+          spacing*.22
+        )
+      );
+    }
+  }
+
+  ctx.restore();
+}
 function renderBackdrop(ctx,width,height,lighting=null){
   const atmosphere=
     lighting?.atmosphere?.backdrop;
@@ -113,6 +571,13 @@ function renderBackdrop(ctx,width,height,lighting=null){
 
     ctx.fillStyle=glow;
     ctx.fillRect(0,0,width,height);
+
+    renderAtmosphereEffect(
+      ctx,
+      width,
+      height,
+      atmosphere.effect
+    );
 
     if(
       atmosphere.weather==='rain'||

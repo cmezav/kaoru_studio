@@ -1,6 +1,7 @@
 import { sceneLighting } from './lightingEngine.js';
+import { THREE_ATMOSPHERES } from '../../3d-lighting/js/atmospheres3d.js?cache=shared-light-v2';
 
-export const LIGHT_ATMOSPHERES = [
+const LIGHT_CORE_ATMOSPHERES = [
   {
     id:'day',
     name:'D\u00eda',
@@ -170,6 +171,144 @@ export const LIGHT_ATMOSPHERES = [
   }
 ];
 
+const SHARED_CREATIVE_ATMOSPHERES =
+  THREE_ATMOSPHERES
+    .filter(
+      (preset) =>
+        preset.group === 'creative'
+    )
+    .map((preset) => {
+      const key =
+        preset.lighting?.key || {};
+
+      const fill =
+        preset.lighting?.fill || {};
+
+      const scene =
+        preset.scene || {};
+
+      const effect =
+        scene.effect
+          ? structuredClone(
+              scene.effect
+            )
+          : null;
+
+      return {
+        id: preset.id,
+        group: 'creative',
+        name: preset.name,
+        description:
+          preset.description,
+        sceneId: 'dual',
+        backdrop: {
+          top:
+            scene.background ||
+            '#2A2432',
+          mid:
+            scene.fog ||
+            scene.background ||
+            '#3C3348',
+          bottom:
+            scene.floor ||
+            scene.background ||
+            '#241F2A',
+          accent:
+            key.color ||
+            '#FFFFFF',
+          weather:
+            scene.weather ||
+            'clear',
+          effect
+        },
+        overrides: {
+          ambient: {
+            ...preset.lighting
+              ?.ambient
+          },
+          shadow: {
+            ...preset.lighting
+              ?.shadow
+          },
+          bounce: {
+            ...preset.lighting
+              ?.bounce
+          },
+          rim: {
+            ...preset.lighting
+              ?.rim
+          },
+          firstLight: {
+            color:
+              key.color ||
+              '#FFFFFF',
+            intensity:
+              Math.min(
+                100,
+                Number(
+                  key.intensity ?? 70
+                )
+              ),
+            direction:
+              Number(
+                key.azimuth ?? 0
+              ),
+            elevation:
+              Number(
+                key.elevation ?? 35
+              ),
+            softness:
+              Number(
+                key.softness ?? 50
+              )
+          },
+          secondLight: {
+            color:
+              fill.color ||
+              '#FFFFFF',
+            intensity:
+              Math.min(
+                100,
+                Number(
+                  fill.intensity ?? 25
+                )
+              ),
+            direction:
+              Number(
+                fill.azimuth ?? 65
+              ),
+            elevation:
+              Number(
+                fill.elevation ?? 20
+              ),
+            softness:
+              Number(
+                fill.softness ?? 70
+              )
+          }
+        }
+      };
+    });
+
+export const LIGHT_ATMOSPHERES = [
+  ...LIGHT_CORE_ATMOSPHERES,
+  ...SHARED_CREATIVE_ATMOSPHERES
+];
+
+export function coreAtmospheres(){
+  return LIGHT_ATMOSPHERES.filter(
+    (preset) =>
+      preset.group !== 'creative'
+  );
+}
+
+export function creativeAtmospheres(){
+  return LIGHT_ATMOSPHERES.filter(
+    (preset) =>
+      preset.group === 'creative'
+  );
+}
+
 export function atmosphereById(id){
   return LIGHT_ATMOSPHERES.find(item=>item.id===id)||LIGHT_ATMOSPHERES[0];
 }
@@ -195,12 +334,26 @@ export function buildAtmosphereLighting(id){
     };
   }
 
+  if(
+    overrides.secondLight &&
+    lighting.lights?.[1]
+  ){
+    lighting.lights[1]={
+      ...lighting.lights[1],
+      ...overrides.secondLight
+    };
+  }
+
   lighting.sceneId=`atmosphere-${preset.id}`;
   lighting.atmosphere={
     id:preset.id,
+    group:preset.group||'core',
     name:preset.name,
     description:preset.description,
-    backdrop:{...preset.backdrop}
+    backdrop:
+      structuredClone(
+        preset.backdrop
+      )
   };
 
   return lighting;

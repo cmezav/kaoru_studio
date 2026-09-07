@@ -446,3 +446,162 @@ html.kaoru-embedded .light-topbar{display:none}html.kaoru-embedded body{min-widt
 .lighting-other-presets[open]>summary{margin-bottom:9px}
 @media(max-width:1180px){.atmosphere-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* === /KAORU LIGHT ATMOSPHERES SIMPLE V3 === */
+/* === KAORU LIGHT SHARED 3D CREATIVE V2 === */
+
+.lighting-creative-atmospheres{
+  margin:10px 0 12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:var(--surface-2);
+  overflow:hidden;
+}
+
+.lighting-creative-atmospheres>summary,
+.light-atmosphere-editor>summary{
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px 10px;
+}
+
+.lighting-creative-atmospheres>summary span{
+  display:grid;
+  gap:2px;
+}
+
+.lighting-creative-atmospheres>summary strong{
+  font-size:11px;
+}
+
+.lighting-creative-atmospheres>summary small{
+  color:var(--muted);
+  font-size:9px;
+}
+
+.atmosphere-creative-strip{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:138px;
+  gap:7px;
+  overflow-x:auto;
+  padding:2px 9px 10px;
+  overscroll-behavior-inline:contain;
+  scrollbar-width:thin;
+}
+
+.atmosphere-card-creative{
+  scroll-snap-align:start;
+}
+
+.atmosphere-card-creative .atmosphere-preview{
+  height:54px;
+}
+
+.light-atmosphere-editor{
+  margin:0 9px 10px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--surface);
+}
+
+.light-atmosphere-editor>summary{
+  font-size:10px;
+  font-weight:800;
+}
+
+.light-atmosphere-editor-body{
+  display:grid;
+  gap:9px;
+  padding:9px;
+  border-top:1px solid var(--line);
+}
+
+.light-atmosphere-colors,
+.light-atmosphere-effect-grid{
+  display:grid;
+  grid-template-columns:
+    repeat(2,minmax(0,1fr));
+  gap:7px;
+}
+
+.light-atmosphere-colors label,
+.light-atmosphere-effect-grid label{
+  display:grid;
+  gap:4px;
+  min-width:0;
+}
+
+.light-atmosphere-colors label>span,
+.light-atmosphere-effect-grid label>span{
+  color:var(--muted);
+  font-size:8.5px;
+  font-weight:800;
+}
+
+.light-atmosphere-colors label>div,
+.light-atmosphere-effect-grid label>div{
+  display:grid;
+  grid-template-columns:34px minmax(0,1fr);
+  gap:5px;
+}
+
+.light-atmosphere-colors input[type="color"],
+.light-atmosphere-effect-grid input[type="color"]{
+  width:34px;
+  height:31px;
+  padding:2px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--surface-2);
+}
+
+.light-atmosphere-colors input[type="text"],
+.light-atmosphere-effect-grid input[type="text"],
+.light-atmosphere-effect-grid select{
+  min-width:0;
+  width:100%;
+  height:31px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--surface-2);
+  color:var(--text);
+  padding:0 6px;
+  font-size:9px;
+}
+
+.light-atmo-range{
+  display:grid;
+  gap:4px;
+}
+
+.light-atmo-range>span{
+  display:flex;
+  justify-content:space-between;
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800;
+}
+
+#resetAtmosphereBtn{
+  min-height:32px;
+  border:1px solid var(--line);
+  border-radius:9px;
+  background:var(--surface-2);
+  color:var(--text);
+  font-weight:800;
+}
+
+@media(max-width:700px){
+  .light-atmosphere-colors,
+  .light-atmosphere-effect-grid{
+    grid-template-columns:1fr;
+  }
+
+  .atmosphere-creative-strip{
+    grid-auto-columns:124px;
+  }
+}
+
+/* === /KAORU LIGHT SHARED 3D CREATIVE V2 === */

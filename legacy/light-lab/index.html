@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=atmosphere-simple-v3-20260906">
+  <link rel="stylesheet" href="./styles.css?cache=shared-light-v2-20260906">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -77,7 +77,115 @@
           <div id="atmosphereScenes" class="atmosphere-grid" aria-label="Ambientes"></div>
         </div>
 
-        <details class="lighting-other-presets">
+                <details class="lighting-creative-atmospheres" open>
+          <summary>
+            <span>
+              <strong>Estilos creativos</strong>
+              <small>Los mismos del 3D</small>
+            </span>
+            <b>⌄</b>
+          </summary>
+
+          <div id="creativeAtmosphereScenes" class="atmosphere-creative-strip" aria-label="Estilos creativos"></div>
+
+          <details class="light-atmosphere-editor">
+            <summary>Editar ambiente seleccionado</summary>
+
+            <div class="light-atmosphere-editor-body">
+              <div class="light-atmosphere-colors">
+                <label>
+                  <span>Fondo superior</span>
+                  <div>
+                    <input id="atmoTopColor" type="color" value="#82C9F4">
+                    <input id="atmoTopHex" type="text" maxlength="7" value="#82C9F4">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Fondo medio</span>
+                  <div>
+                    <input id="atmoMidColor" type="color" value="#DDF2FF">
+                    <input id="atmoMidHex" type="text" maxlength="7" value="#DDF2FF">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Fondo inferior</span>
+                  <div>
+                    <input id="atmoBottomColor" type="color" value="#F4E7BF">
+                    <input id="atmoBottomHex" type="text" maxlength="7" value="#F4E7BF">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Brillo ambiental</span>
+                  <div>
+                    <input id="atmoAccentColor" type="color" value="#FFF2B3">
+                    <input id="atmoAccentHex" type="text" maxlength="7" value="#FFF2B3">
+                  </div>
+                </label>
+              </div>
+
+              <div class="light-atmosphere-effect-grid">
+                <label>
+                  <span>Patrón</span>
+                  <select id="atmoEffectType">
+                    <option value="none">Ninguno</option>
+                    <option value="glow">Resplandor</option>
+                    <option value="split">Dos colores</option>
+                    <option value="stripe">Franja</option>
+                    <option value="window">Ventana</option>
+                    <option value="leaves">Hojas</option>
+                    <option value="blinds">Persianas</option>
+                    <option value="neon">Neón</option>
+                    <option value="rim">Contraluz</option>
+                    <option value="iridescent">Iridiscente</option>
+                    <option value="rainbow">Arcoíris</option>
+                    <option value="underwater">Bajo el mar</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Color A</span>
+                  <div>
+                    <input id="atmoEffectAColor" type="color" value="#FFFFFF">
+                    <input id="atmoEffectAHex" type="text" maxlength="7" value="#FFFFFF">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Color B</span>
+                  <div>
+                    <input id="atmoEffectBColor" type="color" value="#7C3AED">
+                    <input id="atmoEffectBHex" type="text" maxlength="7" value="#7C3AED">
+                  </div>
+                </label>
+              </div>
+
+              <label class="light-atmo-range">
+                <span>Intensidad <output id="atmoEffectOpacityOut">0%</output></span>
+                <input id="atmoEffectOpacity" type="range" min="0" max="100" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Rotación <output id="atmoEffectAngleOut">0°</output></span>
+                <input id="atmoEffectAngle" type="range" min="-180" max="180" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Escala <output id="atmoEffectScaleOut">100%</output></span>
+                <input id="atmoEffectScale" type="range" min="40" max="240" value="100">
+              </label>
+
+              <p class="base-help">
+                Las luces del preset siguen editándose normalmente abajo: color, fuerza, posición, altura y suavidad.
+              </p>
+
+              <button id="resetAtmosphereBtn" type="button">Restablecer estilo</button>
+            </div>
+          </details>
+        </details>
+<details class="lighting-other-presets">
           <summary>Otros estilos de luz</summary>
           <div id="lightingScenes" class="lighting-scenes lighting-preset-grid" aria-label="Tipos de iluminacion"></div>
         </details>
@@ -243,7 +351,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=atmosphere-simple-v3-20260906"></script>
+  <script type="module" src="./js/main.js?cache=shared-light-v2-20260906"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>
