@@ -1115,3 +1115,393 @@ body[data-atmo-effect="underwater"]
     grid-template-columns:1fr;
   }
 }
+
+/* === KAORU PRESET CARD VISUALS V6 === */
+.atmosphere-card,
+.atmosphere-3d-card{
+  --pv-key:#FFFFFF;
+  --pv-fill:#8A8A92;
+  --pv-shadow:#24242B;
+  --pv-base:#85818A;
+  --pv-rim:#FFFFFF;
+  --pv-x:35%;
+  --pv-y:28%;
+}
+
+.atmosphere-preview,
+.atmosphere-3d-preview{
+  min-height:72px;
+}
+
+.atmo-study-orb{
+  position:absolute;
+  z-index:2;
+  left:50%;
+  top:50%;
+  width:48px;
+  height:48px;
+  transform:translate(-50%,-48%);
+  border-radius:50%;
+  pointer-events:none;
+  background:
+    radial-gradient(
+      circle at var(--pv-x) var(--pv-y),
+      color-mix(in srgb,var(--pv-key) 86%,white) 0 7%,
+      var(--pv-key) 9% 19%,
+      color-mix(in srgb,var(--pv-key) 54%,var(--pv-base)) 32%,
+      color-mix(in srgb,var(--pv-base) 58%,var(--pv-shadow)) 67%,
+      var(--pv-shadow) 100%
+    );
+  box-shadow:
+    -12px 4px 22px
+    color-mix(
+      in srgb,
+      var(--pv-fill) 30%,
+      transparent
+    ),
+    11px -7px 20px
+    color-mix(
+      in srgb,
+      var(--pv-key) 24%,
+      transparent
+    ),
+    inset -10px 8px 16px
+    color-mix(
+      in srgb,
+      var(--pv-shadow) 56%,
+      transparent
+    );
+}
+
+.atmo-study-orb::before{
+  content:"";
+  position:absolute;
+  inset:-3px;
+  border-radius:inherit;
+  border:1px solid
+    color-mix(
+      in srgb,
+      var(--pv-rim) 60%,
+      transparent
+    );
+  box-shadow:
+    0 0 11px
+    color-mix(
+      in srgb,
+      var(--pv-rim) 26%,
+      transparent
+    );
+}
+
+.atmo-study-orb::after{
+  content:"";
+  position:absolute;
+  left:8%;
+  right:8%;
+  bottom:-10px;
+  height:8px;
+  border-radius:50%;
+  background:
+    color-mix(
+      in srgb,
+      var(--pv-shadow) 46%,
+      transparent
+    );
+  filter:blur(4px);
+  transform:scaleX(1.18);
+}
+
+.atmosphere-preview>i,
+.atmosphere-3d-preview>i{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  opacity:.54;
+  mix-blend-mode:screen;
+}
+
+.atmo-visual-meta{
+  display:flex!important;
+  flex-wrap:wrap;
+  gap:3px;
+  margin-top:5px;
+}
+
+.atmo-visual-meta em{
+  display:inline-flex;
+  align-items:center;
+  min-height:17px;
+  padding:0 5px;
+  border:1px solid
+    color-mix(
+      in srgb,
+      currentColor 20%,
+      transparent
+    );
+  border-radius:999px;
+  background:
+    color-mix(
+      in srgb,
+      currentColor 5%,
+      transparent
+    );
+  color:inherit;
+  opacity:.66;
+  font-size:6.7px;
+  font-style:normal;
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+}
+
+.atmosphere-card[data-effect="glow"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      circle at 18% 20%,
+      var(--atmo-effect-a),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 82% 76%,
+      var(--atmo-effect-b),
+      transparent 44%
+    );
+}
+
+.atmosphere-card[data-effect="split"]
+.atmosphere-preview>i,
+.atmosphere-card[data-effect="neon"]
+.atmosphere-preview>i{
+  background:
+    linear-gradient(
+      90deg,
+      var(--atmo-effect-a),
+      transparent 46%,
+      var(--atmo-effect-b)
+    );
+}
+
+.atmosphere-card[data-effect="stripe"]
+.atmosphere-preview>i{
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 39%,
+      var(--atmo-effect-a) 43% 57%,
+      transparent 61%
+    );
+}
+
+.atmosphere-card[data-effect="window"]
+.atmosphere-preview>i,
+.atmosphere-card[data-effect="grid"]
+.atmosphere-preview>i{
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 16px,
+      var(--atmo-effect-b) 17px 20px,
+      transparent 21px 34px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 12px,
+      var(--atmo-effect-b) 13px 16px,
+      transparent 17px 29px
+    ),
+    linear-gradient(
+      135deg,
+      var(--atmo-effect-a),
+      transparent 68%
+    );
+}
+
+.atmosphere-card[data-effect="blinds"]
+.atmosphere-preview>i{
+  background:
+    repeating-linear-gradient(
+      0deg,
+      var(--atmo-effect-a) 0 4px,
+      transparent 5px 11px
+    );
+}
+
+.atmosphere-card[data-effect="leaves"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      ellipse at 20% 25%,
+      var(--atmo-effect-a) 0 8%,
+      transparent 10%
+    ),
+    radial-gradient(
+      ellipse at 58% 18%,
+      var(--atmo-effect-b) 0 8%,
+      transparent 10%
+    ),
+    radial-gradient(
+      ellipse at 76% 66%,
+      var(--atmo-effect-a) 0 7%,
+      transparent 9%
+    ),
+    radial-gradient(
+      ellipse at 34% 72%,
+      var(--atmo-effect-b) 0 10%,
+      transparent 12%
+    );
+}
+
+.atmosphere-card[data-effect="rim"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      circle at 0 50%,
+      var(--atmo-effect-a),
+      transparent 42%
+    ),
+    radial-gradient(
+      circle at 100% 50%,
+      var(--atmo-effect-b),
+      transparent 42%
+    );
+}
+
+.atmosphere-card[data-effect="iridescent"]
+.atmosphere-preview>i{
+  background:
+    conic-gradient(
+      from 25deg,
+      var(--atmo-effect-a),
+      #965BFF,
+      #4DE8FF,
+      var(--atmo-effect-b),
+      #FFB54D,
+      var(--atmo-effect-a)
+    );
+}
+
+.atmosphere-card[data-effect="rainbow"]
+.atmosphere-preview>i{
+  background:
+    linear-gradient(
+      122deg,
+      #FF4C4C,
+      #FFA33A,
+      #FFE85B,
+      #56D96C,
+      #4FD8FF,
+      #7670FF,
+      #D85DFF
+    );
+}
+
+.atmosphere-card[data-effect="underwater"]
+.atmosphere-preview>i,
+.atmosphere-card[data-effect="caustics"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      ellipse at 24% 18%,
+      var(--atmo-effect-a),
+      transparent 24%
+    ),
+    radial-gradient(
+      ellipse at 70% 28%,
+      var(--atmo-effect-b),
+      transparent 28%
+    ),
+    repeating-linear-gradient(
+      115deg,
+      transparent 0 9px,
+      color-mix(
+        in srgb,
+        var(--atmo-effect-a) 55%,
+        transparent
+      ) 10px 12px,
+      transparent 13px 23px
+    );
+}
+
+.atmosphere-card[data-effect="blacklight"]
+.atmosphere-preview>i,
+.atmosphere-card[data-effect="sparkles"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      circle at 16% 26%,
+      #FF2AC8 0 3%,
+      transparent 5%
+    ),
+    radial-gradient(
+      circle at 43% 63%,
+      #FF7318 0 4%,
+      transparent 6%
+    ),
+    radial-gradient(
+      circle at 78% 34%,
+      #24F4FF 0 4%,
+      transparent 6%
+    ),
+    radial-gradient(
+      circle at 68% 78%,
+      var(--atmo-effect-a) 0 3%,
+      transparent 5%
+    );
+  opacity:.82;
+}
+
+.atmosphere-card[data-effect="flash"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      circle at 50% 36%,
+      white 0 8%,
+      var(--atmo-effect-a) 10% 24%,
+      transparent 52%
+    );
+}
+
+.atmosphere-card[data-effect="bokeh"]
+.atmosphere-preview>i,
+.atmosphere-card[data-effect="circles"]
+.atmosphere-preview>i{
+  background:
+    radial-gradient(
+      circle at 18% 30%,
+      var(--atmo-effect-a) 0 7%,
+      transparent 9%
+    ),
+    radial-gradient(
+      circle at 58% 20%,
+      var(--atmo-effect-b) 0 9%,
+      transparent 11%
+    ),
+    radial-gradient(
+      circle at 80% 72%,
+      var(--atmo-effect-a) 0 8%,
+      transparent 10%
+    );
+}
+
+.atmosphere-creative-strip{
+  grid-auto-columns:154px;
+}
+
+.atmosphere-creative-strip
+.atmosphere-3d-card{
+  flex-basis:154px;
+}
+
+@media(max-width:700px){
+  .atmosphere-creative-strip{
+    grid-auto-columns:142px;
+  }
+
+  .atmosphere-creative-strip
+  .atmosphere-3d-card{
+    flex-basis:142px;
+  }
+}
+/* === /KAORU PRESET CARD VISUALS V6 === */

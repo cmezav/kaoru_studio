@@ -487,6 +487,142 @@ function kaoruRefreshCreativeAtmospheres3d(){
   );
 }
 
+function kaoruAtmosphereEffectLabel(type){
+  const labels={
+    none:'',
+    glow:'Glow',
+    split:'Split',
+    stripe:'Franja',
+    window:'Ventana',
+    leaves:'Follaje',
+    blinds:'Persianas',
+    grid:'Rejilla',
+    neon:'Neón',
+    rim:'Rim',
+    iridescent:'Iridescente',
+    rainbow:'Prisma',
+    bokeh:'Bokeh',
+    circles:'Círculos',
+    sparkles:'Brillos',
+    blacklight:'Blacklight',
+    flash:'Flash',
+    caustics:'Caústicas',
+    underwater:'Acuático'
+  };
+
+  return labels[type]||type||'';
+}
+
+function kaoruAtmosphereDirectionLabel(
+  azimuth,
+  elevation
+){
+  const a=Number(azimuth||0);
+  const e=Number(elevation||0);
+
+  if(e>=68)return 'Cenital';
+  if(e<=-28)return 'Inferior';
+  if(Math.abs(a)>=138)return 'Trasera';
+  if(a<=-48)return 'Izquierda';
+  if(a>=48)return 'Derecha';
+  return 'Frontal';
+}
+
+function kaoruAtmosphereSoftnessLabel(
+  softness
+){
+  const value=Number(softness??50);
+
+  if(value<=24)return 'Dura';
+  if(value<=64)return 'Media';
+  return 'Difusa';
+}
+
+function kaoruAtmosphereVisual3d(
+  preset
+){
+  const key=
+    preset?.lighting?.key||{};
+
+  const fill=
+    preset?.lighting?.fill||{};
+
+  const shadow=
+    preset?.lighting?.shadow||{};
+
+  const ambient=
+    preset?.lighting?.ambient||{};
+
+  const rim=
+    preset?.lighting?.rim||{};
+
+  const effect=
+    preset?.scene?.effect||{};
+
+  const azimuth=
+    Number(key.azimuth||0);
+
+  const elevation=
+    Number(key.elevation||0);
+
+  const rad=
+    azimuth*Math.PI/180;
+
+  const elevRad=
+    elevation*Math.PI/180;
+
+  const x=
+    Math.max(
+      12,
+      Math.min(
+        88,
+        50+Math.sin(rad)*34
+      )
+    );
+
+  const y=
+    Math.max(
+      12,
+      Math.min(
+        88,
+        53-Math.sin(elevRad)*32
+      )
+    );
+
+  return{
+    key:key.color||'#FFFFFF',
+    fill:
+      fill.color||
+      ambient.color||
+      '#8A8A92',
+    shadow:
+      shadow.color||
+      '#24242B',
+    base:
+      preset?.scene?.background||
+      '#85818A',
+    rim:
+      rim.color||
+      key.color||
+      '#FFFFFF',
+    x,
+    y,
+    direction:
+      kaoruAtmosphereDirectionLabel(
+        azimuth,
+        elevation
+      ),
+    softness:
+      kaoruAtmosphereSoftnessLabel(
+        key.softness
+      ),
+    effectLabel:
+      kaoruAtmosphereEffectLabel(
+        effect.type
+      )
+  };
+}
+
 function normalizeHex(
   value
 ) {
@@ -1054,6 +1190,46 @@ function kaoruPopulateAtmosphereGrid(
           effect.colorB||'#7C3AED'
         );
 
+        const visual=
+          kaoruAtmosphereVisual3d(
+            preset
+          );
+
+        button.style.setProperty(
+          '--pv-key',
+          visual.key
+        );
+
+        button.style.setProperty(
+          '--pv-fill',
+          visual.fill
+        );
+
+        button.style.setProperty(
+          '--pv-shadow',
+          visual.shadow
+        );
+
+        button.style.setProperty(
+          '--pv-base',
+          visual.base
+        );
+
+        button.style.setProperty(
+          '--pv-rim',
+          visual.rim
+        );
+
+        button.style.setProperty(
+          '--pv-x',
+          `${visual.x}%`
+        );
+
+        button.style.setProperty(
+          '--pv-y',
+          `${visual.y}%`
+        );
+
         const favorite=
           isFavoriteLightingPreset(
             preset.id
@@ -1061,11 +1237,21 @@ function kaoruPopulateAtmosphereGrid(
 
         button.innerHTML=`
           <span class="atmosphere-3d-preview" aria-hidden="true">
+            <b class="atmo-study-orb"></b>
             <i></i>
           </span>
           <span class="atmo-card-copy">
             <strong>${preset.name}</strong>
             <small>${preset.description}</small>
+            <span class="atmo-visual-meta">
+              <em>${visual.direction}</em>
+              <em>${visual.softness}</em>
+              ${
+                visual.effectLabel
+                  ?`<em>${visual.effectLabel}</em>`
+                  :''
+              }
+            </span>
             <span class="atmo-card-actions">
               <span
                 class="atmo-favorite-toggle"
