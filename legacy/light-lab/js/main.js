@@ -16,10 +16,22 @@ import {
   saveCustomLightingPreset,
   toggleFavoriteLightingPreset
 } from '../../shared/lightingPresetLibrary.js?cache=preset-library-v5-20260907';
+import {
+  createStudioHistory
+} from '../../shared/studioHistory.js?cache=lighting-history-v9-20260907';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
+const studioHistoryLight =
+  createStudioHistory(
+    store,
+    {
+      limit:120,
+      debounceMs:180
+    }
+  );
 window.LightLabStore = store;
+window.LightLabHistory = studioHistoryLight;
 const ADVANCED_PREVIEW_MODES = [
   ['sphere', 'Esfera'],
   ['cylinder', 'Cilindro'],
@@ -3034,3 +3046,123 @@ elements.applyCompareAtmosphereB
       }
     }
   );
+
+/* === KAORU HISTORY LIGHTING V9 === */
+const undoHistoryButtonLight=
+  document.getElementById(
+    'undoHistoryLight'
+  );
+
+const redoHistoryButtonLight=
+  document.getElementById(
+    'redoHistoryLight'
+  );
+
+function kaoruIsTextEditingTargetLight(
+  target
+){
+  if(!target)return false;
+
+  if(target.isContentEditable){
+    return true;
+  }
+
+  if(target.tagName==='TEXTAREA'){
+    return true;
+  }
+
+  if(target.tagName!=='INPUT'){
+    return false;
+  }
+
+  return[
+    'text',
+    'search',
+    'email',
+    'url',
+    'password',
+    'number'
+  ].includes(
+    String(target.type||'text')
+      .toLowerCase()
+  );
+}
+
+studioHistoryLight.subscribe(
+  ({
+    canUndo,
+    canRedo,
+    undoCount,
+    redoCount
+  })=>{
+    if(undoHistoryButtonLight){
+      undoHistoryButtonLight.disabled=
+        !canUndo;
+
+      undoHistoryButtonLight.title=
+        canUndo
+          ?`Deshacer (Ctrl+Z) · ${undoCount}`
+          :'Nada que deshacer';
+    }
+
+    if(redoHistoryButtonLight){
+      redoHistoryButtonLight.disabled=
+        !canRedo;
+
+      redoHistoryButtonLight.title=
+        canRedo
+          ?`Rehacer (Ctrl+Shift+Z) · ${redoCount}`
+          :'Nada que rehacer';
+    }
+  }
+);
+
+undoHistoryButtonLight
+  ?.addEventListener(
+    'click',
+    ()=>{
+      if(studioHistoryLight.undo()){
+        showToast('Cambio deshecho');
+      }
+    }
+  );
+
+redoHistoryButtonLight
+  ?.addEventListener(
+    'click',
+    ()=>{
+      if(studioHistoryLight.redo()){
+        showToast('Cambio rehecho');
+      }
+    }
+  );
+
+document.addEventListener(
+  'keydown',
+  (event)=>{
+    if(
+      !(event.ctrlKey||event.metaKey)||
+      event.altKey||
+      event.key.toLowerCase()!=='z'||
+      kaoruIsTextEditingTargetLight(
+        event.target
+      )
+    ){
+      return;
+    }
+
+    event.preventDefault();
+
+    if(event.shiftKey){
+      if(studioHistoryLight.redo()){
+        showToast('Cambio rehecho');
+      }
+      return;
+    }
+
+    if(studioHistoryLight.undo()){
+      showToast('Cambio deshecho');
+    }
+  }
+);
+/* === /KAORU HISTORY LIGHTING V9 === */

@@ -1755,3 +1755,55 @@ body[data-atmo-effect="underwater"]
   }
 }
 /* === /KAORU PRESET COMPARE V8 === */
+
+/* === KAORU HISTORY LIGHTING V9 === */
+.lighting-history-actions{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  margin-left:auto;
+  padding-left:4px;
+}
+
+.lighting-history-actions button{
+  display:inline-grid;
+  place-items:center;
+  width:31px;
+  height:31px;
+  padding:0;
+  border:1px solid
+    var(--line,var(--three-line,rgba(127,127,127,.28)));
+  border-radius:9px;
+  background:
+    var(--surface,var(--three-surface,rgba(255,255,255,.08)));
+  color:inherit;
+  font-size:17px;
+  font-weight:800;
+  line-height:1;
+  cursor:pointer;
+}
+
+.lighting-history-actions button:hover:not(:disabled){
+  border-color:
+    var(--accent,var(--lab-accent,currentColor));
+  color:
+    var(--accent,var(--lab-accent,currentColor));
+  transform:translateY(-1px);
+}
+
+.lighting-history-actions button:disabled{
+  opacity:.30;
+  cursor:default;
+}
+
+@media(max-width:860px){
+  .lighting-history-actions{
+    margin-left:0;
+  }
+
+  .lighting-history-actions button{
+    width:29px;
+    height:29px;
+  }
+}
+/* === /KAORU HISTORY LIGHTING V9 === */

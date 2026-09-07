@@ -37,9 +37,21 @@ import {
   saveCustomLightingPreset,
   toggleFavoriteLightingPreset
 } from '../../shared/lightingPresetLibrary.js?cache=preset-library-v5-20260907';
+import {
+  createStudioHistory
+} from '../../shared/studioHistory.js?cache=lighting-history-v9-20260907';
 
 const store = create3dStore();
+const studioHistory3d =
+  createStudioHistory(
+    store,
+    {
+      limit:120,
+      debounceMs:180
+    }
+  );
 window.ThreeLightingStore = store;
+window.ThreeLightingHistory = studioHistory3d;
 
 const byId = (id) =>
   document.getElementById(id);
@@ -4190,3 +4202,123 @@ elements.applyCompareAtmosphereB
       }
     }
   );
+
+/* === KAORU HISTORY LIGHTING V9 === */
+const undoHistoryButton3d=
+  document.getElementById(
+    'undoHistory3d'
+  );
+
+const redoHistoryButton3d=
+  document.getElementById(
+    'redoHistory3d'
+  );
+
+function kaoruIsTextEditingTarget3d(
+  target
+){
+  if(!target)return false;
+
+  if(target.isContentEditable){
+    return true;
+  }
+
+  if(target.tagName==='TEXTAREA'){
+    return true;
+  }
+
+  if(target.tagName!=='INPUT'){
+    return false;
+  }
+
+  return[
+    'text',
+    'search',
+    'email',
+    'url',
+    'password',
+    'number'
+  ].includes(
+    String(target.type||'text')
+      .toLowerCase()
+  );
+}
+
+studioHistory3d.subscribe(
+  ({
+    canUndo,
+    canRedo,
+    undoCount,
+    redoCount
+  })=>{
+    if(undoHistoryButton3d){
+      undoHistoryButton3d.disabled=
+        !canUndo;
+
+      undoHistoryButton3d.title=
+        canUndo
+          ?`Deshacer (Ctrl+Z) · ${undoCount}`
+          :'Nada que deshacer';
+    }
+
+    if(redoHistoryButton3d){
+      redoHistoryButton3d.disabled=
+        !canRedo;
+
+      redoHistoryButton3d.title=
+        canRedo
+          ?`Rehacer (Ctrl+Shift+Z) · ${redoCount}`
+          :'Nada que rehacer';
+    }
+  }
+);
+
+undoHistoryButton3d
+  ?.addEventListener(
+    'click',
+    ()=>{
+      if(studioHistory3d.undo()){
+        toast('Cambio deshecho');
+      }
+    }
+  );
+
+redoHistoryButton3d
+  ?.addEventListener(
+    'click',
+    ()=>{
+      if(studioHistory3d.redo()){
+        toast('Cambio rehecho');
+      }
+    }
+  );
+
+document.addEventListener(
+  'keydown',
+  (event)=>{
+    if(
+      !(event.ctrlKey||event.metaKey)||
+      event.altKey||
+      event.key.toLowerCase()!=='z'||
+      kaoruIsTextEditingTarget3d(
+        event.target
+      )
+    ){
+      return;
+    }
+
+    event.preventDefault();
+
+    if(event.shiftKey){
+      if(studioHistory3d.redo()){
+        toast('Cambio rehecho');
+      }
+      return;
+    }
+
+    if(studioHistory3d.undo()){
+      toast('Cambio deshecho');
+    }
+  }
+);
+/* === /KAORU HISTORY LIGHTING V9 === */

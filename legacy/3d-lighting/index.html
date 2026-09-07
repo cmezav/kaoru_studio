@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-compare-v8-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=lighting-history-v9-20260907">
 
   <script type="importmap">
   {
@@ -37,7 +37,12 @@
       <a class="studio-link" data-studio-link="3d" href="./index.html" title="3D Lighting Studio - Alt+5">3D <span class="studio-link-label">3D</span><kbd>Alt+5</kbd></a>
       <a class="studio-link" data-studio-link="gallery" href="../gallery/index.html" title="Galeria - Alt+6">&#9638; <span class="studio-link-label">Galeria</span><kbd>Alt+6</kbd></a>
     </nav>
+    <div class="lighting-history-actions" aria-label="Historial de edición">
+      <button id="undoHistory3d" type="button" title="Nada que deshacer" disabled aria-label="Deshacer">↶</button>
+      <button id="redoHistory3d" type="button" title="Nada que rehacer" disabled aria-label="Rehacer">↷</button>
+    </div>
   </header>
+
 
   <main class="three-shell phase6-shell">
     <aside class="three-panel three-controls">
@@ -583,7 +588,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=preset-compare-v8-20260907"></script>
+  <script type="module" src="./js/main.js?cache=lighting-history-v9-20260907"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>
