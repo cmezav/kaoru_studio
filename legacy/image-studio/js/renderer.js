@@ -124,90 +124,121 @@ function hasColorAdjustments(state){
   );
 }
 
-function roundedRectPath(ctx,x,y,w,h,radiusValue){
-  const radius=clamp(
-    number(radiusValue,0),
-    0,
-    Math.min(w,h)/2
-  );
+function alphaMask(source){
+  const width=source.width;
+  const height=source.height;
+  const mask=F.canvas(width,height);
+  const ctx=mask.getContext('2d',{alpha:true});
 
-  ctx.beginPath();
+  ctx.clearRect(0,0,width,height);
+  ctx.fillStyle='#fff';
+  ctx.fillRect(0,0,width,height);
+  ctx.globalCompositeOperation='destination-in';
+  ctx.drawImage(source,0,0);
+  ctx.globalCompositeOperation='source-over';
 
-  if(radius<=0){
-    ctx.rect(x,y,w,h);
-    return
-  }
-
-  ctx.moveTo(x+radius,y);
-  ctx.lineTo(x+w-radius,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+radius);
-  ctx.lineTo(x+w,y+h-radius);
-  ctx.quadraticCurveTo(x+w,y+h,x+w-radius,y+h);
-  ctx.lineTo(x+radius,y+h);
-  ctx.quadraticCurveTo(x,y+h,x,y+h-radius);
-  ctx.lineTo(x,y+radius);
-  ctx.quadraticCurveTo(x,y,x+radius,y);
-  ctx.closePath()
+  return mask
 }
 
-function buildContourMask(width,height,opt){
-  const band=Math.max(
-    1,
-    Math.min(
-      Math.floor(Math.min(width,height)/2),
-      Math.round(number(opt.width,48))
-    )
+function copyMask(mask){
+  const out=F.canvas(mask.width,mask.height);
+  out.getContext('2d',{alpha:true}).drawImage(mask,0,0);
+  return out
+}
+
+function morphMask(mask,distance,operation){
+  const amount=Math.max(0,number(distance,0));
+  const out=copyMask(mask);
+
+  if(amount<=.25){
+    return out
+  }
+
+  const ctx=out.getContext('2d',{alpha:true});
+  const diagonal=amount*.70710678;
+  const offsets=[
+    [amount,0],
+    [-amount,0],
+    [0,amount],
+    [0,-amount],
+    [diagonal,diagonal],
+    [-diagonal,diagonal],
+    [diagonal,-diagonal],
+    [-diagonal,-diagonal]
+  ];
+
+  ctx.globalCompositeOperation=
+    operation==='erode'
+      ?'destination-in'
+      :'source-over';
+
+  for(const [dx,dy] of offsets){
+    ctx.drawImage(mask,dx,dy)
+  }
+
+  ctx.globalCompositeOperation='source-over';
+  return out
+}
+
+function buildAlphaContourMask(source,opt,scaleFactor=1){
+  const width=source.width;
+  const height=source.height;
+
+  const inside=Math.max(
+    .5,
+    number(opt.width,48)*
+    scaleFactor
+  );
+
+  const outside=Math.max(
+    0,
+    number(opt.roundness,0)*
+    scaleFactor
   );
 
   const feather=Math.max(
     0,
-    number(opt.feather,18)
+    number(opt.feather,18)*
+    scaleFactor
   );
 
-  const roundness=clamp(
-    number(opt.roundness,0),
-    0,
-    Math.min(width,height)/2
+  const alpha=alphaMask(source);
+
+  /*
+    El contorno se obtiene de la silueta alfa real:
+    - erosionamos para crear el límite interior;
+    - dilatamos para permitir blur hacia fuera;
+    - restamos ambos y nos queda una banda que sigue cada objeto
+      del PNG, incluso cuando hay varias formas separadas.
+  */
+  const inner=morphMask(
+    alpha,
+    inside,
+    'erode'
   );
 
-  const raw=F.canvas(width,height);
-  const ctx=raw.getContext('2d',{alpha:true});
+  const outer=outside>0
+    ?morphMask(
+        alpha,
+        outside,
+        'dilate'
+      )
+    :copyMask(alpha);
 
-  ctx.clearRect(0,0,width,height);
-  ctx.fillStyle='#fff';
-  roundedRectPath(
-    ctx,
-    0,
-    0,
-    width,
-    height,
-    roundness
-  );
-  ctx.fill();
+  const edge=copyMask(outer);
+  const ectx=edge.getContext('2d',{alpha:true});
+  ectx.globalCompositeOperation='destination-out';
+  ectx.drawImage(inner,0,0);
+  ectx.globalCompositeOperation='source-over';
 
-  const innerWidth=Math.max(1,width-band*2);
-  const innerHeight=Math.max(1,height-band*2);
-
-  ctx.globalCompositeOperation='destination-out';
-  roundedRectPath(
-    ctx,
-    band,
-    band,
-    innerWidth,
-    innerHeight,
-    Math.max(0,roundness-band)
-  );
-  ctx.fill();
-  ctx.globalCompositeOperation='source-over';
-
-  if(feather<=0){
-    return raw
+  if(feather<=.25){
+    return edge
   }
 
   const soft=F.canvas(width,height);
   const sctx=soft.getContext('2d',{alpha:true});
   sctx.filter=`blur(${Math.min(120,feather)}px)`;
-  sctx.drawImage(raw,0,0);
+  sctx.drawImage(edge,0,0);
   sctx.filter='none';
 
   return soft
@@ -239,20 +270,10 @@ function applyContourBlur(source,opt,scaleFactor=1){
   const width=source.width;
   const height=source.height;
 
-  const mask=buildContourMask(
-    width,
-    height,
-    {
-      width:
-        number(opt.width,48)*
-        scaleFactor,
-      feather:
-        number(opt.feather,18)*
-        scaleFactor,
-      roundness:
-        number(opt.roundness,0)*
-        scaleFactor
-    }
+  const mask=buildAlphaContourMask(
+    source,
+    opt,
+    scaleFactor
   );
 
   const blurred=F.canvas(width,height);
@@ -272,6 +293,11 @@ function applyContourBlur(source,opt,scaleFactor=1){
   const ctx=out.getContext('2d',{alpha:true});
   ctx.drawImage(source,0,0);
 
+  /*
+    Reemplazamos solo la banda del contorno.
+    El centro queda intacto y el blur puede extenderse a la zona
+    transparente si el usuario aumenta "Expansión exterior".
+  */
   ctx.save();
   ctx.globalAlpha=intensity;
   ctx.globalCompositeOperation='destination-out';

@@ -90,12 +90,12 @@
             <summary>Blur de contorno</summary>
             <div class="details-body">
               <label class="switch-row"><span>Activar blur de contorno</span><input id="edgeBlurEnabled" type="checkbox"><i></i></label>
-              <p class="helper">Suaviza únicamente el borde exterior de la imagen y mantiene el centro más nítido.</p>
+              <p class="helper">Detecta automáticamente el contorno real del PNG por transparencia. En imágenes sin transparencia usa el borde del lienzo.</p>
               <label class="range-row"><span>Intensidad</span><input id="edgeBlurIntensity" type="range" min="0" max="100" step="1" value="75"><output id="edgeBlurIntensityOut">75%</output></label>
               <label class="range-row"><span>Radio blur</span><input id="edgeBlurRadius" type="range" min="0" max="80" step="1" value="16"><output id="edgeBlurRadiusOut">16 px</output></label>
-              <label class="range-row"><span>Ancho contorno</span><input id="edgeBlurWidth" type="range" min="1" max="220" step="1" value="48"><output id="edgeBlurWidthOut">48 px</output></label>
+              <label class="range-row"><span>Ancho interior</span><input id="edgeBlurWidth" type="range" min="1" max="220" step="1" value="48"><output id="edgeBlurWidthOut">48 px</output></label>
               <label class="range-row"><span>Desvanecer</span><input id="edgeBlurFeather" type="range" min="0" max="120" step="1" value="18"><output id="edgeBlurFeatherOut">18 px</output></label>
-              <label class="range-row"><span>Redondez</span><input id="edgeBlurRoundness" type="range" min="0" max="200" step="1" value="0"><output id="edgeBlurRoundnessOut">0 px</output></label>
+              <label class="range-row"><span>Expansión exterior</span><input id="edgeBlurRoundness" type="range" min="0" max="200" step="1" value="0"><output id="edgeBlurRoundnessOut">0 px</output></label>
             </div>
           </details>
 
@@ -189,7 +189,7 @@
   <script src="./js/history.js?cache=image-preview-recovery-v1-20260906"></script>
   <script src="./js/filters.js?cache=image-preview-recovery-v1-20260906"></script>
   <script src="./js/lensBlur.js?cache=image-preview-recovery-v1-20260906"></script>
-  <script src="./js/renderer.js?cache=image-contour-blur-v2-20260907"></script>
+  <script src="./js/renderer.js?cache=image-alpha-contour-blur-v3-20260907"></script>
   <script src="./js/previewPipeline.js?cache=lens-viewport-lock-v3-20260907"></script>
   <script src="./js/exportPipeline.js?cache=image-preview-recovery-v1-20260906"></script>
   <script src="./js/storage.js?cache=image-preview-recovery-v1-20260906"></script>
