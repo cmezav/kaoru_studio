@@ -1155,3 +1155,50 @@ html.kaoru-embedded .light-topbar{display:none}html.kaoru-embedded body{min-widt
   }
 }
 /* === /KAORU PRESET CARD VISUALS V6 === */
+
+/* === KAORU PRESET SORT V7 === */
+.atmosphere-search-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:7px;
+}
+
+.atmosphere-sort-select{
+  min-width:150px;
+  max-width:190px;
+  min-height:36px;
+  box-sizing:border-box;
+  border:1px solid
+    var(--line,rgba(127,127,127,.28));
+  border-radius:10px;
+  padding:0 28px 0 9px;
+  background:
+    var(--surface,#fff);
+  color:inherit;
+  font:inherit;
+  font-size:8.5px;
+  font-weight:750;
+  outline:none;
+  cursor:pointer;
+}
+
+.atmosphere-sort-select:focus{
+  border-color:
+    var(
+      --accent,
+      var(--lab-accent,#8a67d5)
+    );
+}
+
+@media(max-width:620px){
+  .atmosphere-search-row{
+    grid-template-columns:1fr;
+  }
+
+  .atmosphere-sort-select{
+    width:100%;
+    max-width:none;
+  }
+}
+/* === /KAORU PRESET SORT V7 === */

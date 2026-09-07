@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-card-visuals-v6-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=preset-sort-v7-20260907">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -88,7 +88,21 @@
 
           <div class="atmosphere-search-row">
             <input id="creativeAtmosphereSearch" type="search" autocomplete="off" placeholder="Buscar preset por nombre, efecto o descripción..." aria-label="Buscar estilos creativos">
+            <select id="creativeAtmosphereSort" class="atmosphere-sort-select" aria-label="Ordenar estilos creativos">
+              <option value="original">Orden original</option>
+              <option value="favorite">★ Favoritos primero</option>
+              <option value="name">Nombre A–Z</option>
+              <option value="intensity-desc">Más intensa primero</option>
+              <option value="intensity-asc">Más suave primero</option>
+              <option value="warm">Más cálida primero</option>
+              <option value="cool">Más fría primero</option>
+              <option value="hard">Más dura primero</option>
+              <option value="diffuse">Más difusa primero</option>
+              <option value="type">Tipo / patrón</option>
+              <option value="direction">Dirección de luz</option>
+            </select>
           </div>
+
           <div class="atmosphere-filterbar" id="creativeAtmosphereFilters" aria-label="Filtrar estilos creativos">
             <button type="button" class="is-active" data-atmo-filter="all">Todos</button>
             <button type="button" data-atmo-filter="new">Nuevos</button>
@@ -409,7 +423,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=preset-card-visuals-v6-20260907"></script>
+  <script type="module" src="./js/main.js?cache=preset-sort-v7-20260907"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>

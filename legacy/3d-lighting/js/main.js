@@ -80,6 +80,7 @@ const elements = {
   creativeAtmosphereFilters: byId('creativeAtmosphereFilters3d'),
   creativeAtmosphereCount: byId('creativeAtmosphereCount3d'),
   creativeAtmosphereSearch: byId('creativeAtmosphereSearch3d'),
+  creativeAtmosphereSort: byId('creativeAtmosphereSort3d'),
   customAtmosphereName: byId('customAtmosphereName3d'),
   saveCustomAtmosphere: byId('saveCustomAtmosphere3d'),
   viewportCard: document.querySelector('.viewport-card'),
@@ -204,6 +205,7 @@ let customModelFiles = [];
 let paletteLibrary = [];
 let creativeAtmosphereFilter = 'all';
 let creativeAtmosphereSearch = '';
+let creativeAtmosphereSort = 'original';
 
 
 const KAORU_CREATIVE_ATMO_FILTERS = {
@@ -621,6 +623,164 @@ function kaoruAtmosphereVisual3d(
         effect.type
       )
   };
+}
+
+
+function kaoruPresetWarmth3d(preset){
+  const color=
+    preset?.lighting?.key?.color||
+    preset?.scene?.effect?.colorA||
+    '#808080';
+
+  const match=
+    /^#([0-9a-f]{6})$/i.exec(
+      String(color)
+    );
+
+  if(!match)return 0;
+
+  const value=parseInt(match[1],16);
+  const r=(value>>16)&255;
+  const g=(value>>8)&255;
+  const b=value&255;
+
+  return(
+    (r-b)+
+    ((r+g-b*2)*.12)
+  );
+}
+
+function kaoruPresetIntensity3d(preset){
+  return Number(
+    preset?.lighting?.key?.intensity??
+    0
+  );
+}
+
+function kaoruPresetSoftness3d(preset){
+  return Number(
+    preset?.lighting?.key?.softness??
+    50
+  );
+}
+
+function kaoruPresetType3d(preset){
+  return(
+    kaoruAtmosphereEffectLabel(
+      preset?.scene?.effect?.type
+    )||
+    kaoruAtmosphereDirectionLabel(
+      preset?.lighting?.key?.azimuth,
+      preset?.lighting?.key?.elevation
+    )
+  );
+}
+
+function kaoruCompareText(a,b){
+  return String(a||'').localeCompare(
+    String(b||''),
+    'es',
+    {sensitivity:'base'}
+  );
+}
+
+function kaoruSortCreativeAtmospheres3d(
+  presets
+){
+  const items=[...presets];
+
+  switch(creativeAtmosphereSort){
+    case 'favorite':
+      return items.sort((a,b)=>
+        Number(
+          isFavoriteLightingPreset(b.id)
+        )-
+        Number(
+          isFavoriteLightingPreset(a.id)
+        )||
+        kaoruCompareText(
+          a.name,
+          b.name
+        )
+      );
+
+    case 'name':
+      return items.sort((a,b)=>
+        kaoruCompareText(
+          a.name,
+          b.name
+        )
+      );
+
+    case 'intensity-desc':
+      return items.sort((a,b)=>
+        kaoruPresetIntensity3d(b)-
+        kaoruPresetIntensity3d(a)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'intensity-asc':
+      return items.sort((a,b)=>
+        kaoruPresetIntensity3d(a)-
+        kaoruPresetIntensity3d(b)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'warm':
+      return items.sort((a,b)=>
+        kaoruPresetWarmth3d(b)-
+        kaoruPresetWarmth3d(a)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'cool':
+      return items.sort((a,b)=>
+        kaoruPresetWarmth3d(a)-
+        kaoruPresetWarmth3d(b)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'hard':
+      return items.sort((a,b)=>
+        kaoruPresetSoftness3d(a)-
+        kaoruPresetSoftness3d(b)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'diffuse':
+      return items.sort((a,b)=>
+        kaoruPresetSoftness3d(b)-
+        kaoruPresetSoftness3d(a)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'type':
+      return items.sort((a,b)=>
+        kaoruCompareText(
+          kaoruPresetType3d(a),
+          kaoruPresetType3d(b)
+        )||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'direction':
+      return items.sort((a,b)=>
+        kaoruCompareText(
+          kaoruAtmosphereDirectionLabel(
+            a?.lighting?.key?.azimuth,
+            a?.lighting?.key?.elevation
+          ),
+          kaoruAtmosphereDirectionLabel(
+            b?.lighting?.key?.azimuth,
+            b?.lighting?.key?.elevation
+          )
+        )||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    default:
+      return items;
+  }
 }
 
 function normalizeHex(
@@ -1303,14 +1463,16 @@ function renderAtmospheres3d(
     );
 
   const creativePresets=
-    kaoruAllCreativeAtmospheres3d()
-      .filter(
-        preset=>
-          kaoruCreativeAtmosphereMatches(
-            preset,
-            creativeAtmosphereFilter
-          )
-      );
+    kaoruSortCreativeAtmospheres3d(
+      kaoruAllCreativeAtmospheres3d()
+        .filter(
+          preset=>
+            kaoruCreativeAtmosphereMatches(
+              preset,
+              creativeAtmosphereFilter
+            )
+        )
+    );
 
   kaoruPopulateAtmosphereGrid(
     elements.atmosphereGrid,
@@ -3698,6 +3860,24 @@ elements.creativeAtmosphereSearch
     (event)=>{
       creativeAtmosphereSearch=
         event.target.value||'';
+
+      elements.creativeAtmosphereGrid
+        ?.replaceChildren();
+
+      renderAtmospheres3d(
+        store.getState()
+      );
+    }
+  );
+
+/* === KAORU PRESET SORT V7 === */
+elements.creativeAtmosphereSort
+  ?.addEventListener(
+    'change',
+    (event)=>{
+      creativeAtmosphereSort=
+        event.target.value||
+        'original';
 
       elements.creativeAtmosphereGrid
         ?.replaceChildren();
