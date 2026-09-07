@@ -1,8 +1,553 @@
-(function(){'use strict';
-  const F=ImageFilters;
-  function render(source,state,options){const crop=state.crop,width=Math.max(1,Math.round(options.width)),height=Math.max(1,Math.round(options.height)),scale=width/Math.max(1,crop.width),quality=options.quality||'full';let work=F.canvas(width,height),ctx=work.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(source,crop.x,crop.y,crop.width,crop.height,0,0,width,height);
-    work=F.colorAdjust(work,state);work=F.sharpen(work,state.sharpness,scale);work=F.pixelate(work,Math.max(1,state.filters.pixelate*scale));work=F.motionBlur(work,state.filters.motionBlur*scale,state.filters.motionAngle);if(state.filters.gaussianBlur>0)work=F.cssBlur(work,state.filters.gaussianBlur*scale);if(state.filters.blur>0)work=F.cssBlur(work,state.filters.blur*scale*.55);
-    const lens={...state.lens,radius:state.lens.radius*scale,size:state.lens.size*scale};work=ImageLensBlur.apply(work,lens,quality);work=F.vignetteAndGrain(work,state,quality);
-    const out=F.canvas(width,height),octx=out.getContext('2d');if(options.background){octx.fillStyle=options.background;octx.fillRect(0,0,width,height)}const t=state.transform;octx.save();octx.globalAlpha=Math.max(0,Math.min(1,state.adjustments.opacity));octx.translate(width/2+t.x*scale,height/2+t.y*(height/Math.max(1,crop.height)));octx.rotate(t.rotation*Math.PI/180);octx.scale(t.scaleX*(t.flipX?-1:1),t.scaleY*(t.flipY?-1:1));octx.drawImage(work,-width/2,-height/2,width,height);octx.restore();return out}
-  window.ImageRenderer={render};
+(function(){
+'use strict';
+
+const F=ImageFilters;
+
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
+
+function number(value,fallback=0){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:fallback;
+}
+
+function validCanvas(value){
+  return Boolean(
+    value&&
+    Number.isFinite(value.width)&&
+    Number.isFinite(value.height)&&
+    value.width>0&&
+    value.height>0
+  );
+}
+
+function safeStage(label,current,callback){
+  try{
+    const next=callback();
+
+    if(validCanvas(next)){
+      return next;
+    }
+
+    console.warn(
+      `Image Studio: ${label} devolvio un resultado invalido. Se conserva la etapa anterior.`
+    );
+  }catch(error){
+    console.warn(
+      `Image Studio: fallo ${label}. Se conserva la etapa anterior.`,
+      error
+    );
+  }
+
+  return current;
+}
+
+function normalizedCrop(source,state){
+  const sourceWidth=Math.max(
+    1,
+    number(
+      source?.width||
+      source?.naturalWidth,
+      1
+    )
+  );
+
+  const sourceHeight=Math.max(
+    1,
+    number(
+      source?.height||
+      source?.naturalHeight,
+      1
+    )
+  );
+
+  const incoming=state?.crop||{};
+
+  const x=clamp(
+    number(incoming.x,0),
+    0,
+    Math.max(0,sourceWidth-1)
+  );
+
+  const y=clamp(
+    number(incoming.y,0),
+    0,
+    Math.max(0,sourceHeight-1)
+  );
+
+  const width=clamp(
+    number(
+      incoming.width,
+      sourceWidth-x
+    ),
+    1,
+    Math.max(1,sourceWidth-x)
+  );
+
+  const height=clamp(
+    number(
+      incoming.height,
+      sourceHeight-y
+    ),
+    1,
+    Math.max(1,sourceHeight-y)
+  );
+
+  return{
+    x,
+    y,
+    width,
+    height
+  };
+}
+
+function hasColorAdjustments(state){
+  const a=state?.adjustments||{};
+  const f=state?.filters||{};
+
+  return Boolean(
+    number(a.brightness)!==0||
+    number(a.contrast)!==0||
+    number(a.saturation)!==0||
+    number(a.exposure)!==0||
+    number(a.temperature)!==0||
+    number(a.hue)!==0||
+    number(a.vibrance)!==0||
+    number(a.gamma,1)!==1||
+    number(a.shadows)!==0||
+    number(a.highlights)!==0||
+    number(a.whites)!==0||
+    number(a.blacks)!==0||
+    number(f.grayscale)!==0||
+    number(f.monochrome)!==0||
+    number(f.sepia)!==0||
+    number(f.invert)!==0
+  );
+}
+
+function render(source,state={},options={}){
+  if(!source){
+    throw new Error(
+      'Image Studio no recibio una imagen fuente.'
+    );
+  }
+
+  const crop=normalizedCrop(
+    source,
+    state
+  );
+
+  const width=Math.max(
+    1,
+    Math.round(
+      number(
+        options.width,
+        crop.width
+      )
+    )
+  );
+
+  const height=Math.max(
+    1,
+    Math.round(
+      number(
+        options.height,
+        crop.height
+      )
+    )
+  );
+
+  const scaleX=
+    width/
+    Math.max(
+      1,
+      crop.width
+    );
+
+  const scaleY=
+    height/
+    Math.max(
+      1,
+      crop.height
+    );
+
+  const quality=
+    options.quality||
+    'full';
+
+  let work=F.canvas(
+    width,
+    height
+  );
+
+  const ctx=
+    work.getContext(
+      '2d',
+      {alpha:true}
+    );
+
+  if(!ctx){
+    throw new Error(
+      'No se pudo crear el contexto 2D.'
+    );
+  }
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  ctx.drawImage(
+    source,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    width,
+    height
+  );
+
+  /*
+    El preview base ya esta dibujado.
+    Solo ejecutamos etapas que realmente estan activas.
+    Si una etapa falla, conservamos la imagen anterior en vez de
+    devolver un lienzo transparente.
+  */
+  if(
+    hasColorAdjustments(
+      state
+    )
+  ){
+    work=safeStage(
+      'ajustes de color',
+      work,
+      ()=>F.colorAdjust(
+        work,
+        state
+      )
+    );
+  }
+
+  const sharpness=
+    state?.sharpness||{};
+
+  if(
+    number(
+      sharpness.amount
+    )>0
+  ){
+    work=safeStage(
+      'nitidez',
+      work,
+      ()=>F.sharpen(
+        work,
+        sharpness,
+        Math.min(
+          scaleX,
+          scaleY
+        )
+      )
+    );
+  }
+
+  const filters=
+    state?.filters||{};
+
+  if(
+    number(
+      filters.pixelate,
+      1
+    )>1
+  ){
+    work=safeStage(
+      'pixelado',
+      work,
+      ()=>F.pixelate(
+        work,
+        Math.max(
+          1,
+          number(
+            filters.pixelate,
+            1
+          )*
+          Math.min(
+            scaleX,
+            scaleY
+          )
+        )
+      )
+    );
+  }
+
+  if(
+    number(
+      filters.motionBlur
+    )>0
+  ){
+    work=safeStage(
+      'motion blur',
+      work,
+      ()=>F.motionBlur(
+        work,
+        number(
+          filters.motionBlur
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        ),
+        number(
+          filters.motionAngle
+        )
+      )
+    );
+  }
+
+  if(
+    number(
+      filters.gaussianBlur
+    )>0
+  ){
+    work=safeStage(
+      'blur gaussiano',
+      work,
+      ()=>F.cssBlur(
+        work,
+        number(
+          filters.gaussianBlur
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        )
+      )
+    );
+  }
+
+  if(
+    number(
+      filters.blur
+    )>0
+  ){
+    work=safeStage(
+      'desenfoque',
+      work,
+      ()=>F.cssBlur(
+        work,
+        number(
+          filters.blur
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        )*
+        .55
+      )
+    );
+  }
+
+  if(
+    state?.lens?.enabled&&
+    number(
+      state.lens.radius
+    )>0
+  ){
+    const lens={
+      ...state.lens,
+      radius:
+        number(
+          state.lens.radius
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        ),
+      size:
+        number(
+          state.lens.size,
+          18
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        )
+    };
+
+    work=safeStage(
+      'Lens Blur',
+      work,
+      ()=>ImageLensBlur.apply(
+        work,
+        lens,
+        quality
+      )
+    );
+  }
+
+  const grain=
+    state?.grain||{};
+
+  if(
+    number(
+      filters.vignette
+    )>0||
+    number(
+      grain.amount
+    )>0
+  ){
+    work=safeStage(
+      'vineta/grano',
+      work,
+      ()=>F.vignetteAndGrain(
+        work,
+        state,
+        quality
+      )
+    );
+  }
+
+  const out=F.canvas(
+    width,
+    height
+  );
+
+  const octx=
+    out.getContext(
+      '2d',
+      {alpha:true}
+    );
+
+  if(!octx){
+    throw new Error(
+      'No se pudo crear el lienzo final.'
+    );
+  }
+
+  if(
+    options.background
+  ){
+    octx.fillStyle=
+      options.background;
+
+    octx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
+  }else{
+    octx.clearRect(
+      0,
+      0,
+      width,
+      height
+    );
+  }
+
+  const transform=
+    state?.transform||{};
+
+  const rawOpacity=
+    number(
+      state?.adjustments?.opacity,
+      1
+    );
+
+  const opacity=
+    Number.isFinite(
+      rawOpacity
+    )
+      ?clamp(
+          rawOpacity,
+          0,
+          1
+        )
+      :1;
+
+  const transformScaleX=
+    Math.max(
+      .01,
+      Math.abs(
+        number(
+          transform.scaleX,
+          1
+        )
+      )
+    )*
+    (
+      transform.flipX
+        ?-1
+        :1
+    );
+
+  const transformScaleY=
+    Math.max(
+      .01,
+      Math.abs(
+        number(
+          transform.scaleY,
+          1
+        )
+      )
+    )*
+    (
+      transform.flipY
+        ?-1
+        :1
+    );
+
+  octx.save();
+
+  octx.globalAlpha=
+    opacity;
+
+  octx.translate(
+    width/2+
+      number(
+        transform.x
+      )*
+      scaleX,
+    height/2+
+      number(
+        transform.y
+      )*
+      scaleY
+  );
+
+  octx.rotate(
+    number(
+      transform.rotation
+    )*
+    Math.PI/
+    180
+  );
+
+  octx.scale(
+    transformScaleX,
+    transformScaleY
+  );
+
+  octx.drawImage(
+    work,
+    -width/2,
+    -height/2,
+    width,
+    height
+  );
+
+  octx.restore();
+
+  return out;
+}
+
+window.ImageRenderer={
+  render
+};
+
 }());

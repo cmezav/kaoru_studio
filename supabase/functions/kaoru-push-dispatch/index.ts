@@ -130,6 +130,21 @@ function courseKey(userId: string, courseId: unknown) {
   return `${userId}:${String(courseId || "")}`;
 }
 
+function isGeneralTaskPayload(payload: Record<string, unknown>) {
+  if (payload.personal === true) return true;
+  if (String(payload.kind || "") === "personal") return true;
+
+  const courseId = String(payload.courseId || "").trim();
+  const courseName = String(payload.courseNameSnapshot || "").trim();
+  const professor = String(payload.professorSnapshot || "").trim();
+
+  /*
+    Una tarea de un curso eliminado conserva snapshots.
+    Esa sigue siendo academica y SI debe contar/notificar.
+  */
+  return !courseId && !courseName && !professor;
+}
+
 function taskNotificationContext(
   userId: string,
   payload: Record<string, unknown>,
@@ -375,6 +390,7 @@ Deno.serve(async (request) => {
   for (const row of taskRows || []) {
     const payload = (row.payload || {}) as Record<string, unknown>;
     if (payload.completed) continue;
+    if (isGeneralTaskPayload(payload)) continue;
     if (!payload.dueAt) continue;
 
     const dueMs = Date.parse(String(payload.dueAt));
@@ -506,7 +522,7 @@ Deno.serve(async (request) => {
     const pending = (taskRows || []).filter((row) => {
       if (row.user_id !== userId) return false;
       const payload = (row.payload || {}) as Record<string, unknown>;
-      return !payload.completed;
+      return !payload.completed && !isGeneralTaskPayload(payload);
     });
 
     let theory = 0;

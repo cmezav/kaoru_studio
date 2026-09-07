@@ -116,6 +116,18 @@ async function setSetting(key,value){return dbPut(SETTINGS_STORE,{key,value,upda
 
 function courseById(id){return state.courses.find(c=>c.id===id)||null;}
 function taskById(id){return state.tasks.find(t=>t.id===id)||null;}
+function isGeneralTask(task){
+  if(!task)return false;
+  if(task.personal===true||task.kind==='personal')return true;
+  return(
+    !task.courseId&&
+    !String(task.courseNameSnapshot||'').trim()&&
+    !String(task.professorSnapshot||'').trim()
+  );
+}
+function isCountedPendingTask(task){
+  return Boolean(task&&!task.completed&&!isGeneralTask(task));
+}
 function kindName(kind){return kind==='lab'?'Laboratorio':kind==='theory'?'Teoría':'';}
 function taskContext(task){
   const course=courseById(task.courseId);
@@ -224,7 +236,7 @@ document.querySelectorAll('.modal-overlay').forEach(modal=>modal.addEventListene
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){const open=document.querySelector('.modal-overlay:not(.hidden)');if(open)hideModal(open.id);else if(els.detailPane.classList.contains('mobile-open'))closeMobileDetail();}});
 
 function counts(){
-  const pending=state.tasks.filter(t=>!t.completed);const completed=state.tasks.filter(t=>t.completed);const todayStart=startOfToday(),todayEnd=endOfToday();
+  const pending=state.tasks.filter(isCountedPendingTask);const completed=state.tasks.filter(t=>t.completed);const todayStart=startOfToday(),todayEnd=endOfToday();
   const overdue=pending.filter(t=>{const d=dueDeadline(t.dueAt);return d&&d<now();});
   const today=pending.filter(t=>{const d=parseDue(t.dueAt);return d&&d>=todayStart&&d<=todayEnd;});
   const week=pending.filter(t=>{const d=parseDue(t.dueAt);return d&&d>=now()&&d<=now()+7*dayMs;});
@@ -4683,7 +4695,7 @@ els.requestNotificationBtn.addEventListener('click',requestNotifications);els.te
 function readNotificationLog(){try{return JSON.parse(localStorage.getItem('kaoru-task-notification-log')||'{}')||{};}catch(_){return{};}}
 function writeNotificationLog(log){try{localStorage.setItem('kaoru-task-notification-log',JSON.stringify(log));}catch(_){}}
 async function checkNotifications(){
-  if(!state.notificationConfig.enabled||!('Notification'in window)||Notification.permission!=='granted')return;const pending=state.tasks.filter(t=>!t.completed);if(!pending.length)return;const log=readNotificationLog(),current=now();
+  if(!state.notificationConfig.enabled||!('Notification'in window)||Notification.permission!=='granted')return;const pending=state.tasks.filter(isCountedPendingTask);if(!pending.length)return;const log=readNotificationLog(),current=now();
   const interval=(state.notificationConfig.intervalHours||3)*3600000;if(current-(state.notificationConfig.lastSummaryAt||0)>=interval){const sorted=[...pending].sort((a,b)=>(parseDue(a.dueAt)||Infinity)-(parseDue(b.dueAt)||Infinity));const next=sorted[0];await showSystemNotification(`Tienes ${pending.length} tarea${pending.length===1?'':'s'} pendiente${pending.length===1?'':'s'}`,next?`Próxima: ${next.title} · ${relativeDue(next)}`:'Revisa Task Studio.','task-summary');state.notificationConfig.lastSummaryAt=current;await setSetting('notificationConfig',state.notificationConfig);}
   for(const task of pending){const due=dueDeadline(task.dueAt);if(!due)continue;const hours=(due-current)/3600000;if(hours<0){const key=`${task.id}:${task.dueAt}:overdue`;if(!log[key]){await showSystemNotification('Tarea atrasada',`${task.title} ya pasó de plazo.`,`task-${task.id}-overdue`,{taskId:task.id});log[key]=current;}continue;}for(const threshold of(state.notificationConfig.thresholds||[])){if(hours<=threshold){const key=`${task.id}:${task.dueAt}:${threshold}`;if(!log[key]){const ctx=taskContext(task);await showSystemNotification(`Entrega en menos de ${threshold} h`,`${task.title} · ${ctx.courseName}`,`task-${task.id}-${threshold}`,{taskId:task.id});log[key]=current;}break;}}}
   writeNotificationLog(log);
