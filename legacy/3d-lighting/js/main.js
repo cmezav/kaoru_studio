@@ -81,6 +81,12 @@ const elements = {
   creativeAtmosphereCount: byId('creativeAtmosphereCount3d'),
   creativeAtmosphereSearch: byId('creativeAtmosphereSearch3d'),
   creativeAtmosphereSort: byId('creativeAtmosphereSort3d'),
+  compareAtmosphereA: byId('compareAtmosphereA3d'),
+  compareAtmosphereB: byId('compareAtmosphereB3d'),
+  compareAtmosphereCardA: byId('compareAtmosphereCardA3d'),
+  compareAtmosphereCardB: byId('compareAtmosphereCardB3d'),
+  applyCompareAtmosphereA: byId('applyCompareAtmosphereA3d'),
+  applyCompareAtmosphereB: byId('applyCompareAtmosphereB3d'),
   customAtmosphereName: byId('customAtmosphereName3d'),
   saveCustomAtmosphere: byId('saveCustomAtmosphere3d'),
   viewportCard: document.querySelector('.viewport-card'),
@@ -783,6 +789,260 @@ function kaoruSortCreativeAtmospheres3d(
   }
 }
 
+
+function kaoruEscapeCompareHtml(value){
+  return String(value??'')
+    .replace(
+      /[&<>"']/g,
+      (char)=>({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      }[char])
+    );
+}
+
+function kaoruComparePresetById3d(id){
+  return kaoruAllCreativeAtmospheres3d()
+    .find(
+      preset=>preset.id===id
+    )||null;
+}
+
+function kaoruFillCompareSelect3d(
+  select,
+  presets,
+  fallbackIndex
+){
+  if(!select)return;
+
+  const signature=
+    presets
+      .map(
+        preset=>
+          `${preset.id}:${preset.name}`
+      )
+      .join('|');
+
+  const current=
+    select.value;
+
+  if(
+    select.dataset.signature!==
+    signature
+  ){
+    select.dataset.signature=
+      signature;
+
+    select.replaceChildren(
+      ...presets.map((preset)=>{
+        const option=
+          document.createElement(
+            'option'
+          );
+
+        option.value=preset.id;
+        option.textContent=
+          preset.name;
+
+        return option;
+      })
+    );
+  }
+
+  if(
+    current&&
+    presets.some(
+      preset=>preset.id===current
+    )
+  ){
+    select.value=current;
+  }else if(presets.length){
+    select.value=
+      presets[
+        Math.min(
+          fallbackIndex,
+          presets.length-1
+        )
+      ].id;
+  }
+}
+
+function kaoruRenderCompareCard3d(
+  card,
+  preset
+){
+  if(!card)return;
+
+  if(!preset){
+    card.innerHTML=
+      '<p class="preset-compare-empty">Sin preset</p>';
+    return;
+  }
+
+  const visual=
+    kaoruAtmosphereVisual3d(
+      preset
+    );
+
+  const effect=
+    preset.scene?.effect||{};
+
+  card.dataset.effect=
+    effect.type||'none';
+
+  card.style.setProperty(
+    '--atmo-bg',
+    preset.scene?.background||
+    '#2A2432'
+  );
+
+  card.style.setProperty(
+    '--atmo-floor',
+    preset.scene?.floor||
+    '#241F2A'
+  );
+
+  card.style.setProperty(
+    '--atmo-light',
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--atmo-effect-a',
+    effect.colorA||
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--atmo-effect-b',
+    effect.colorB||
+    visual.fill
+  );
+
+  card.style.setProperty(
+    '--pv-key',
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--pv-fill',
+    visual.fill
+  );
+
+  card.style.setProperty(
+    '--pv-shadow',
+    visual.shadow
+  );
+
+  card.style.setProperty(
+    '--pv-base',
+    visual.base
+  );
+
+  card.style.setProperty(
+    '--pv-rim',
+    visual.rim
+  );
+
+  card.style.setProperty(
+    '--pv-x',
+    `${visual.x}%`
+  );
+
+  card.style.setProperty(
+    '--pv-y',
+    `${visual.y}%`
+  );
+
+  const intensity=
+    Math.round(
+      kaoruPresetIntensity3d(
+        preset
+      )
+    );
+
+  const softness=
+    Math.round(
+      kaoruPresetSoftness3d(
+        preset
+      )
+    );
+
+  card.innerHTML=`
+    <span class="preset-compare-preview atmosphere-preview atmosphere-3d-preview" aria-hidden="true">
+      <b class="atmo-study-orb"></b>
+      <i></i>
+    </span>
+    <span class="preset-compare-copy">
+      <strong>${kaoruEscapeCompareHtml(preset.name)}</strong>
+      <small>${kaoruEscapeCompareHtml(preset.description)}</small>
+      <span class="atmo-visual-meta">
+        <em>${kaoruEscapeCompareHtml(visual.direction)}</em>
+        <em>${kaoruEscapeCompareHtml(visual.softness)}</em>
+        ${
+          visual.effectLabel
+            ?`<em>${kaoruEscapeCompareHtml(visual.effectLabel)}</em>`
+            :''
+        }
+      </span>
+      <dl class="preset-compare-stats">
+        <div>
+          <dt>Intensidad</dt>
+          <dd>${intensity}%</dd>
+        </div>
+        <div>
+          <dt>Softness</dt>
+          <dd>${softness}%</dd>
+        </div>
+      </dl>
+      <span class="preset-compare-swatches" aria-label="Colores principales">
+        <i style="background:${visual.key}" title="Principal ${visual.key}"></i>
+        <i style="background:${visual.fill}" title="Relleno ${visual.fill}"></i>
+        <i style="background:${visual.shadow}" title="Sombra ${visual.shadow}"></i>
+        <i style="background:${visual.rim}" title="Rim ${visual.rim}"></i>
+      </span>
+    </span>
+  `;
+}
+
+function kaoruRenderComparator3d(){
+  const presets=
+    kaoruSortCreativeAtmospheres3d(
+      kaoruAllCreativeAtmospheres3d()
+    );
+
+  kaoruFillCompareSelect3d(
+    elements.compareAtmosphereA,
+    presets,
+    0
+  );
+
+  kaoruFillCompareSelect3d(
+    elements.compareAtmosphereB,
+    presets,
+    1
+  );
+
+  kaoruRenderCompareCard3d(
+    elements.compareAtmosphereCardA,
+    kaoruComparePresetById3d(
+      elements.compareAtmosphereA
+        ?.value
+    )
+  );
+
+  kaoruRenderCompareCard3d(
+    elements.compareAtmosphereCardB,
+    kaoruComparePresetById3d(
+      elements.compareAtmosphereB
+        ?.value
+    )
+  );
+}
+
 function normalizeHex(
   value
 ) {
@@ -1483,6 +1743,8 @@ function renderAtmospheres3d(
     elements.creativeAtmosphereGrid,
     creativePresets
   );
+
+  kaoruRenderComparator3d();
 
   if(elements.creativeAtmosphereCount){
     elements.creativeAtmosphereCount
@@ -3885,5 +4147,46 @@ elements.creativeAtmosphereSort
       renderAtmospheres3d(
         store.getState()
       );
+    }
+  );
+
+/* === KAORU PRESET COMPARE V8 === */
+[
+  elements.compareAtmosphereA,
+  elements.compareAtmosphereB
+].forEach((select)=>{
+  select?.addEventListener(
+    'change',
+    ()=>{
+      kaoruRenderComparator3d();
+    }
+  );
+});
+
+elements.applyCompareAtmosphereA
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const id=
+        elements.compareAtmosphereA
+          ?.value;
+
+      if(id){
+        kaoruApplyAtmospherePreset(id);
+      }
+    }
+  );
+
+elements.applyCompareAtmosphereB
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const id=
+        elements.compareAtmosphereB
+          ?.value;
+
+      if(id){
+        kaoruApplyAtmospherePreset(id);
+      }
     }
   );

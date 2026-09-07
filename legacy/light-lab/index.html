@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-sort-v7-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=preset-compare-v8-20260907">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -119,7 +119,33 @@
 
           <div id="creativeAtmosphereScenes" class="atmosphere-creative-strip" aria-label="Estilos creativos"></div>
 
+          <details class="preset-compare" open>
+            <summary>Comparar 2 presets</summary>
+            <div class="preset-compare-body">
+              <p class="base-help">Mira dos configuraciones a la vez y aplica la que prefieras sin perder los presets originales.</p>
+              <div class="preset-compare-grid">
+                <section>
+                  <label class="preset-compare-select-label">
+                    <span>Preset A</span>
+                    <select id="compareAtmosphereA"></select>
+                  </label>
+                  <div id="compareAtmosphereCardA" class="preset-compare-card atmosphere-card atmosphere-3d-card"></div>
+                  <button id="applyCompareAtmosphereA" class="preset-compare-apply" type="button">Aplicar A</button>
+                </section>
+                <section>
+                  <label class="preset-compare-select-label">
+                    <span>Preset B</span>
+                    <select id="compareAtmosphereB"></select>
+                  </label>
+                  <div id="compareAtmosphereCardB" class="preset-compare-card atmosphere-card atmosphere-3d-card"></div>
+                  <button id="applyCompareAtmosphereB" class="preset-compare-apply" type="button">Aplicar B</button>
+                </section>
+              </div>
+            </div>
+          </details>
+
           <div class="preset-library-save">
+
             <input id="customAtmosphereName" type="text" maxlength="60" placeholder="Nombre para esta variante..." aria-label="Nombre del preset personal">
             <button id="saveCustomAtmosphere" type="button">Guardar variante</button>
           </div>
@@ -423,7 +449,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=preset-sort-v7-20260907"></script>
+  <script type="module" src="./js/main.js?cache=preset-compare-v8-20260907"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>

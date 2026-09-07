@@ -81,7 +81,7 @@ const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), creativeAtmosphereSearch: byId('creativeAtmosphereSearch'), creativeAtmosphereSort: byId('creativeAtmosphereSort'), customAtmosphereName: byId('customAtmosphereName'), saveCustomAtmosphere: byId('saveCustomAtmosphere'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), creativeAtmosphereSearch: byId('creativeAtmosphereSearch'), creativeAtmosphereSort: byId('creativeAtmosphereSort'), compareAtmosphereA: byId('compareAtmosphereA'), compareAtmosphereB: byId('compareAtmosphereB'), compareAtmosphereCardA: byId('compareAtmosphereCardA'), compareAtmosphereCardB: byId('compareAtmosphereCardB'), applyCompareAtmosphereA: byId('applyCompareAtmosphereA'), applyCompareAtmosphereB: byId('applyCompareAtmosphereB'), customAtmosphereName: byId('customAtmosphereName'), saveCustomAtmosphere: byId('saveCustomAtmosphere'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
   atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
   atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
   atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
@@ -302,6 +302,10 @@ function kaoruUserAtmospheresLight(){
           record.description||
           'Variante personalizada',
         userPreset:true,
+        overrides:
+          kaoruCustomOverridesLight(
+            lighting
+          ),
         backdrop:{
           top:
             backdrop.top||
@@ -731,6 +735,402 @@ function kaoruSortCreativeAtmospheresLight(
     default:
       return items;
   }
+}
+
+
+function kaoruEscapeCompareHtml(value){
+  return String(value??'')
+    .replace(
+      /[&<>"']/g,
+      (char)=>({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      }[char])
+    );
+}
+
+function kaoruComparePresetByIdLight(id){
+  return kaoruAllCreativeAtmospheresLight()
+    .find(
+      preset=>preset.id===id
+    )||null;
+}
+
+function kaoruCustomOverridesLight(
+  lighting
+){
+  const lights=
+    Array.isArray(lighting?.lights)
+      ?lighting.lights
+      :[];
+
+  const first=
+    lights[0]||{};
+
+  const second=
+    lights[1]||{};
+
+  return{
+    ambient:{
+      ...(lighting?.ambient||{})
+    },
+    shadow:{
+      ...(lighting?.shadow||{})
+    },
+    bounce:{
+      ...(lighting?.bounce||{})
+    },
+    rim:{
+      ...(lighting?.rim||{})
+    },
+    firstLight:{
+      color:
+        first.color||
+        '#FFFFFF',
+      intensity:
+        Number(
+          first.intensity??70
+        ),
+      direction:
+        Number(
+          first.direction??
+          first.azimuth??
+          0
+        ),
+      elevation:
+        Number(
+          first.elevation??35
+        ),
+      softness:
+        Number(
+          first.softness??50
+        )
+    },
+    secondLight:{
+      color:
+        second.color||
+        first.color||
+        '#FFFFFF',
+      intensity:
+        Number(
+          second.intensity??25
+        ),
+      direction:
+        Number(
+          second.direction??
+          second.azimuth??
+          65
+        ),
+      elevation:
+        Number(
+          second.elevation??20
+        ),
+      softness:
+        Number(
+          second.softness??70
+        )
+    }
+  };
+}
+
+function kaoruFillCompareSelectLight(
+  select,
+  presets,
+  fallbackIndex
+){
+  if(!select)return;
+
+  const signature=
+    presets
+      .map(
+        preset=>
+          `${preset.id}:${preset.name}`
+      )
+      .join('|');
+
+  const current=
+    select.value;
+
+  if(
+    select.dataset.signature!==
+    signature
+  ){
+    select.dataset.signature=
+      signature;
+
+    select.replaceChildren(
+      ...presets.map((preset)=>{
+        const option=
+          document.createElement(
+            'option'
+          );
+
+        option.value=preset.id;
+        option.textContent=
+          preset.name;
+
+        return option;
+      })
+    );
+  }
+
+  if(
+    current&&
+    presets.some(
+      preset=>preset.id===current
+    )
+  ){
+    select.value=current;
+  }else if(presets.length){
+    select.value=
+      presets[
+        Math.min(
+          fallbackIndex,
+          presets.length-1
+        )
+      ].id;
+  }
+}
+
+function kaoruRenderCompareCardLight(
+  card,
+  preset
+){
+  if(!card)return;
+
+  if(!preset){
+    card.innerHTML=
+      '<p class="preset-compare-empty">Sin preset</p>';
+    return;
+  }
+
+  const visual=
+    kaoruAtmosphereVisualLight(
+      preset
+    );
+
+  const effect=
+    preset.backdrop?.effect||{};
+
+  card.dataset.effect=
+    effect.type||'none';
+
+  card.style.setProperty(
+    '--atmo-top',
+    preset.backdrop?.top||
+    '#2A2432'
+  );
+
+  card.style.setProperty(
+    '--atmo-mid',
+    preset.backdrop?.mid||
+    '#3C3348'
+  );
+
+  card.style.setProperty(
+    '--atmo-bottom',
+    preset.backdrop?.bottom||
+    '#241F2A'
+  );
+
+  card.style.setProperty(
+    '--atmo-accent',
+    preset.backdrop?.accent||
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--atmo-effect-a',
+    effect.colorA||
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--atmo-effect-b',
+    effect.colorB||
+    visual.fill
+  );
+
+  card.style.setProperty(
+    '--pv-key',
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--pv-fill',
+    visual.fill
+  );
+
+  card.style.setProperty(
+    '--pv-shadow',
+    visual.shadow
+  );
+
+  card.style.setProperty(
+    '--pv-base',
+    visual.base
+  );
+
+  card.style.setProperty(
+    '--pv-rim',
+    visual.rim
+  );
+
+  card.style.setProperty(
+    '--pv-x',
+    `${visual.x}%`
+  );
+
+  card.style.setProperty(
+    '--pv-y',
+    `${visual.y}%`
+  );
+
+  const intensity=
+    Math.round(
+      kaoruPresetIntensityLight(
+        preset
+      )
+    );
+
+  const softness=
+    Math.round(
+      kaoruPresetSoftnessLight(
+        preset
+      )
+    );
+
+  card.innerHTML=`
+    <span class="preset-compare-preview atmosphere-preview atmosphere-3d-preview" aria-hidden="true">
+      <b class="atmo-study-orb"></b>
+      <i></i>
+    </span>
+    <span class="preset-compare-copy">
+      <strong>${kaoruEscapeCompareHtml(preset.name)}</strong>
+      <small>${kaoruEscapeCompareHtml(preset.description)}</small>
+      <span class="atmo-visual-meta">
+        <em>${kaoruEscapeCompareHtml(visual.direction)}</em>
+        <em>${kaoruEscapeCompareHtml(visual.softness)}</em>
+        ${
+          visual.effectLabel
+            ?`<em>${kaoruEscapeCompareHtml(visual.effectLabel)}</em>`
+            :''
+        }
+      </span>
+      <dl class="preset-compare-stats">
+        <div>
+          <dt>Intensidad</dt>
+          <dd>${intensity}%</dd>
+        </div>
+        <div>
+          <dt>Softness</dt>
+          <dd>${softness}%</dd>
+        </div>
+      </dl>
+      <span class="preset-compare-swatches" aria-label="Colores principales">
+        <i style="background:${visual.key}" title="Principal ${visual.key}"></i>
+        <i style="background:${visual.fill}" title="Relleno ${visual.fill}"></i>
+        <i style="background:${visual.shadow}" title="Sombra ${visual.shadow}"></i>
+        <i style="background:${visual.rim}" title="Rim ${visual.rim}"></i>
+      </span>
+    </span>
+  `;
+}
+
+function kaoruRenderComparatorLight(){
+  const presets=
+    kaoruSortCreativeAtmospheresLight(
+      kaoruAllCreativeAtmospheresLight()
+    );
+
+  kaoruFillCompareSelectLight(
+    elements.compareAtmosphereA,
+    presets,
+    0
+  );
+
+  kaoruFillCompareSelectLight(
+    elements.compareAtmosphereB,
+    presets,
+    1
+  );
+
+  kaoruRenderCompareCardLight(
+    elements.compareAtmosphereCardA,
+    kaoruComparePresetByIdLight(
+      elements.compareAtmosphereA
+        ?.value
+    )
+  );
+
+  kaoruRenderCompareCardLight(
+    elements.compareAtmosphereCardB,
+    kaoruComparePresetByIdLight(
+      elements.compareAtmosphereB
+        ?.value
+    )
+  );
+}
+
+function kaoruApplyComparePresetLight(id){
+  const custom=
+    customLightingPresetById(
+      id,
+      'light'
+    );
+
+  lightsRenderSignature='';
+
+  if(custom){
+    const snapshot=
+      structuredClone(
+        custom.snapshot
+      );
+
+    store.setState((state)=>({
+      ...state,
+      lighting:{
+        ...(snapshot.lighting||{}),
+        atmosphere:{
+          ...(snapshot.lighting
+            ?.atmosphere||{}),
+          id:custom.id,
+          name:custom.name
+        }
+      },
+      ui:{
+        ...state.ui,
+        paletteView:'illuminated'
+      }
+    }));
+
+    showToast(
+      `Mi preset: ${custom.name}`
+    );
+    return;
+  }
+
+  const preset=
+    atmosphereById(id);
+
+  store.setState((state)=>({
+    ...state,
+    lighting:
+      buildAtmosphereLighting(
+        preset.id
+      ),
+    ui:{
+      ...state.ui,
+      paletteView:'illuminated'
+    }
+  }));
+
+  showToast(
+    `Estilo: ${preset.name}`
+  );
 }
 
 function escapeHtml(value) {
@@ -1429,6 +1829,8 @@ function renderLightingControls(state) {
           })
       );
   }
+
+  kaoruRenderComparatorLight();
 
   if(elements.creativeAtmosphereCount){
     const visibleCount=
@@ -2589,5 +2991,46 @@ elements.creativeAtmosphereSort
       renderLightingControls(
         store.getState()
       );
+    }
+  );
+
+/* === KAORU PRESET COMPARE V8 === */
+[
+  elements.compareAtmosphereA,
+  elements.compareAtmosphereB
+].forEach((select)=>{
+  select?.addEventListener(
+    'change',
+    ()=>{
+      kaoruRenderComparatorLight();
+    }
+  );
+});
+
+elements.applyCompareAtmosphereA
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const id=
+        elements.compareAtmosphereA
+          ?.value;
+
+      if(id){
+        kaoruApplyComparePresetLight(id);
+      }
+    }
+  );
+
+elements.applyCompareAtmosphereB
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const id=
+        elements.compareAtmosphereB
+          ?.value;
+
+      if(id){
+        kaoruApplyComparePresetLight(id);
+      }
     }
   );

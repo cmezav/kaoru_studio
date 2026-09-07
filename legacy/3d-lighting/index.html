@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-sort-v7-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=preset-compare-v8-20260907">
 
   <script type="importmap">
   {
@@ -110,7 +110,33 @@
 
         <div id="creativeAtmosphereGrid" class="atmosphere-creative-strip" aria-label="Estilos creativos 3D"></div>
 
+        <details class="preset-compare" open>
+          <summary>Comparar 2 presets</summary>
+          <div class="preset-compare-body">
+            <p class="help">Mira dos configuraciones a la vez y aplica la que prefieras sin perder los presets originales.</p>
+            <div class="preset-compare-grid">
+              <section>
+                <label class="preset-compare-select-label">
+                  <span>Preset A</span>
+                  <select id="compareAtmosphereA3d"></select>
+                </label>
+                <div id="compareAtmosphereCardA3d" class="preset-compare-card atmosphere-card atmosphere-3d-card"></div>
+                <button id="applyCompareAtmosphereA3d" class="preset-compare-apply" type="button">Aplicar A</button>
+              </section>
+              <section>
+                <label class="preset-compare-select-label">
+                  <span>Preset B</span>
+                  <select id="compareAtmosphereB3d"></select>
+                </label>
+                <div id="compareAtmosphereCardB3d" class="preset-compare-card atmosphere-card atmosphere-3d-card"></div>
+                <button id="applyCompareAtmosphereB3d" class="preset-compare-apply" type="button">Aplicar B</button>
+              </section>
+            </div>
+          </div>
+        </details>
+
         <div class="preset-library-save">
+
           <input id="customAtmosphereName3d" type="text" maxlength="60" placeholder="Nombre para esta variante..." aria-label="Nombre del preset personal 3D">
           <button id="saveCustomAtmosphere3d" type="button">Guardar variante</button>
         </div>
@@ -557,7 +583,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=preset-sort-v7-20260907"></script>
+  <script type="module" src="./js/main.js?cache=preset-compare-v8-20260907"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>
