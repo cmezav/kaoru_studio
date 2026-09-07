@@ -180,10 +180,29 @@ function morphMask(mask,distance,operation){
   return out
 }
 
-function buildAlphaContourMask(source,opt,scaleFactor=1){
-  const width=source.width;
-  const height=source.height;
+function subtractMask(a,b){
+  const out=copyMask(a);
+  const ctx=out.getContext('2d',{alpha:true});
+  ctx.globalCompositeOperation='destination-out';
+  ctx.drawImage(b,0,0);
+  ctx.globalCompositeOperation='source-over';
+  return out
+}
 
+function blurMask(mask,radius){
+  if(radius<=.25){
+    return copyMask(mask)
+  }
+
+  const out=F.canvas(mask.width,mask.height);
+  const ctx=out.getContext('2d',{alpha:true});
+  ctx.filter=`blur(${Math.min(120,radius)}px)`;
+  ctx.drawImage(mask,0,0);
+  ctx.filter='none';
+  return out
+}
+
+function buildAlphaContourMask(source,opt,scaleFactor=1){
   const inside=Math.max(
     .5,
     number(opt.width,48)*
@@ -202,14 +221,20 @@ function buildAlphaContourMask(source,opt,scaleFactor=1){
     scaleFactor
   );
 
+  const radius=Math.max(
+    0,
+    number(opt.radius,16)*
+    scaleFactor
+  );
+
   const alpha=alphaMask(source);
 
   /*
-    El contorno se obtiene de la silueta alfa real:
-    - erosionamos para crear el límite interior;
-    - dilatamos para permitir blur hacia fuera;
-    - restamos ambos y nos queda una banda que sigue cada objeto
-      del PNG, incluso cuando hay varias formas separadas.
+    Versión tipo Silueta Studio:
+    - tomamos la silueta alfa real del PNG;
+    - creamos una banda de contorno basada en esa silueta;
+    - suavizamos LA MÁSCARA del borde, no los colores del dibujo.
+    Así el PNG no genera franjas o manchas rectangulares sobre el lienzo.
   */
   const inner=morphMask(
     alpha,
@@ -225,23 +250,21 @@ function buildAlphaContourMask(source,opt,scaleFactor=1){
       )
     :copyMask(alpha);
 
-  const edge=copyMask(outer);
-  const ectx=edge.getContext('2d',{alpha:true});
-  ectx.globalCompositeOperation='destination-out';
-  ectx.drawImage(inner,0,0);
-  ectx.globalCompositeOperation='source-over';
+  const edgeBand=subtractMask(
+    outer,
+    inner
+  );
 
-  if(feather<=.25){
-    return edge
+  const softBand=blurMask(
+    edgeBand,
+    feather+(radius*.6)
+  );
+
+  return {
+    base:alpha,
+    edgeBand,
+    softBand
   }
-
-  const soft=F.canvas(width,height);
-  const sctx=soft.getContext('2d',{alpha:true});
-  sctx.filter=`blur(${Math.min(120,feather)}px)`;
-  sctx.drawImage(edge,0,0);
-  sctx.filter='none';
-
-  return soft
 }
 
 function applyContourBlur(source,opt,scaleFactor=1){
@@ -267,48 +290,43 @@ function applyContourBlur(source,opt,scaleFactor=1){
     return source
   }
 
-  const width=source.width;
-  const height=source.height;
-
-  const mask=buildAlphaContourMask(
+  const {
+    base,
+    edgeBand,
+    softBand
+  }=buildAlphaContourMask(
     source,
     opt,
     scaleFactor
   );
 
-  const blurred=F.canvas(width,height);
-  const bctx=blurred.getContext('2d',{alpha:true});
-  bctx.filter=`blur(${Math.min(120,radius)}px)`;
-  bctx.drawImage(source,0,0);
-  bctx.filter='none';
-
-  const blurredEdge=F.canvas(width,height);
-  const ectx=blurredEdge.getContext('2d',{alpha:true});
-  ectx.drawImage(blurred,0,0);
-  ectx.globalCompositeOperation='destination-in';
-  ectx.drawImage(mask,0,0);
-  ectx.globalCompositeOperation='source-over';
-
-  const out=F.canvas(width,height);
-  const ctx=out.getContext('2d',{alpha:true});
-  ctx.drawImage(source,0,0);
+  const mixedMask=copyMask(base);
+  const mctx=mixedMask.getContext('2d',{alpha:true});
 
   /*
-    Reemplazamos solo la banda del contorno.
-    El centro queda intacto y el blur puede extenderse a la zona
-    transparente si el usuario aumenta "Expansión exterior".
+    Reemplazamos solo la franja del contorno:
+    - quitamos una parte del borde nítido;
+    - añadimos una versión suavizada de ESA silueta.
+    Esto sí sigue la forma real del PNG y evita blur por rectángulo.
   */
-  ctx.save();
-  ctx.globalAlpha=intensity;
-  ctx.globalCompositeOperation='destination-out';
-  ctx.drawImage(mask,0,0);
-  ctx.restore();
+  mctx.save();
+  mctx.globalAlpha=intensity;
+  mctx.globalCompositeOperation='destination-out';
+  mctx.drawImage(edgeBand,0,0);
+  mctx.restore();
 
-  ctx.save();
-  ctx.globalAlpha=intensity;
+  mctx.save();
+  mctx.globalAlpha=intensity;
+  mctx.globalCompositeOperation='source-over';
+  mctx.drawImage(softBand,0,0);
+  mctx.restore();
+
+  const out=F.canvas(source.width,source.height);
+  const ctx=out.getContext('2d',{alpha:true});
+  ctx.drawImage(source,0,0);
+  ctx.globalCompositeOperation='destination-in';
+  ctx.drawImage(mixedMask,0,0);
   ctx.globalCompositeOperation='source-over';
-  ctx.drawImage(blurredEdge,0,0);
-  ctx.restore();
 
   return out
 }
