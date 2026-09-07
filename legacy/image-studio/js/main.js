@@ -2,7 +2,17 @@
   const $=s=>document.querySelector(s),clone=ImageState.clone;
   let state=ImageState.defaults(),source=null,sourceBlob=null,sourceName='',sourceWidth=0,sourceHeight=0,currentProjectId=null,zoom=1,focusMode=false,liveLensPreview=false,drag=null,recoveryTimer=0,toastTimer=0;
   const history=new ImageHistory.History(90);
-  const preview=new ImagePreviewPipeline.PreviewPipeline($('#previewCanvas'),busy=>{$('#renderBadge').hidden=!busy},text=>{$('#statusText').textContent=text});
+  const preview=new ImagePreviewPipeline.PreviewPipeline(
+    $('#previewCanvas'),
+    busy=>{
+      const badge=$('#renderBadge');
+      if(badge)badge.hidden=!busy
+    },
+    text=>{
+      const status=$('#statusText');
+      if(status)status.textContent=text
+    }
+  );
 
   window.ImageStudioLensBridge={
     getState:()=>state,
@@ -19,10 +29,34 @@
     toast(text){toast(text)}
   };
 
-  function toast(text){clearTimeout(toastTimer);const el=$('#toast');el.textContent=text;el.classList.add('show');toastTimer=setTimeout(()=>el.classList.remove('show'),2300)}
+  function toast(text){
+    clearTimeout(toastTimer);
+    const el=$('#toast');
+    if(!el){
+      console.warn('Image Studio toast:',text);
+      return
+    }
+    el.textContent=String(text||'');
+    el.classList.add('show');
+    toastTimer=setTimeout(
+      ()=>el.classList.remove('show'),
+      2300
+    )
+  }
   function setEnabled(enabled){$('#editorControls').classList.toggle('disabled',!enabled);['#saveProjectBtn','#saveTemplateBtn','#exportTopBtn','#repairPreviewBtn'].forEach(s=>$(s).disabled=!enabled)}
   function dimensionsLabel(){return source?`${sourceWidth.toLocaleString('es-ES')} × ${sourceHeight.toLocaleString('es-ES')} px`:''}
-  function setSourceMeta(){if(!source)return;$('#fileName').textContent=sourceName||'Imagen';$('#imageMeta').textContent=dimensionsLabel();$('#emptyState').hidden=true;$('#canvasWrap').hidden=false;setEnabled(true)}
+  function setSourceMeta(){
+    if(!source)return;
+    const fileName=$('#fileName');
+    const imageMeta=$('#imageMeta');
+    const emptyState=$('#emptyState');
+    const canvasWrap=$('#canvasWrap');
+    if(fileName)fileName.textContent=sourceName||'Imagen';
+    if(imageMeta)imageMeta.textContent=dimensionsLabel();
+    if(emptyState)emptyState.hidden=true;
+    if(canvasWrap)canvasWrap.hidden=false;
+    setEnabled(true)
+  }
   function getExportConfig(){return{format:$('#exportFormat').value,scale:Number($('#exportScale').value)||1,width:Number($('#exportWidth').value)||1,height:Number($('#exportHeight').value)||1,quality:Number($('#exportQuality').value)||92,transparent:$('#transparentBg').checked,background:$('#backgroundColor').value}}
   function projectPayload(){return{schema:'kaoru-image-studio-project',version:14.4,state:clone(state),zoom,focusMode:false,liveLensPreview,export:getExportConfig(),fileName:sourceName}}
   function scheduleRecovery(){if(!sourceBlob)return;clearTimeout(recoveryTimer);recoveryTimer=setTimeout(()=>ImageStorage.save({payload:projectPayload(),source:sourceBlob,fileName:sourceName}).catch(console.warn),180)}
@@ -38,14 +72,250 @@
   history.onChange=({canUndo,canRedo})=>{$('#undoBtn').disabled=!canUndo;$('#redoBtn').disabled=!canRedo};
 
   function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterControls','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const el=$(selector);el.dataset.group=group;ImageUI.build(el,state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
-  function syncAll(){ImageUI.sync(state);$('#monochromeColor').value=state.filters.monochromeColor;$('#lensEnabled').checked=state.lens.enabled;$('#lensShape').value=state.lens.shape;$('#liveLensPreview').checked=!!liveLensPreview;$('#transformX').value=Math.round(state.transform.x);$('#transformY').value=Math.round(state.transform.y);$('#scaleX').value=Math.round(state.transform.scaleX*100);$('#scaleY').value=Math.round(state.transform.scaleY*100);$('#rotation').value=state.transform.rotation;$('#imageOpacity').value=Math.round(state.adjustments.opacity*100);$('#aspectLock').checked=state.transform.aspectLock;$('#cropX').value=Math.round(state.crop.x);$('#cropY').value=Math.round(state.crop.y);$('#cropWidth').value=Math.round(state.crop.width);$('#cropHeight').value=Math.round(state.crop.height);$('#focusModeBtn').classList.toggle('active',focusMode);updateFocusRing();updateExportInfo();window.ImageStudioLensBridge?.notify?.(state)}
+  function syncAll(){
+    try{
+      ImageUI.sync(state)
+    }catch(error){
+      console.warn('Image Studio UI sync',error)
+    }
+
+    const value=(selector,next)=>{
+      const el=$(selector);
+      if(el)el.value=String(next??'')
+    };
+
+    const checked=(selector,next)=>{
+      const el=$(selector);
+      if(el)el.checked=!!next
+    };
+
+    value('#monochromeColor',state.filters.monochromeColor);
+    checked('#lensEnabled',state.lens.enabled);
+    value('#lensShape',state.lens.shape);
+    checked('#liveLensPreview',liveLensPreview);
+    value('#transformX',Math.round(state.transform.x));
+    value('#transformY',Math.round(state.transform.y));
+    value('#scaleX',Math.round(state.transform.scaleX*100));
+    value('#scaleY',Math.round(state.transform.scaleY*100));
+    value('#rotation',state.transform.rotation);
+    value('#imageOpacity',Math.round(state.adjustments.opacity*100));
+    checked('#aspectLock',state.transform.aspectLock);
+    value('#cropX',Math.round(state.crop.x));
+    value('#cropY',Math.round(state.crop.y));
+    value('#cropWidth',Math.round(state.crop.width));
+    value('#cropHeight',Math.round(state.crop.height));
+
+    const focusButton=$('#focusModeBtn');
+    if(focusButton){
+      focusButton.classList.toggle(
+        'active',
+        focusMode
+      )
+    }
+
+    try{
+      updateFocusRing()
+    }catch(error){
+      console.warn('Image Studio focus sync',error)
+    }
+
+    try{
+      updateExportInfo()
+    }catch(error){
+      console.warn('Image Studio export sync',error)
+    }
+
+    try{
+      window.ImageStudioLensBridge?.notify?.(state)
+    }catch(error){
+      console.warn('Image Studio Lens tools sync',error)
+    }
+  }
 
   async function blobToSource(blob,name){if(source&&typeof source.close==='function')try{source.close()}catch(_){};let drawable;try{drawable=await createImageBitmap(blob,{imageOrientation:'from-image'})}catch(_){drawable=await new Promise((resolve,reject)=>{const url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('No se pudo decodificar la imagen.'))};img.src=url})}source=drawable;sourceBlob=blob;sourceName=name||blob.name||'imagen';sourceWidth=drawable.width||drawable.naturalWidth;sourceHeight=drawable.height||drawable.naturalHeight}
   function clampCrop(){state.crop.x=Math.max(0,Math.min(sourceWidth-1,Number(state.crop.x)||0));state.crop.y=Math.max(0,Math.min(sourceHeight-1,Number(state.crop.y)||0));state.crop.width=Math.max(1,Math.min(sourceWidth-state.crop.x,Number(state.crop.width)||sourceWidth));state.crop.height=Math.max(1,Math.min(sourceHeight-state.crop.y,Number(state.crop.height)||sourceHeight))}
-  async function openBlob(blob,name,payload=null,projectId=null,asTemplate=false){await blobToSource(blob,name);state=payload?ImageState.normalizeProject(payload):ImageState.defaults();if(!payload){state.crop={x:0,y:0,width:sourceWidth,height:sourceHeight}}clampCrop();currentProjectId=asTemplate?null:projectId;zoom=Math.max(.08,Math.min(4,Number(payload&&payload.zoom)||1));focusMode=false;liveLensPreview=!!(payload&&payload.liveLensPreview);setSourceMeta();syncAll();history.reset(state);preview.setSource(source,state);preview.schedule('full',0);restoreExport(payload&&payload.export);setTimeout(()=>payload&&payload.zoom?applyZoom():fitView(),80);scheduleRecovery()}
-  async function loadFile(file){if(!file||!/^image\/(png|jpeg|webp)$/i.test(file.type)){toast('Selecciona PNG, JPG/JPEG o WEBP.');return}try{await openBlob(file,file.name);currentProjectId=null;toast('Imagen importada. Image Studio V2 listo.')}catch(error){console.error(error);toast(error.message||'No se pudo abrir la imagen.')}}
+  async function openBlob(blob,name,payload=null,projectId=null,asTemplate=false){
+    await blobToSource(blob,name);
 
-  function restoreExport(exp){if(!source)return;const e=exp||{};$('#exportFormat').value=e.format||'png';$('#exportScale').value=String(e.scale||1);$('#exportQuality').value=e.quality||92;const qualityOut=$('#qualityRow output');if(qualityOut)qualityOut.textContent=`${e.quality||92}%`;$('#transparentBg').checked=e.transparent!==false;$('#backgroundColor').value=e.background||'#ffffff';if(e.width&&e.height){$('#exportWidth').value=e.width;$('#exportHeight').value=e.height}else updateExportDimensions(true);syncExportVisibility();updateExportInfo()}
+    state=payload
+      ?ImageState.normalizeProject(payload)
+      :ImageState.defaults();
+
+    if(!payload){
+      state.crop={
+        x:0,
+        y:0,
+        width:sourceWidth,
+        height:sourceHeight
+      }
+    }
+
+    clampCrop();
+
+    currentProjectId=
+      asTemplate
+        ?null
+        :projectId;
+
+    zoom=Math.max(
+      .08,
+      Math.min(
+        4,
+        Number(payload&&payload.zoom)||1
+      )
+    );
+
+    focusMode=false;
+    liveLensPreview=!!(
+      payload&&payload.liveLensPreview
+    );
+
+    /*
+      MUY IMPORTANTE:
+      pintamos primero la imagen base. La UI ya no puede impedir
+      que una imagen importada aparezca en el canvas.
+    */
+    preview.setSource(
+      source,
+      state
+    );
+
+    setSourceMeta();
+
+    syncAll();
+
+    history.reset(state);
+
+    try{
+      restoreExport(
+        payload&&payload.export
+      )
+    }catch(error){
+      console.warn(
+        'Image Studio restore export',
+        error
+      )
+    }
+
+    preview.schedule(
+      'full',
+      80
+    );
+
+    setTimeout(
+      ()=>{
+        try{
+          payload&&payload.zoom
+            ?applyZoom()
+            :fitView()
+        }catch(error){
+          console.warn(
+            'Image Studio fit preview',
+            error
+          )
+        }
+      },
+      80
+    );
+
+    scheduleRecovery()
+  }
+  async function loadFile(file){
+    if(
+      !file||
+      !/^image\/(png|jpeg|webp)$/i.test(file.type)
+    ){
+      toast(
+        'Selecciona PNG, JPG/JPEG o WEBP.'
+      );
+      return
+    }
+
+    try{
+      await openBlob(
+        file,
+        file.name
+      );
+
+      currentProjectId=null;
+
+      toast(
+        'Imagen importada. Image Studio listo.'
+      )
+    }catch(error){
+      console.error(
+        'Image Studio import',
+        error
+      );
+
+      try{
+        preview.cancel('');
+        if(source){
+          preview.setState(state);
+          preview.paintFallback(
+            'Imagen base restaurada'
+          )
+        }
+      }catch(recoveryError){
+        console.warn(
+          'Image Studio import recovery',
+          recoveryError
+        )
+      }
+
+      const badge=$('#renderBadge');
+      if(badge)badge.hidden=true;
+
+      toast(
+        error?.message||
+        'No se pudo abrir la imagen.'
+      )
+    }
+  }
+
+  function restoreExport(exp){
+    if(!source)return;
+
+    const e=exp||{};
+
+    const format=$('#exportFormat');
+    const scale=$('#exportScale');
+    const quality=$('#exportQuality');
+    const transparent=$('#transparentBg');
+    const background=$('#backgroundColor');
+    const width=$('#exportWidth');
+    const height=$('#exportHeight');
+
+    if(format)format.value=e.format||'png';
+    if(scale)scale.value=String(e.scale||1);
+    if(quality)quality.value=e.quality||92;
+
+    const qualityOut=$('#qualityRow output');
+    if(qualityOut){
+      qualityOut.textContent=`${e.quality||92}%`
+    }
+
+    if(transparent){
+      transparent.checked=e.transparent!==false
+    }
+
+    if(background){
+      background.value=e.background||'#ffffff'
+    }
+
+    if(
+      e.width&&
+      e.height
+    ){
+      if(width)width.value=e.width;
+      if(height)height.value=e.height
+    }else{
+      updateExportDimensions(true)
+    }
+
+    syncExportVisibility();
+    updateExportInfo()
+  }
   function updateExportDimensions(fromScale=true){if(!source)return;if(fromScale){const scale=Number($('#exportScale').value)||1;$('#exportWidth').value=Math.max(1,Math.round(state.crop.width*scale));$('#exportHeight').value=Math.max(1,Math.round(state.crop.height*scale))}updateExportInfo()}
   function updateExportInfo(){if(!source){$('#exportInfo').textContent='';return}const w=Number($('#exportWidth').value)||0,h=Number($('#exportHeight').value)||0;$('#exportInfo').textContent=`${w.toLocaleString('es-ES')} × ${h.toLocaleString('es-ES')} px · render desde la fuente original`}
   function syncExportVisibility(){const format=$('#exportFormat').value;$('#qualityRow').classList.toggle('visible',format!=='png');if(format==='jpeg')$('#transparentBg').checked=false;$('#backgroundRow').classList.toggle('visible',!$('#transparentBg').checked||format==='jpeg')}
