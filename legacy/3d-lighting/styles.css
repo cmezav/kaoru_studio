@@ -955,3 +955,65 @@ body[data-atmo-effect="underwater"]
 }
 
 /* === /KAORU CREATIVE ATMOSPHERES EDITABLE V1 === */
+
+/* === KAORU PRESET FILTER UI V1 === */
+.atmosphere-filterbar{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin:9px 0 9px;
+  padding-bottom:5px;
+  overflow-x:auto;
+  scrollbar-width:thin;
+}
+.atmosphere-filterbar button{
+  flex:0 0 auto;
+  min-height:29px;
+  padding:0 9px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:var(--surface-2);
+  color:var(--muted);
+  font-size:9px;
+  font-weight:800;
+  cursor:pointer;
+}
+.atmosphere-filterbar button:hover{
+  border-color:var(--accent);
+  color:var(--accent);
+}
+.atmosphere-filterbar button.is-active{
+  border-color:var(--accent);
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+.atmosphere-filter-count{
+  flex:0 0 auto;
+  margin-left:auto;
+  padding:4px 7px;
+  color:var(--muted);
+  font-size:8px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.atmosphere-creative-strip .atmosphere-3d-card{
+  min-width:122px;
+}
+.atmosphere-creative-strip .atmosphere-3d-card small{
+  display:-webkit-box;
+  overflow:hidden;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:1;
+  line-clamp:1;
+}
+.atmosphere-editor>summary{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+@media(max-width:900px){
+  .atmosphere-filter-count{
+    margin-left:0;
+  }
+}
+/* === /KAORU PRESET FILTER UI V1 === */

@@ -69,6 +69,8 @@ const elements = {
   toast: byId('toast'),
   atmosphereGrid: byId('atmosphereGrid'),
   creativeAtmosphereGrid: byId('creativeAtmosphereGrid'),
+  creativeAtmosphereFilters: byId('creativeAtmosphereFilters3d'),
+  creativeAtmosphereCount: byId('creativeAtmosphereCount3d'),
   viewportCard: document.querySelector('.viewport-card'),
   atmosphereEditorLabel: byId('atmosphereEditorLabel'),
   atmosphereBackground: byId('atmosphereBackground'),
@@ -189,6 +191,124 @@ let engine = null;
 let modelLoadToken = 0;
 let customModelFiles = [];
 let paletteLibrary = [];
+let creativeAtmosphereFilter = 'all';
+
+
+const KAORU_CREATIVE_ATMO_FILTERS = {
+  natural: new Set([
+    'sun-side',
+    'golden-rim',
+    'window-cross',
+    'warm-blinds',
+    'window-cool',
+    'blinds-golden',
+    'leaf-light',
+    'leaf-dense',
+    'sun-blast',
+    'bokeh-gold'
+  ]),
+  dramatic: new Set([
+    'yellow-stripe',
+    'golden-rim',
+    'violet-orange',
+    'olive-crimson',
+    'forest-lowkey',
+    'neon-red-cyan',
+    'neon-dual',
+    'cyan-floor',
+    'purple-gold-split',
+    'flash-editorial',
+    'blue-red-drama'
+  ]),
+  color: new Set([
+    'cool-blue',
+    'pink-lavender',
+    'violet-orange',
+    'neon-red-cyan',
+    'neon-dual',
+    'cyan-floor',
+    'purple-gold-split',
+    'iridescent',
+    'rainbow',
+    'rainbow-prism',
+    'blue-red-drama'
+  ])
+};
+
+function kaoruCreativeAtmosphereTags(preset){
+  const tags=new Set();
+  const id=preset?.id||'';
+  const type=
+    preset?.scene?.effect?.type||
+    preset?.backdrop?.effect?.type||
+    'none';
+
+  Object.entries(
+    KAORU_CREATIVE_ATMO_FILTERS
+  ).forEach(([tag,ids])=>{
+    if(ids.has(id))tags.add(tag);
+  });
+
+  if([
+    'stripe',
+    'window',
+    'leaves',
+    'blinds',
+    'bokeh',
+    'circles',
+    'sparkles',
+    'underwater',
+    'caustics'
+  ].includes(type)){
+    tags.add('pattern');
+  }
+
+  if([
+    'iridescent',
+    'rainbow',
+    'underwater',
+    'caustics',
+    'sparkles',
+    'bokeh',
+    'circles'
+  ].includes(type)){
+    tags.add('fantasy');
+  }
+
+  if([
+    'split',
+    'neon',
+    'iridescent',
+    'rainbow'
+  ].includes(type)){
+    tags.add('color');
+  }
+
+  if([
+    'glow',
+    'rim',
+    'window',
+    'leaves',
+    'blinds'
+  ].includes(type)){
+    tags.add('natural');
+  }
+
+  return tags;
+}
+
+function kaoruCreativeAtmosphereMatches(
+  preset,
+  filter
+){
+  return(
+    filter==='all'||
+    kaoruCreativeAtmosphereTags(
+      preset
+    ).has(filter)
+  );
+}
+
 
 function normalizeHex(
   value
@@ -726,6 +846,9 @@ function kaoruPopulateAtmosphereGrid(
         button.dataset.atmosphere=
           preset.id;
 
+        button.title=
+          `${preset.name} — ${preset.description}`;
+
         button.dataset.effect=
           effect.type||'none';
 
@@ -790,10 +913,18 @@ function renderAtmospheres3d(
     );
 
   const creativePresets=
-    THREE_ATMOSPHERES.filter(
-      preset=>
-        preset.group==='creative'
-    );
+    THREE_ATMOSPHERES
+      .filter(
+        preset=>
+          preset.group==='creative'
+      )
+      .filter(
+        preset=>
+          kaoruCreativeAtmosphereMatches(
+            preset,
+            creativeAtmosphereFilter
+          )
+      );
 
   kaoruPopulateAtmosphereGrid(
     elements.atmosphereGrid,
@@ -804,6 +935,16 @@ function renderAtmospheres3d(
     elements.creativeAtmosphereGrid,
     creativePresets
   );
+
+  if(elements.creativeAtmosphereCount){
+    elements.creativeAtmosphereCount
+      .textContent=
+        `${creativePresets.length} estilo${
+          creativePresets.length===1
+            ?''
+            :'s'
+        }`;
+  }
 
   const atmosphere=
     state.scene?.atmosphere||{};
@@ -2033,6 +2174,41 @@ elements.creativeAtmosphereGrid?.addEventListener(
   'click',
   kaoruAtmosphereClick
 );
+
+elements.creativeAtmosphereFilters
+  ?.addEventListener(
+    'click',
+    (event)=>{
+      const button=
+        event.target.closest(
+          '[data-atmo-filter]'
+        );
+
+      if(!button)return;
+
+      creativeAtmosphereFilter=
+        button.dataset.atmoFilter||
+        'all';
+
+      elements.creativeAtmosphereFilters
+        .querySelectorAll(
+          '[data-atmo-filter]'
+        )
+        .forEach((item)=>{
+          item.classList.toggle(
+            'is-active',
+            item===button
+          );
+        });
+
+      elements.creativeAtmosphereGrid
+        ?.replaceChildren();
+
+      renderAtmospheres3d(
+        store.getState()
+      );
+    }
+  );
 
 function kaoruPatchAtmosphere(
   patch

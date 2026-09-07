@@ -605,3 +605,65 @@ html.kaoru-embedded .light-topbar{display:none}html.kaoru-embedded body{min-widt
 }
 
 /* === /KAORU LIGHT SHARED 3D CREATIVE V2 === */
+
+/* === KAORU PRESET FILTER UI V1 === */
+.atmosphere-filterbar{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  margin:9px 0 8px;
+  padding:2px 0 5px;
+  overflow-x:auto;
+  scrollbar-width:thin;
+}
+.atmosphere-filterbar button{
+  flex:0 0 auto;
+  min-height:27px;
+  padding:0 8px;
+  border:1px solid var(--lab-line);
+  border-radius:999px;
+  background:var(--lab-surface-2);
+  color:var(--lab-muted);
+  font-size:8px;
+  font-weight:850;
+  cursor:pointer;
+}
+.atmosphere-filterbar button:hover{
+  border-color:var(--lab-accent);
+  color:var(--lab-accent);
+}
+.atmosphere-filterbar button.is-active{
+  border-color:var(--lab-accent);
+  background:var(--lab-accent-soft);
+  color:var(--lab-accent);
+}
+.atmosphere-filter-count{
+  flex:0 0 auto;
+  margin-left:auto;
+  padding:4px 6px;
+  color:var(--lab-muted);
+  font-size:7.5px;
+  font-weight:800;
+  white-space:nowrap;
+}
+.atmosphere-creative-strip .atmosphere-card-creative{
+  min-width:112px;
+}
+.atmosphere-card-creative small{
+  display:-webkit-box;
+  overflow:hidden;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:1;
+  line-clamp:1;
+}
+.light-atmosphere-editor>summary{
+  position:sticky;
+  top:0;
+  z-index:2;
+}
+@media(max-width:1180px){
+  .atmosphere-filter-count{
+    margin-left:0;
+  }
+}
+/* === /KAORU PRESET FILTER UI V1 === */

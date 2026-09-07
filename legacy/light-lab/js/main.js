@@ -73,7 +73,7 @@ const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
   atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
   atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
   atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
@@ -96,7 +96,125 @@ const elements = {
   copyAll: byId('copyAllBtn'), download: byId('downloadStructureBtn'), toast: byId('toast')
 };
 let toastTimer = 0; let editingIndex = null; let lightsRenderSignature = '';
+let creativeAtmosphereFilter = 'all';
 setupAdvancedPreviewUI();
+
+
+const KAORU_CREATIVE_ATMO_FILTERS = {
+  natural: new Set([
+    'sun-side',
+    'golden-rim',
+    'window-cross',
+    'warm-blinds',
+    'window-cool',
+    'blinds-golden',
+    'leaf-light',
+    'leaf-dense',
+    'sun-blast',
+    'bokeh-gold'
+  ]),
+  dramatic: new Set([
+    'yellow-stripe',
+    'golden-rim',
+    'violet-orange',
+    'olive-crimson',
+    'forest-lowkey',
+    'neon-red-cyan',
+    'neon-dual',
+    'cyan-floor',
+    'purple-gold-split',
+    'flash-editorial',
+    'blue-red-drama'
+  ]),
+  color: new Set([
+    'cool-blue',
+    'pink-lavender',
+    'violet-orange',
+    'neon-red-cyan',
+    'neon-dual',
+    'cyan-floor',
+    'purple-gold-split',
+    'iridescent',
+    'rainbow',
+    'rainbow-prism',
+    'blue-red-drama'
+  ])
+};
+
+function kaoruCreativeAtmosphereTags(preset){
+  const tags=new Set();
+  const id=preset?.id||'';
+  const type=
+    preset?.scene?.effect?.type||
+    preset?.backdrop?.effect?.type||
+    'none';
+
+  Object.entries(
+    KAORU_CREATIVE_ATMO_FILTERS
+  ).forEach(([tag,ids])=>{
+    if(ids.has(id))tags.add(tag);
+  });
+
+  if([
+    'stripe',
+    'window',
+    'leaves',
+    'blinds',
+    'bokeh',
+    'circles',
+    'sparkles',
+    'underwater',
+    'caustics'
+  ].includes(type)){
+    tags.add('pattern');
+  }
+
+  if([
+    'iridescent',
+    'rainbow',
+    'underwater',
+    'caustics',
+    'sparkles',
+    'bokeh',
+    'circles'
+  ].includes(type)){
+    tags.add('fantasy');
+  }
+
+  if([
+    'split',
+    'neon',
+    'iridescent',
+    'rainbow'
+  ].includes(type)){
+    tags.add('color');
+  }
+
+  if([
+    'glow',
+    'rim',
+    'window',
+    'leaves',
+    'blinds'
+  ].includes(type)){
+    tags.add('natural');
+  }
+
+  return tags;
+}
+
+function kaoruCreativeAtmosphereMatches(
+  preset,
+  filter
+){
+  return(
+    filter==='all'||
+    kaoruCreativeAtmosphereTags(
+      preset
+    ).has(filter)
+  );
+}
+
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
@@ -675,6 +793,13 @@ function renderLightingControls(state) {
     elements.creativeAtmosphereScenes
       .replaceChildren(
         ...creativeAtmospheres()
+          .filter(
+            (preset)=>
+              kaoruCreativeAtmosphereMatches(
+                preset,
+                creativeAtmosphereFilter
+              )
+          )
           .map((preset)=>{
             const button =
               document.createElement(
@@ -687,6 +812,9 @@ function renderLightingControls(state) {
 
             button.dataset.atmosphere=
               preset.id;
+
+            button.title=
+              `${preset.name} — ${preset.description}`;
 
             button.style.setProperty(
               '--atmo-top',
@@ -721,6 +849,25 @@ function renderLightingControls(state) {
             return button;
           })
       );
+  }
+
+  if(elements.creativeAtmosphereCount){
+    const visibleCount=
+      creativeAtmospheres()
+        .filter(
+          (preset)=>
+            kaoruCreativeAtmosphereMatches(
+              preset,
+              creativeAtmosphereFilter
+            )
+        )
+        .length;
+
+    elements.creativeAtmosphereCount
+      .textContent=
+        `${visibleCount} estilo${
+          visibleCount===1?'':'s'
+        }`;
   }
 
   elements.creativeAtmosphereScenes
@@ -1313,6 +1460,41 @@ elements.atmosphereScenes?.addEventListener(
     );
   }
 );
+elements.creativeAtmosphereFilters
+  ?.addEventListener(
+    'click',
+    (event)=>{
+      const button=
+        event.target.closest(
+          '[data-atmo-filter]'
+        );
+
+      if(!button)return;
+
+      creativeAtmosphereFilter=
+        button.dataset.atmoFilter||
+        'all';
+
+      elements.creativeAtmosphereFilters
+        .querySelectorAll(
+          '[data-atmo-filter]'
+        )
+        .forEach((item)=>{
+          item.classList.toggle(
+            'is-active',
+            item===button
+          );
+        });
+
+      elements.creativeAtmosphereScenes
+        ?.replaceChildren();
+
+      renderLightingControls(
+        store.getState()
+      );
+    }
+  );
+
 elements.creativeAtmosphereScenes?.addEventListener(
   'click',
   (event)=>{
