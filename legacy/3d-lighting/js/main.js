@@ -4322,3 +4322,389 @@ document.addEventListener(
   }
 );
 /* === /KAORU HISTORY LIGHTING V9 === */
+
+/* === KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+const kaoruLightPad3d=
+  document.getElementById(
+    'lightPositionPad3d'
+  );
+
+const kaoruLightHandle3d=
+  document.getElementById(
+    'lightPositionHandle3d'
+  );
+
+const kaoruLightReadout3d=
+  document.getElementById(
+    'lightPositionReadout3d'
+  );
+
+const kaoruSoloButton3d=
+  document.getElementById(
+    'soloSelectedLight3d'
+  );
+
+let kaoruSoloRestore3d=null;
+let kaoruSoloActiveId3d=null;
+let kaoruApplyingSolo3d=false;
+
+function kaoruClamp3d(value,min,max){
+  return Math.max(
+    min,
+    Math.min(max,value)
+  );
+}
+
+function kaoruCurrentSelectedLight3d(
+  state=store.getState()
+){
+  return(
+    state.lighting.lights.find(
+      light=>
+        light.id===
+        state.lighting.selectedLightId
+    )||
+    state.lighting.lights[0]||
+    null
+  );
+}
+
+function kaoruSoloStillValid3d(state){
+  if(!kaoruSoloActiveId3d){
+    return false;
+  }
+
+  const active=
+    state.lighting.lights.find(
+      light=>
+        light.id===
+        kaoruSoloActiveId3d
+    );
+
+  if(
+    !active||
+    !active.enabled
+  ){
+    return false;
+  }
+
+  return !state.lighting.lights.some(
+    light=>
+      light.id!==kaoruSoloActiveId3d&&
+      light.enabled
+  );
+}
+
+function kaoruSyncVisualLight3d(
+  state=store.getState()
+){
+  const light=
+    kaoruCurrentSelectedLight3d(
+      state
+    );
+
+  if(
+    kaoruSoloActiveId3d&&
+    !kaoruApplyingSolo3d&&
+    !kaoruSoloStillValid3d(state)
+  ){
+    kaoruSoloRestore3d=null;
+    kaoruSoloActiveId3d=null;
+  }
+
+  if(!light){
+    if(kaoruLightPad3d){
+      kaoruLightPad3d.dataset.disabled='true';
+    }
+
+    if(kaoruSoloButton3d){
+      kaoruSoloButton3d.disabled=true;
+    }
+
+    return;
+  }
+
+  const azimuth=
+    kaoruClamp3d(
+      Number(light.azimuth||0),
+      -180,
+      180
+    );
+
+  const elevation=
+    kaoruClamp3d(
+      Number(light.elevation||0),
+      -85,
+      85
+    );
+
+  const left=
+    ((azimuth+180)/360)*100;
+
+  const top=
+    ((85-elevation)/170)*100;
+
+  if(kaoruLightHandle3d){
+    kaoruLightHandle3d.style.left=
+      `${left}%`;
+
+    kaoruLightHandle3d.style.top=
+      `${top}%`;
+
+    kaoruLightHandle3d.style
+      .setProperty(
+        '--light-handle-color',
+        light.color||'#FFFFFF'
+      );
+  }
+
+  if(kaoruLightReadout3d){
+    kaoruLightReadout3d.textContent=
+      `${Math.round(azimuth)}° · ${Math.round(elevation)}°`;
+  }
+
+  if(kaoruLightPad3d){
+    delete kaoruLightPad3d
+      .dataset.disabled;
+  }
+
+  if(kaoruSoloButton3d){
+    kaoruSoloButton3d.disabled=false;
+
+    const soloActive=
+      Boolean(
+        kaoruSoloRestore3d
+      );
+
+    kaoruSoloButton3d.textContent=
+      soloActive
+        ?'Restaurar todas las luces'
+        :'Solo seleccionado';
+
+    kaoruSoloButton3d.classList.toggle(
+      'is-active',
+      soloActive
+    );
+
+    kaoruSoloButton3d.setAttribute(
+      'aria-pressed',
+      String(soloActive)
+    );
+  }
+}
+
+function kaoruMoveSelectedLight3d(
+  event
+){
+  if(!kaoruLightPad3d)return;
+
+  const light=
+    kaoruCurrentSelectedLight3d();
+
+  if(!light)return;
+
+  const rect=
+    kaoruLightPad3d
+      .getBoundingClientRect();
+
+  if(
+    !rect.width||
+    !rect.height
+  ){
+    return;
+  }
+
+  const x=
+    kaoruClamp3d(
+      (event.clientX-rect.left)/
+      rect.width,
+      0,
+      1
+    );
+
+  const y=
+    kaoruClamp3d(
+      (event.clientY-rect.top)/
+      rect.height,
+      0,
+      1
+    );
+
+  const azimuth=
+    Math.round(
+      x*360-180
+    );
+
+  const elevation=
+    Math.round(
+      85-y*170
+    );
+
+  updateSelectedLight({
+    azimuth,
+    elevation
+  });
+}
+
+kaoruLightPad3d
+  ?.addEventListener(
+    'pointerdown',
+    (event)=>{
+      if(
+        event.button!==0&&
+        event.pointerType==='mouse'
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      kaoruLightPad3d
+        .setPointerCapture(
+          event.pointerId
+        );
+
+      kaoruMoveSelectedLight3d(
+        event
+      );
+    }
+  );
+
+kaoruLightPad3d
+  ?.addEventListener(
+    'pointermove',
+    (event)=>{
+      if(
+        !kaoruLightPad3d
+          .hasPointerCapture(
+            event.pointerId
+          )
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      kaoruMoveSelectedLight3d(
+        event
+      );
+    }
+  );
+
+kaoruLightPad3d
+  ?.addEventListener(
+    'pointerup',
+    (event)=>{
+      if(
+        kaoruLightPad3d
+          .hasPointerCapture(
+            event.pointerId
+          )
+      ){
+        kaoruLightPad3d
+          .releasePointerCapture(
+            event.pointerId
+          );
+      }
+    }
+  );
+
+kaoruSoloButton3d
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const state=
+        store.getState();
+
+      if(kaoruSoloRestore3d){
+        const restore=
+          new Map(
+            kaoruSoloRestore3d
+          );
+
+        kaoruApplyingSolo3d=true;
+
+        try{
+          store.setState(current=>({
+            ...current,
+            lighting:{
+              ...current.lighting,
+              lights:
+                current.lighting.lights
+                  .map(light=>({
+                    ...light,
+                    enabled:
+                      restore.has(light.id)
+                        ?restore.get(light.id)
+                        :light.enabled
+                  }))
+            }
+          }));
+        }finally{
+          kaoruApplyingSolo3d=false;
+          kaoruSoloRestore3d=null;
+          kaoruSoloActiveId3d=null;
+        }
+
+        toast(
+          'Todas las luces restauradas'
+        );
+
+        kaoruSyncVisualLight3d();
+        return;
+      }
+
+      const selected=
+        kaoruCurrentSelectedLight3d(
+          state
+        );
+
+      if(!selected)return;
+
+      kaoruSoloRestore3d=
+        state.lighting.lights.map(
+          light=>[
+            light.id,
+            Boolean(light.enabled)
+          ]
+        );
+
+      kaoruSoloActiveId3d=
+        selected.id;
+
+      kaoruApplyingSolo3d=true;
+
+      try{
+        store.setState(current=>({
+          ...current,
+          lighting:{
+            ...current.lighting,
+            enabled:true,
+            lights:
+              current.lighting.lights
+                .map(light=>({
+                  ...light,
+                  enabled:
+                    light.id===
+                    selected.id
+                }))
+          }
+        }));
+      }finally{
+        kaoruApplyingSolo3d=false;
+      }
+
+      toast(
+        `Solo: ${selected.name||'Luz'}`
+      );
+
+      kaoruSyncVisualLight3d();
+    }
+  );
+
+store.subscribe(
+  kaoruSyncVisualLight3d
+);
+
+kaoruSyncVisualLight3d();
+/* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */

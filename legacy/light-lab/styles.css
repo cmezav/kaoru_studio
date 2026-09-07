@@ -1457,3 +1457,188 @@ html.kaoru-embedded .light-topbar{display:none}html.kaoru-embedded body{min-widt
   }
 }
 /* === /KAORU HISTORY LIGHTING V9 === */
+
+/* === KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+.light-position-tools{
+  display:grid;
+  gap:8px;
+  margin:9px 0 11px;
+  padding:9px;
+  border:1px solid
+    var(--line,var(--three-line,rgba(127,127,127,.28)));
+  border-radius:12px;
+  background:
+    var(--surface-2,var(--three-surface-2,rgba(127,127,127,.05)));
+}
+
+.light-position-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.light-position-head strong,
+.light-position-head small{
+  display:block;
+}
+
+.light-position-head strong{
+  font-size:10px;
+}
+
+.light-position-head small{
+  margin-top:2px;
+  color:
+    var(--muted,var(--three-muted,currentColor));
+  font-size:8px;
+  line-height:1.3;
+}
+
+.light-position-head output{
+  flex:0 0 auto;
+  padding:4px 6px;
+  border-radius:999px;
+  background:
+    color-mix(
+      in srgb,
+      currentColor 6%,
+      transparent
+    );
+  font-size:7.5px;
+  font-weight:850;
+}
+
+.light-position-pad{
+  position:relative;
+  width:min(100%,220px);
+  aspect-ratio:1/1;
+  margin:0 auto;
+  border:1px solid
+    var(--line,var(--three-line,rgba(127,127,127,.28)));
+  border-radius:50%;
+  overflow:hidden;
+  touch-action:none;
+  cursor:crosshair;
+  background:
+    linear-gradient(
+      90deg,
+      transparent calc(50% - .5px),
+      color-mix(in srgb,currentColor 14%,transparent) 50%,
+      transparent calc(50% + .5px)
+    ),
+    linear-gradient(
+      0deg,
+      transparent calc(50% - .5px),
+      color-mix(in srgb,currentColor 14%,transparent) 50%,
+      transparent calc(50% + .5px)
+    ),
+    radial-gradient(
+      circle,
+      transparent 0 33%,
+      color-mix(in srgb,currentColor 8%,transparent) 33.5% 34%,
+      transparent 34.5% 66%,
+      color-mix(in srgb,currentColor 8%,transparent) 66.5% 67%,
+      transparent 67.5%
+    ),
+    color-mix(
+      in srgb,
+      var(--surface,var(--three-surface,#fff)) 92%,
+      currentColor
+    );
+}
+
+.light-position-pad[data-disabled="true"]{
+  opacity:.38;
+  pointer-events:none;
+}
+
+.light-position-handle{
+  --light-handle-color:#FFFFFF;
+  position:absolute;
+  z-index:3;
+  width:22px;
+  height:22px;
+  padding:0;
+  border:2px solid
+    color-mix(
+      in srgb,
+      var(--light-handle-color) 75%,
+      white
+    );
+  border-radius:50%;
+  background:
+    var(--light-handle-color);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.18),
+    0 3px 11px
+    color-mix(
+      in srgb,
+      var(--light-handle-color) 45%,
+      transparent
+    );
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+
+.light-pad-label{
+  position:absolute;
+  z-index:1;
+  color:
+    var(--muted,var(--three-muted,currentColor));
+  opacity:.56;
+  font-size:6.5px;
+  font-weight:800;
+  pointer-events:none;
+}
+
+.light-pad-label.is-top{
+  left:50%;
+  top:6px;
+  transform:translateX(-50%);
+}
+
+.light-pad-label.is-bottom{
+  left:50%;
+  bottom:6px;
+  transform:translateX(-50%);
+}
+
+.light-pad-label.is-left{
+  left:7px;
+  top:50%;
+  transform:translateY(-50%);
+}
+
+.light-pad-label.is-right{
+  right:7px;
+  top:50%;
+  transform:translateY(-50%);
+}
+
+.light-solo-btn{
+  min-height:31px;
+  border:1px solid
+    var(--line,var(--three-line,rgba(127,127,127,.28)));
+  border-radius:9px;
+  background:
+    var(--surface,var(--three-surface,#fff));
+  color:inherit;
+  font-size:8.5px;
+  font-weight:850;
+  cursor:pointer;
+}
+
+.light-solo-btn:hover:not(:disabled),
+.light-solo-btn.is-active{
+  border-color:
+    var(--accent,var(--lab-accent,currentColor));
+  color:
+    var(--accent,var(--lab-accent,currentColor));
+}
+
+.light-solo-btn:disabled{
+  opacity:.4;
+  cursor:default;
+}
+/* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */

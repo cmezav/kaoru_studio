@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=lighting-history-v9-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=visual-light-v10-20260907">
 
   <script type="importmap">
   {
@@ -321,6 +321,24 @@
 
         <div id="lightList" class="light-list"></div>
 
+        <div class="light-position-tools">
+          <div class="light-position-head">
+            <div>
+              <strong>Posición visual de la luz</strong>
+              <small>Arrastra el punto en vez de depender solo de los sliders.</small>
+            </div>
+            <output id="lightPositionReadout3d">0° · 0°</output>
+          </div>
+          <div id="lightPositionPad3d" class="light-position-pad" aria-label="Mover luz seleccionada por azimut y elevación">
+            <span class="light-pad-label is-top">Arriba</span>
+            <span class="light-pad-label is-left">Izq.</span>
+            <span class="light-pad-label is-right">Der.</span>
+            <span class="light-pad-label is-bottom">Abajo</span>
+            <button id="lightPositionHandle3d" class="light-position-handle" type="button" tabindex="-1" aria-hidden="true"></button>
+          </div>
+          <button id="soloSelectedLight3d" class="light-solo-btn" type="button">Solo seleccionado</button>
+        </div>
+
         <button id="addLightBtn" class="wide-action light-add" type="button">+ Agregar luz</button>
 
         <div class="light-editor">
@@ -588,7 +606,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=lighting-history-v9-20260907"></script>
+  <script type="module" src="./js/main.js?cache=visual-light-v10-20260907"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

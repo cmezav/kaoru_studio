@@ -3166,3 +3166,405 @@ document.addEventListener(
   }
 );
 /* === /KAORU HISTORY LIGHTING V9 === */
+
+/* === KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+const kaoruLightPad=
+  document.getElementById(
+    'lightPositionPad'
+  );
+
+const kaoruLightHandle=
+  document.getElementById(
+    'lightPositionHandle'
+  );
+
+const kaoruLightReadout=
+  document.getElementById(
+    'lightPositionReadout'
+  );
+
+const kaoruSoloButton=
+  document.getElementById(
+    'soloSelectedLight'
+  );
+
+let kaoruSoloRestoreLight=null;
+let kaoruSoloActiveIdLight=null;
+let kaoruApplyingSoloLight=false;
+
+function kaoruClampLight(value,min,max){
+  return Math.max(
+    min,
+    Math.min(max,value)
+  );
+}
+
+function kaoruCurrentSelectedLight(
+  state=store.getState()
+){
+  return(
+    state.lighting.lights.find(
+      light=>
+        light.id===
+        state.lighting.selectedLightId
+    )||
+    state.lighting.lights[0]||
+    null
+  );
+}
+
+function kaoruSoloStillValidLight(state){
+  if(!kaoruSoloActiveIdLight){
+    return false;
+  }
+
+  const active=
+    state.lighting.lights.find(
+      light=>
+        light.id===
+        kaoruSoloActiveIdLight
+    );
+
+  if(
+    !active||
+    !active.enabled
+  ){
+    return false;
+  }
+
+  return !state.lighting.lights.some(
+    light=>
+      light.id!==kaoruSoloActiveIdLight&&
+      light.enabled
+  );
+}
+
+function kaoruSyncVisualLight(
+  state=store.getState()
+){
+  const light=
+    kaoruCurrentSelectedLight(
+      state
+    );
+
+  if(
+    kaoruSoloActiveIdLight&&
+    !kaoruApplyingSoloLight&&
+    !kaoruSoloStillValidLight(state)
+  ){
+    kaoruSoloRestoreLight=null;
+    kaoruSoloActiveIdLight=null;
+  }
+
+  if(!light){
+    if(kaoruLightPad){
+      kaoruLightPad.dataset.disabled='true';
+    }
+
+    if(kaoruSoloButton){
+      kaoruSoloButton.disabled=true;
+    }
+
+    return;
+  }
+
+  const direction=
+    kaoruClampLight(
+      Number(
+        light.direction??
+        light.azimuth??
+        0
+      ),
+      -180,
+      180
+    );
+
+  const elevation=
+    kaoruClampLight(
+      Number(light.elevation||0),
+      -85,
+      85
+    );
+
+  const left=
+    ((direction+180)/360)*100;
+
+  const top=
+    ((85-elevation)/170)*100;
+
+  if(kaoruLightHandle){
+    kaoruLightHandle.style.left=
+      `${left}%`;
+
+    kaoruLightHandle.style.top=
+      `${top}%`;
+
+    kaoruLightHandle.style
+      .setProperty(
+        '--light-handle-color',
+        light.color||'#FFFFFF'
+      );
+  }
+
+  if(kaoruLightReadout){
+    kaoruLightReadout.textContent=
+      `${Math.round(direction)}° · ${Math.round(elevation)}°`;
+  }
+
+  if(kaoruLightPad){
+    delete kaoruLightPad
+      .dataset.disabled;
+  }
+
+  if(kaoruSoloButton){
+    kaoruSoloButton.disabled=false;
+
+    const soloActive=
+      Boolean(
+        kaoruSoloRestoreLight
+      );
+
+    kaoruSoloButton.textContent=
+      soloActive
+        ?'Restaurar todas las luces'
+        :'Solo seleccionado';
+
+    kaoruSoloButton.classList.toggle(
+      'is-active',
+      soloActive
+    );
+
+    kaoruSoloButton.setAttribute(
+      'aria-pressed',
+      String(soloActive)
+    );
+  }
+}
+
+function kaoruMoveSelectedLight(
+  event
+){
+  if(!kaoruLightPad)return;
+
+  const light=
+    kaoruCurrentSelectedLight();
+
+  if(!light)return;
+
+  const rect=
+    kaoruLightPad
+      .getBoundingClientRect();
+
+  if(
+    !rect.width||
+    !rect.height
+  ){
+    return;
+  }
+
+  const x=
+    kaoruClampLight(
+      (event.clientX-rect.left)/
+      rect.width,
+      0,
+      1
+    );
+
+  const y=
+    kaoruClampLight(
+      (event.clientY-rect.top)/
+      rect.height,
+      0,
+      1
+    );
+
+  const direction=
+    Math.round(
+      x*360-180
+    );
+
+  const elevation=
+    Math.round(
+      85-y*170
+    );
+
+  updateDirectLight(
+    light.id,
+    {
+      direction,
+      elevation
+    }
+  );
+}
+
+kaoruLightPad
+  ?.addEventListener(
+    'pointerdown',
+    (event)=>{
+      if(
+        event.button!==0&&
+        event.pointerType==='mouse'
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      kaoruLightPad
+        .setPointerCapture(
+          event.pointerId
+        );
+
+      kaoruMoveSelectedLight(
+        event
+      );
+    }
+  );
+
+kaoruLightPad
+  ?.addEventListener(
+    'pointermove',
+    (event)=>{
+      if(
+        !kaoruLightPad
+          .hasPointerCapture(
+            event.pointerId
+          )
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      kaoruMoveSelectedLight(
+        event
+      );
+    }
+  );
+
+kaoruLightPad
+  ?.addEventListener(
+    'pointerup',
+    (event)=>{
+      if(
+        kaoruLightPad
+          .hasPointerCapture(
+            event.pointerId
+          )
+      ){
+        kaoruLightPad
+          .releasePointerCapture(
+            event.pointerId
+          );
+      }
+    }
+  );
+
+kaoruSoloButton
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const state=
+        store.getState();
+
+      if(kaoruSoloRestoreLight){
+        const restore=
+          new Map(
+            kaoruSoloRestoreLight
+          );
+
+        kaoruApplyingSoloLight=true;
+
+        try{
+          store.setState(current=>({
+            ...current,
+            lighting:{
+              ...current.lighting,
+              lights:
+                current.lighting.lights
+                  .map(light=>({
+                    ...light,
+                    enabled:
+                      restore.has(light.id)
+                        ?restore.get(light.id)
+                        :light.enabled
+                  }))
+            },
+            ui:{
+              ...current.ui,
+              paletteView:'illuminated'
+            }
+          }));
+        }finally{
+          kaoruApplyingSoloLight=false;
+          kaoruSoloRestoreLight=null;
+          kaoruSoloActiveIdLight=null;
+        }
+
+        showToast(
+          'Todas las luces restauradas'
+        );
+
+        kaoruSyncVisualLight();
+        return;
+      }
+
+      const selected=
+        kaoruCurrentSelectedLight(
+          state
+        );
+
+      if(!selected)return;
+
+      kaoruSoloRestoreLight=
+        state.lighting.lights.map(
+          light=>[
+            light.id,
+            Boolean(light.enabled)
+          ]
+        );
+
+      kaoruSoloActiveIdLight=
+        selected.id;
+
+      kaoruApplyingSoloLight=true;
+
+      try{
+        store.setState(current=>({
+          ...current,
+          lighting:{
+            ...current.lighting,
+            enabled:true,
+            sceneId:'custom',
+            lights:
+              current.lighting.lights
+                .map(light=>({
+                  ...light,
+                  enabled:
+                    light.id===
+                    selected.id
+                }))
+          },
+          ui:{
+            ...current.ui,
+            paletteView:'illuminated'
+          }
+        }));
+      }finally{
+        kaoruApplyingSoloLight=false;
+      }
+
+      showToast(
+        `Solo: ${selected.name||'Luz'}`
+      );
+
+      kaoruSyncVisualLight();
+    }
+  );
+
+store.subscribe(
+  kaoruSyncVisualLight
+);
+
+kaoruSyncVisualLight();
+/* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
