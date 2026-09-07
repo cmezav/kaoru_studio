@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=lighting-simple-1">
+  <link rel="stylesheet" href="./styles.css?cache=atmosphere-simple-v3-20260906">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -52,7 +52,7 @@
         <div class="section-heading lighting-heading">
           <span>03</span>
           <div>
-            <h2>Elige un tipo de iluminación</h2>
+            <h2>Elige el ambiente</h2>
             <small>Empieza con un estilo y luego cambia sus colores y fuerza.</small>
           </div>
           <label class="master-switch" title="Activar o apagar la iluminación">
@@ -66,7 +66,21 @@
           a lo que buscas y después ajústalo.
         </p>
 
-        <div id="lightingScenes" class="lighting-scenes lighting-preset-grid" aria-label="Tipos de iluminación"></div>
+        <div class="atmosphere-simple-block">
+          <div class="atmosphere-simple-head">
+            <div>
+              <strong>Ambiente</strong>
+              <small>El fondo y la luz cambian juntos.</small>
+            </div>
+            <span id="atmosphereLabel">Dia</span>
+          </div>
+          <div id="atmosphereScenes" class="atmosphere-grid" aria-label="Ambientes"></div>
+        </div>
+
+        <details class="lighting-other-presets">
+          <summary>Otros estilos de luz</summary>
+          <div id="lightingScenes" class="lighting-scenes lighting-preset-grid" aria-label="Tipos de iluminacion"></div>
+        </details>
 
         <div class="simple-light-editor-heading">
           <div>
@@ -229,7 +243,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=duotone-visible-2"></script>
+  <script type="module" src="./js/main.js?cache=atmosphere-simple-v3-20260906"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>

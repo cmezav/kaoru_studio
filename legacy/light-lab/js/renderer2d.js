@@ -51,29 +51,162 @@ function highlightColor(colors) { return colorAt(colors, 13, '#FFF2EB'); }
 function rimColor(colors) { return colorAt(colors, 14, '#B8D7FF'); }
 function bounceColor(colors) { return colorAt(colors, 15, '#D48E79'); }
 
-function renderBackdrop(ctx, width, height) {
-  const dark = document.documentElement.dataset.theme === 'night';
-  const backdrop = ctx.createRadialGradient(width * .5, height * .38, 0, width * .5, height * .5, width * .78);
-  backdrop.addColorStop(0, dark ? '#2B2733' : '#FFFFFF');
-  backdrop.addColorStop(.55, dark ? '#1C1921' : '#F7F3F8');
-  backdrop.addColorStop(1, dark ? '#100F13' : '#E9E5EB');
-  ctx.fillStyle = backdrop;
-  ctx.fillRect(0, 0, width, height);
+function renderBackdrop(ctx,width,height,lighting=null){
+  const atmosphere=
+    lighting?.atmosphere?.backdrop;
 
-  ctx.save();
-  ctx.globalAlpha = dark ? .16 : .28;
-  ctx.strokeStyle = dark ? '#FFFFFF' : '#6B5A72';
-  ctx.lineWidth = 1;
-  const step = Math.max(42, Math.round(width / 18));
-  for (let x = 0; x < width; x += step) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+  if(atmosphere){
+    const sky=
+      ctx.createLinearGradient(
+        0,0,0,height
+      );
+
+    sky.addColorStop(
+      0,
+      atmosphere.top||'#7FAED0'
+    );
+    sky.addColorStop(
+      .52,
+      atmosphere.mid||'#AAB7C0'
+    );
+    sky.addColorStop(
+      1,
+      atmosphere.bottom||'#6E7778'
+    );
+
+    ctx.fillStyle=sky;
+    ctx.fillRect(0,0,width,height);
+
+    const glow=
+      ctx.createRadialGradient(
+        width*.26,
+        height*.24,
+        0,
+        width*.26,
+        height*.24,
+        width*.66
+      );
+
+    glow.addColorStop(
+      0,
+      rgba(
+        atmosphere.accent||'#FFFFFF',
+        .34
+      )
+    );
+
+    glow.addColorStop(
+      .5,
+      rgba(
+        atmosphere.accent||'#FFFFFF',
+        .08
+      )
+    );
+
+    glow.addColorStop(
+      1,
+      rgba(
+        atmosphere.accent||'#FFFFFF',
+        0
+      )
+    );
+
+    ctx.fillStyle=glow;
+    ctx.fillRect(0,0,width,height);
+
+    if(
+      atmosphere.weather==='rain'||
+      atmosphere.weather==='storm'
+    ){
+      ctx.save();
+
+      ctx.strokeStyle=
+        rgba(
+          '#D9F3FF',
+          atmosphere.weather==='storm'
+            ?.22
+            :.14
+        );
+
+      ctx.lineWidth=
+        Math.max(
+          1,
+          width*.0015
+        );
+
+      const gap=
+        Math.max(
+          24,
+          width/34
+        );
+
+      for(
+        let x=-height;
+        x<width+height;
+        x+=gap
+      ){
+        ctx.beginPath();
+        ctx.moveTo(x,0);
+        ctx.lineTo(
+          x-height*.34,
+          height
+        );
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    if(atmosphere.weather==='fog'){
+      ctx.fillStyle=
+        'rgba(245,248,246,.20)';
+
+      ctx.fillRect(
+        0,0,width,height
+      );
+    }
+
+    return;
   }
-  for (let y = 0; y < height; y += step) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-  }
-  ctx.restore();
+
+  const dark=
+    document.documentElement
+      .dataset.theme==='night';
+
+  const backdrop=
+    ctx.createRadialGradient(
+      width*.5,
+      height*.38,
+      0,
+      width*.5,
+      height*.5,
+      width*.78
+    );
+
+  backdrop.addColorStop(
+    0,
+    dark
+      ?'#2B2733'
+      :'#FFFFFF'
+  );
+
+  backdrop.addColorStop(
+    .55,
+    dark
+      ?'#1C1921'
+      :'#F7F3F8'
+  );
+
+  backdrop.addColorStop(
+    1,
+    dark
+      ?'#100F13'
+      :'#E9E5EB'
+  );
+
+  ctx.fillStyle=backdrop;
+  ctx.fillRect(0,0,width,height);
 }
-
 function renderGroundShadow(ctx, cx, cy, rx, ry, color = '#000000') {
   const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
   gradient.addColorStop(0, rgba(color, .32));
@@ -1072,7 +1205,7 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
 
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, width, height);
-  renderBackdrop(ctx, width, height);
+  renderBackdrop(ctx, width, height, lighting);
 
   const lightVector = dominantLightVector(lighting);
   const safeColors = Array.isArray(colors) && colors.length ? colors : ['#777777'];

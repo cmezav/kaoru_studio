@@ -1,6 +1,6 @@
 import { LIGHT_LAB_CATEGORIES } from './presets.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
-import { createDefaultLighting } from './lightingEngine.js';
+import { buildAtmosphereLighting } from './atmospheres.js?cache=atmosphere-simple-v3';
 
 export const LIGHT_LAB_STATE_VERSION = 7;
 
@@ -17,7 +17,7 @@ export function createInitialState() {
     interpretation: `Color base ${preset.baseHex}`,
     params,
     palette: { source: 'base-color', baseHex: preset.baseHex, colors: entries.map((item) => item.hex), entries, roles: entries.map((item) => item.role) },
-    lighting: createDefaultLighting(),
+    lighting: buildAtmosphereLighting('day'),
     reference: { image: null, extractedColors: [], recentColors: [] },
     ui: { activePanel: 'category', phase: 7, selectedSwatchIndex: null, lastSamplePosition: null, paletteView: 'illuminated' }
   };

@@ -2,10 +2,11 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=duotone-visible-2';
+import { renderBasicPreview } from './renderer2d.js?cache=atmosphere-simple-v3';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
+import { LIGHT_ATMOSPHERES, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=atmosphere-simple-v3';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
@@ -71,7 +72,7 @@ const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  lightingEnabled: byId('lightingEnabled'), lightingScenes: byId('lightingScenes'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
   resetParams: byId('resetParamsBtn'), previewTitle: byId('previewTitle'), paletteName: byId('paletteName'), swatchGrid: byId('swatchGrid'),
   paletteViewTabs: byId('paletteViewTabs'), comparisonGrid: byId('comparisonGrid'),
   canvas: byId('previewCanvas'), modeLabel: byId('previewModeLabel'), previewTabs: byId('previewTabs'),
@@ -171,7 +172,59 @@ function renderLightingControls(state) {
   elements.addLight.disabled =
     lighting.lights.length >= MAX_DIRECT_LIGHTS;
 
-  if (!elements.lightingScenes.childElementCount) {
+    if (
+    elements.atmosphereScenes &&
+    !elements.atmosphereScenes.childElementCount
+  ) {
+    elements.atmosphereScenes.replaceChildren(
+      ...LIGHT_ATMOSPHERES.map((preset) => {
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='atmosphere-card';
+        button.dataset.atmosphere=preset.id;
+        button.style.setProperty('--atmo-top',preset.backdrop.top);
+        button.style.setProperty('--atmo-mid',preset.backdrop.mid);
+        button.style.setProperty('--atmo-bottom',preset.backdrop.bottom);
+        button.style.setProperty('--atmo-accent',preset.backdrop.accent);
+        button.innerHTML=`
+          <span class="atmosphere-preview" aria-hidden="true"><i></i></span>
+          <span>
+            <strong>${escapeHtml(preset.name)}</strong>
+            <small>${escapeHtml(preset.description)}</small>
+          </span>
+        `;
+        return button;
+      })
+    );
+  }
+
+  const activeAtmosphere=
+    lighting.atmosphere?.id||
+    'day';
+
+  elements.atmosphereScenes
+    ?.querySelectorAll('[data-atmosphere]')
+    .forEach((button)=>{
+      const active=
+        button.dataset.atmosphere===
+        activeAtmosphere;
+
+      button.classList.toggle(
+        'is-active',
+        active
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(active)
+      );
+    });
+
+  if(elements.atmosphereLabel){
+    elements.atmosphereLabel.textContent=
+      atmosphereById(activeAtmosphere).name;
+  }
+if (!elements.lightingScenes.childElementCount) {
     elements.lightingScenes.replaceChildren(
       ...LIGHTING_SCENES.map((scene) => {
         const button = document.createElement('button');
@@ -704,6 +757,40 @@ elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=element
 document.querySelector('.parameter-list').addEventListener('input',(event)=>{const input=event.target.closest('[data-param]');if(!input)return;store.setState((state)=>{const params={...state.params,[input.dataset.param]:Number(input.value)};const next={...state,selection:{...state.selection,presetId:'custom'},params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});});
 elements.resetParams.addEventListener('click',()=>{store.setState((state)=>{const params={...DEFAULT_PARAMS};const next={...state,params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});showToast('Ajustes restablecidos');});
 elements.lightingEnabled.addEventListener('change',()=>{store.setState((state)=>({...state,lighting:{...state.lighting,enabled:elements.lightingEnabled.checked}}));showToast(elements.lightingEnabled.checked?'Iluminación activada':'Iluminación apagada');});
+elements.atmosphereScenes?.addEventListener(
+  'click',
+  (event)=>{
+    const button=
+      event.target.closest(
+        '[data-atmosphere]'
+      );
+
+    if(!button)return;
+
+    const preset=
+      atmosphereById(
+        button.dataset.atmosphere
+      );
+
+    lightsRenderSignature='';
+
+    store.setState((state)=>({
+      ...state,
+      lighting:
+        buildAtmosphereLighting(
+          preset.id
+        ),
+      ui:{
+        ...state.ui,
+        paletteView:'illuminated'
+      }
+    }));
+
+    showToast(
+      `Ambiente: ${preset.name}`
+    );
+  }
+);
 elements.lightingScenes.addEventListener('click',(event)=>{
   const button=event.target.closest('[data-scene]');
   if(!button)return;
