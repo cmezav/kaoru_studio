@@ -175,11 +175,6 @@ class PreviewPipeline{
   restoreLensLayout(snapshot){
     if(!snapshot)return;
 
-    /*
-      Chrome puede recalcular el origen del contenedor flex cuando
-      termina un render pesado de Canvas2D. Reasignar el tamaño CSS
-      y devolver los scrolls evita el salto visual de Lens Blur.
-    */
     if(snapshot.cssWidth){
       this.canvas.style.width=
         snapshot.cssWidth;
@@ -190,36 +185,97 @@ class PreviewPipeline{
         snapshot.cssHeight;
     }
 
+    const viewport=
+      snapshot.viewport;
+
+    const properties=
+      snapshot.properties;
+
+    const app=
+      document.querySelector(
+        '.image-app'
+      );
+
+    const workspace=
+      document.querySelector(
+        '.workspace'
+      );
+
+    const stage=
+      document.querySelector(
+        '.stage'
+      );
+
+    const restorePosition=()=>{
+      if(viewport){
+        viewport.scrollTop=
+          snapshot.viewportTop;
+
+        viewport.scrollLeft=
+          snapshot.viewportLeft;
+      }
+
+      if(properties){
+        properties.scrollTop=
+          snapshot.propertiesTop;
+
+        properties.scrollLeft=
+          snapshot.propertiesLeft;
+      }
+    };
+
+    const repaint=()=>{
+      /*
+        Invalida pintura/composición sin cambiar el tamaño visible.
+        Es el equivalente automático al repaint que estaba ocurriendo
+        al modificar el zoom del navegador.
+      */
+      for(const element of[
+        app,
+        workspace,
+        stage,
+        viewport
+      ]){
+        if(!element)continue;
+
+        const previous=
+          element.style.opacity;
+
+        element.style.opacity=
+          '0.99999';
+
+        void element.offsetHeight;
+
+        element.style.opacity=
+          previous;
+      }
+
+      void document.documentElement.offsetHeight;
+
+      restorePosition();
+    };
+
+    restorePosition();
+    repaint();
+
     requestAnimationFrame(
       ()=>{
-        if(snapshot.viewport){
-          snapshot.viewport.scrollTop=
-            snapshot.viewportTop;
+        repaint();
 
-          snapshot.viewport.scrollLeft=
-            snapshot.viewportLeft;
-        }
-
-        if(snapshot.properties){
-          snapshot.properties.scrollTop=
-            snapshot.propertiesTop;
-
-          snapshot.properties.scrollLeft=
-            snapshot.propertiesLeft;
-        }
-
-        if(
-          window.scrollX!==
-            snapshot.pageX||
-          window.scrollY!==
-            snapshot.pageY
-        ){
-          window.scrollTo(
-            snapshot.pageX,
-            snapshot.pageY
-          );
-        }
+        requestAnimationFrame(
+          repaint
+        );
       }
+    );
+
+    setTimeout(
+      repaint,
+      80
+    );
+
+    setTimeout(
+      repaint,
+      180
     );
   }
 
