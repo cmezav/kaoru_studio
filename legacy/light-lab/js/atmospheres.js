@@ -1,6 +1,6 @@
 import { sceneLighting } from './lightingEngine.js';
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
-import { THREE_ATMOSPHERES } from '../../3d-lighting/js/atmospheres3d.js?cache=creative-catalog-v1-20260906';
+import { THREE_ATMOSPHERES } from '../../3d-lighting/js/atmospheres3d.js?cache=extra-light-presets-v1-20260907';
 
 const LIGHT_CORE_ATMOSPHERES = [
   {

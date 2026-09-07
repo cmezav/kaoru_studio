@@ -27,7 +27,7 @@ import {
   save3dToGallery,
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
-import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=creative-catalog-v1-20260906';
+import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=extra-light-presets-v1-20260907';
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
 
 const store = create3dStore();

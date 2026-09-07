@@ -1,6 +1,8 @@
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
+import { EXTRA_LIGHTING_ATMOSPHERES } from '../../shared/extraLightingAtmospheres.js?cache=extra-light-presets-v1-20260907';
 
 export const THREE_ATMOSPHERES = [
+  ...EXTRA_LIGHTING_ATMOSPHERES,
   {
     id:'day',
     name:'D\u00eda',
