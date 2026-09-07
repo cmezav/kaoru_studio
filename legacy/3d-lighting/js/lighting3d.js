@@ -1,5 +1,5 @@
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
-import { drawLightProjectorPattern, lightProjectorSignature, normalizeLightProjector, projectorIsMulticolor } from '../../shared/lightPatterns.js?cache=projector-controls-v1-20260906';
+import { drawLightProjectorPattern, lightProjectorSignature, normalizeLightProjector, projectorIsMulticolor } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
 
 export const LIGHTING3D_PHASE = 5;
 export const MAX_3D_LIGHTS = 8;

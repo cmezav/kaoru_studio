@@ -11,7 +11,7 @@ import {
   MAX_3D_LIGHTS,
   createDefault3dLight,
   duplicate3dLight
-} from './lighting3d.js?v=projector-real-v1';
+} from './lighting3d.js?v=projector-quality-v1-20260906';
 import {
   listAvailableLightLabPalettes,
   readLightLabFile,
@@ -28,7 +28,7 @@ import {
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
 import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=creative-catalog-v1-20260906';
-import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-controls-v1-20260906';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;

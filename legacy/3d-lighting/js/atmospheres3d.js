@@ -1,4 +1,4 @@
-import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-controls-v1-20260906';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-quality-v1-20260906';
 
 export const THREE_ATMOSPHERES = [
   {
