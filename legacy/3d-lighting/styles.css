@@ -1017,3 +1017,35 @@ body[data-atmo-effect="underwater"]
   }
 }
 /* === /KAORU PRESET FILTER UI V1 === */
+
+/* === KAORU PRESET BROWSER V4 === */
+.atmosphere-search-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:8px 0 6px;
+}
+.atmosphere-search-row input{
+  width:100%;
+  min-width:0;
+  box-sizing:border-box;
+  border:1px solid var(--line,rgba(127,127,127,.28));
+  border-radius:10px;
+  padding:9px 11px;
+  background:var(--surface,#fff);
+  color:inherit;
+  font:inherit;
+  outline:none;
+}
+.atmosphere-search-row input:focus{
+  border-color:var(--accent,var(--lab-accent,#8a67d5));
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,var(--lab-accent,#8a67d5)) 18%,transparent);
+}
+.atmosphere-search-row input::placeholder{
+  color:inherit;
+  opacity:.55;
+}
+.atmosphere-filterbar button[data-atmo-filter="new"],
+.atmosphere-filterbar button[data-atmo-filter="classic"]{
+  font-weight:650;
+}

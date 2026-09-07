@@ -71,6 +71,7 @@ const elements = {
   creativeAtmosphereGrid: byId('creativeAtmosphereGrid'),
   creativeAtmosphereFilters: byId('creativeAtmosphereFilters3d'),
   creativeAtmosphereCount: byId('creativeAtmosphereCount3d'),
+  creativeAtmosphereSearch: byId('creativeAtmosphereSearch3d'),
   viewportCard: document.querySelector('.viewport-card'),
   atmosphereEditorLabel: byId('atmosphereEditorLabel'),
   atmosphereBackground: byId('atmosphereBackground'),
@@ -192,6 +193,7 @@ let modelLoadToken = 0;
 let customModelFiles = [];
 let paletteLibrary = [];
 let creativeAtmosphereFilter = 'all';
+let creativeAtmosphereSearch = '';
 
 
 const KAORU_CREATIVE_ATMO_FILTERS = {
@@ -297,16 +299,59 @@ function kaoruCreativeAtmosphereTags(preset){
   return tags;
 }
 
+function kaoruNormalizeAtmosphereSearch(value){
+  return String(value||'')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .trim();
+}
+
 function kaoruCreativeAtmosphereMatches(
   preset,
   filter
 ){
-  return(
-    filter==='all'||
+  const tags=
     kaoruCreativeAtmosphereTags(
       preset
-    ).has(filter)
-  );
+    );
+
+  const id=
+    String(preset?.id||'');
+
+  const isNew=
+    id.startsWith('ref-');
+
+  const filterMatch=
+    filter==='all'||
+    (filter==='new'&&isNew)||
+    (filter==='classic'&&!isNew)||
+    tags.has(filter);
+
+  if(!filterMatch){
+    return false;
+  }
+
+  const query=
+    kaoruNormalizeAtmosphereSearch(
+      creativeAtmosphereSearch
+    );
+
+  if(!query){
+    return true;
+  }
+
+  const haystack=
+    kaoruNormalizeAtmosphereSearch(
+      [
+        preset?.id,
+        preset?.name,
+        preset?.description,
+        ...tags
+      ].filter(Boolean).join(' ')
+    );
+
+  return haystack.includes(query);
 }
 
 
@@ -3148,3 +3193,20 @@ async function start() {
 }
 
 start();
+
+/* === KAORU PRESET SEARCH V4 === */
+elements.creativeAtmosphereSearch
+  ?.addEventListener(
+    'input',
+    (event)=>{
+      creativeAtmosphereSearch=
+        event.target.value||'';
+
+      elements.creativeAtmosphereGrid
+        ?.replaceChildren();
+
+      renderAtmospheres3d(
+        store.getState()
+      );
+    }
+  );

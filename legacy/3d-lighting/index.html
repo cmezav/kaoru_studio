@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-filter-ui-v1-20260906">
+  <link rel="stylesheet" href="./styles.css?cache=preset-browser-v4-20260907">
 
   <script type="importmap">
   {
@@ -77,8 +77,13 @@
           <strong>Estilos creativos</strong>
           <small>Basados en las referencias de iluminacion.</small>
         </div>
+        <div class="atmosphere-search-row">
+          <input id="creativeAtmosphereSearch3d" type="search" autocomplete="off" placeholder="Buscar preset por nombre, efecto o descripción..." aria-label="Buscar estilos creativos 3D">
+        </div>
         <div class="atmosphere-filterbar" id="creativeAtmosphereFilters3d" aria-label="Filtrar estilos creativos 3D">
           <button type="button" class="is-active" data-atmo-filter="all">Todos</button>
+          <button type="button" data-atmo-filter="new">Nuevos</button>
+          <button type="button" data-atmo-filter="classic">Anteriores</button>
           <button type="button" data-atmo-filter="natural">Natural</button>
           <button type="button" data-atmo-filter="color">Color</button>
           <button type="button" data-atmo-filter="pattern">Patrones</button>
@@ -529,7 +534,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=lighting-calibration-v3-20260907"></script>
+  <script type="module" src="./js/main.js?cache=preset-browser-v4-20260907"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

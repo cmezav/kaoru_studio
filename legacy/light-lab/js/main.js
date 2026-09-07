@@ -73,7 +73,7 @@ const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), creativeAtmosphereSearch: byId('creativeAtmosphereSearch'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
   atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
   atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
   atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
@@ -97,6 +97,7 @@ const elements = {
 };
 let toastTimer = 0; let editingIndex = null; let lightsRenderSignature = '';
 let creativeAtmosphereFilter = 'all';
+let creativeAtmosphereSearch = '';
 setupAdvancedPreviewUI();
 
 
@@ -203,16 +204,59 @@ function kaoruCreativeAtmosphereTags(preset){
   return tags;
 }
 
+function kaoruNormalizeAtmosphereSearch(value){
+  return String(value||'')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .trim();
+}
+
 function kaoruCreativeAtmosphereMatches(
   preset,
   filter
 ){
-  return(
-    filter==='all'||
+  const tags=
     kaoruCreativeAtmosphereTags(
       preset
-    ).has(filter)
-  );
+    );
+
+  const id=
+    String(preset?.id||'');
+
+  const isNew=
+    id.startsWith('ref-');
+
+  const filterMatch=
+    filter==='all'||
+    (filter==='new'&&isNew)||
+    (filter==='classic'&&!isNew)||
+    tags.has(filter);
+
+  if(!filterMatch){
+    return false;
+  }
+
+  const query=
+    kaoruNormalizeAtmosphereSearch(
+      creativeAtmosphereSearch
+    );
+
+  if(!query){
+    return true;
+  }
+
+  const haystack=
+    kaoruNormalizeAtmosphereSearch(
+      [
+        preset?.id,
+        preset?.name,
+        preset?.description,
+        ...tags
+      ].filter(Boolean).join(' ')
+    );
+
+  return haystack.includes(query);
 }
 
 
@@ -1793,3 +1837,20 @@ elements.copyAll.addEventListener('click',async()=>{const state=store.getState()
 elements.download.addEventListener('click',()=>{downloadProjectStructure(store.getState());showToast('Proyecto Light Lab descargado');});
 document.addEventListener('studio-theme-change',()=>render(store.getState())); window.addEventListener('resize',()=>{const state=store.getState();if(state.selection.previewMode!=='reference'){const original=state.palette.entries;const selected=state.lighting.lights.find((light)=>light.id===state.lighting.selectedLightId);const entries=state.ui.paletteView==='original'?original:applyLightingToPalette(original,state.lighting,state.ui.paletteView==='selected'?{onlyLightId:selected?.id}:{});const previewLighting=state.ui.paletteView==='selected'?{...state.lighting,lights:selected?[selected]:[]}:state.lighting;renderBasicPreview(elements.canvas,entries.map((entry)=>entry.hex),state.selection.previewMode,state.ui.paletteView==='original'?null:previewLighting);}},{passive:true});
 store.subscribe(render); render(store.getState()); window.LightLab={getState:store.getState,reset:store.reset,useExtractedAsBase,applyLightingToPalette,phase:4};
+
+/* === KAORU PRESET SEARCH V4 === */
+elements.creativeAtmosphereSearch
+  ?.addEventListener(
+    'input',
+    (event)=>{
+      creativeAtmosphereSearch=
+        event.target.value||'';
+
+      elements.creativeAtmosphereScenes
+        ?.replaceChildren();
+
+      renderLightingControls(
+        store.getState()
+      );
+    }
+  );
