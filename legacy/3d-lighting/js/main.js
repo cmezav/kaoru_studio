@@ -11,7 +11,7 @@ import {
   MAX_3D_LIGHTS,
   createDefault3dLight,
   duplicate3dLight
-} from './lighting3d.js?v=5.1';
+} from './lighting3d.js?v=projector-real-v1';
 import {
   listAvailableLightLabPalettes,
   readLightLabFile,
@@ -27,7 +27,8 @@ import {
   save3dToGallery,
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
-import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=creative-editable-v1';
+import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=projector-real-v1';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-real-v1';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -801,11 +802,12 @@ function renderAtmospheres3d(
     'custom';
 
   const effect=
+    state.lighting?.projector||
     atmosphere.effect||{
       type:'none',
       colorA:'#FFFFFF',
       colorB:'#7C3AED',
-      opacity:0,
+      intensity:0,
       angle:0,
       scale:100
     };
@@ -814,7 +816,14 @@ function renderAtmospheres3d(
     atmosphere.weather||
     active;
 
+  /*
+    El patron ya no es un overlay del viewport:
+    se proyecta desde el SpotLight real.
+  */
   document.body.dataset.atmoEffect=
+    'none';
+
+  document.body.dataset.realProjector=
     effect.type||
     'none';
 
@@ -838,7 +847,7 @@ function renderAtmospheres3d(
         0,
         Math.min(
           1,
-          Number(effect.opacity||0)/100
+          Number(effect.opacity??effect.intensity??0)/100
         )
       )
     )
@@ -999,7 +1008,9 @@ function renderAtmospheres3d(
 
     const opacity=
       Number(
-        effect.opacity??0
+        effect.opacity??
+        effect.intensity??
+        0
       );
 
     elements.atmosphereEffectOpacity.value=
@@ -1959,27 +1970,43 @@ function kaoruPatchAtmosphere(
 function kaoruPatchAtmosphereEffect(
   patch
 ){
-  store.setState(state=>({
-    ...state,
-    scene:{
-      ...state.scene,
-      atmosphere:{
-        ...(state.scene?.atmosphere||{}),
-        edited:true,
-        effect:{
-          type:'none',
-          colorA:'#FFFFFF',
-          colorB:'#7C3AED',
-          opacity:0,
-          angle:0,
-          scale:100,
-          ...(state.scene?.atmosphere
-            ?.effect||{}),
-          ...patch
+  store.setState(state=>{
+    const effect={
+      type:'none',
+      colorA:'#FFFFFF',
+      colorB:'#7C3AED',
+      opacity:0,
+      angle:0,
+      scale:100,
+      ...(state.scene?.atmosphere
+        ?.effect||{}),
+      ...patch
+    };
+
+    return{
+      ...state,
+      scene:{
+        ...state.scene,
+        atmosphere:{
+          ...(state.scene?.atmosphere||{}),
+          edited:true,
+          effect
+        }
+      },
+      lighting:{
+        ...state.lighting,
+        projector:{
+          ...projectorFromEffect(
+            effect
+          ),
+          lightId:
+            state.lighting
+              .lights?.[0]?.id||
+            'key'
         }
       }
-    }
-  }));
+    };
+  });
 }
 
 function kaoruBindAtmosphereColor(

@@ -2,7 +2,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { createAsaroHead } from './asaroHead.js?v=3.1';
 import { createHumanModel } from './humanModel.js?v=4.1';
-import { createLightingRig } from './lighting3d.js?v=5.1';
+import { createLightingRig } from './lighting3d.js?v=projector-real-v1';
 import { applyPaletteToMaterials } from './paletteBridge3d.js?v=6.0';
 import { createCustomModel } from './customModel.js?v=6.0';
 import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=male-body-fbx';

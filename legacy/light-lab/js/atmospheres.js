@@ -1,5 +1,6 @@
 import { sceneLighting } from './lightingEngine.js';
-import { THREE_ATMOSPHERES } from '../../3d-lighting/js/atmospheres3d.js?cache=shared-light-v2';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-real-v1';
+import { THREE_ATMOSPHERES } from '../../3d-lighting/js/atmospheres3d.js?cache=projector-real-v1';
 
 const LIGHT_CORE_ATMOSPHERES = [
   {
@@ -355,6 +356,19 @@ export function buildAtmosphereLighting(id){
         preset.backdrop
       )
   };
+
+  lighting.projector=
+    projectorFromEffect(
+      preset.backdrop?.effect||{}
+    );
+
+  if(
+    lighting.projector.enabled &&
+    lighting.lights?.[0]
+  ){
+    lighting.projector.lightId=
+      lighting.lights[0].id;
+  }
 
   return lighting;
 }

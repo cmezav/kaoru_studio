@@ -6,7 +6,8 @@ import { renderBasicPreview } from './renderer2d.js?cache=shared-light-v2';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
-import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=shared-light-v2';
+import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=projector-real-v1';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-real-v1';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
@@ -225,7 +226,9 @@ function syncAtmosphereEditor(
     {};
 
   const effect =
-    backdrop.effect || {};
+    lighting.projector ||
+    backdrop.effect ||
+    {};
 
   setAtmoColorPair(
     elements.atmoTopColor,
@@ -277,7 +280,8 @@ function syncAtmosphereEditor(
   const opacity =
     Math.round(
       normalizeEffectOpacity(
-        effect.opacity
+        effect.opacity ??
+        effect.intensity
       ) * 100
     );
 
@@ -372,11 +376,36 @@ function patchAtmosphereEffect(
         .atmosphere
         ?.backdrop || {};
 
+    const effect={
+      type:'none',
+      colorA:'#FFFFFF',
+      colorB:'#7C3AED',
+      opacity:0,
+      angle:0,
+      scale:100,
+      ...(backdrop.effect || {}),
+      ...changes
+    };
+
+    const projector=
+      projectorFromEffect(
+        effect
+      );
+
+    if(
+      projector.enabled &&
+      state.lighting.lights?.[0]
+    ){
+      projector.lightId=
+        state.lighting.lights[0].id;
+    }
+
     return {
       ...state,
       lighting:{
         ...state.lighting,
         sceneId:'custom',
+        projector,
         atmosphere:{
           ...(state.lighting
             .atmosphere || {
@@ -386,16 +415,7 @@ function patchAtmosphereEffect(
             }),
           backdrop:{
             ...backdrop,
-            effect:{
-              type:'none',
-              colorA:'#FFFFFF',
-              colorB:'#7C3AED',
-              opacity:0,
-              angle:0,
-              scale:100,
-              ...(backdrop.effect || {}),
-              ...changes
-            }
+            effect
           }
         }
       }

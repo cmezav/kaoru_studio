@@ -1,3 +1,5 @@
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=projector-real-v1';
+
 export const THREE_ATMOSPHERES = [
   {
     id:'day',
@@ -726,6 +728,12 @@ export function build3dAtmosphere(
       showHelpers:
         currentLighting.showHelpers??true,
       selectedLightId:'key',
+      projector:{
+        ...projectorFromEffect(
+          preset.scene?.effect||{}
+        ),
+        lightId:'key'
+      },
       ambient:{...config.ambient},
       shadow:{...config.shadow},
       bounce:{...config.bounce},

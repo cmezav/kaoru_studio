@@ -44,6 +44,20 @@ export function createInitial3dState() {
       enabled: true,
       showHelpers: true,
       selectedLightId: 'key',
+      projector: {
+        enabled: false,
+        type: 'none',
+        colorA: '#FFFFFF',
+        colorB: '#7C3AED',
+        intensity: 0,
+        angle: 0,
+        scale: 100,
+        blur: 8,
+        offsetX: 0,
+        offsetY: 0,
+        contrast: 70,
+        lightId: 'key'
+      },
       ambient: {
         color: '#D8DEFF',
         intensity: 18

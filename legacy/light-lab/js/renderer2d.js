@@ -1,5 +1,6 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
+import { drawLightProjectorPattern, normalizeLightProjector } from '../../shared/lightPatterns.js?cache=projector-real-v1';
 
 const MATERIAL_TINTS = {
   gold: '#D6A93D',
@@ -572,12 +573,10 @@ function renderBackdrop(ctx,width,height,lighting=null){
     ctx.fillStyle=glow;
     ctx.fillRect(0,0,width,height);
 
-    renderAtmosphereEffect(
-      ctx,
-      width,
-      height,
-      atmosphere.effect
-    );
+    /*
+      El patron creativo ya no se pinta sobre el fondo.
+      Se proyecta como luz dentro de la figura.
+    */
 
     if(
       atmosphere.weather==='rain'||
@@ -683,6 +682,148 @@ function renderGroundShadow(ctx, cx, cy, rx, ry, color = '#000000') {
   ctx.beginPath();
   ctx.arc(cx, cy * (rx / ry), rx, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+}
+
+function renderProjectedLightPattern(
+  ctx,
+  cx,
+  cy,
+  rx,
+  ry,
+  lighting
+){
+  const projector=
+    normalizeLightProjector(
+      lighting?.projector||{}
+    );
+
+  if(!projector.enabled)return;
+
+  const width=ctx.canvas.width;
+  const height=ctx.canvas.height;
+
+  const layer=
+    document.createElement(
+      'canvas'
+    );
+
+  layer.width=width;
+  layer.height=height;
+
+  const layerCtx=
+    layer.getContext('2d');
+
+  if(!layerCtx)return;
+
+  drawLightProjectorPattern(
+    layerCtx,
+    width,
+    height,
+    projector,
+    {cookie:false}
+  );
+
+  const lights=
+    activeLights(lighting);
+
+  const source=
+    lights.find(
+      (light)=>
+        light.id===
+        projector.lightId
+    )||
+    lights[0];
+
+  const direction=
+    Number(
+      source?.direction||0
+    )*
+    Math.PI/180;
+
+  const elevation=
+    Number(
+      source?.elevation||0
+    )*
+    Math.PI/180;
+
+  const lightX=
+    cx+
+    Math.sin(direction)*
+    rx*.58;
+
+  const lightY=
+    cy-
+    Math.sin(elevation)*
+    ry*.48;
+
+  const falloff=
+    layerCtx.createRadialGradient(
+      lightX,
+      lightY,
+      0,
+      lightX,
+      lightY,
+      Math.max(rx,ry)*1.48
+    );
+
+  falloff.addColorStop(
+    0,
+    'rgba(255,255,255,1)'
+  );
+
+  falloff.addColorStop(
+    .62,
+    'rgba(255,255,255,.88)'
+  );
+
+  falloff.addColorStop(
+    1,
+    'rgba(255,255,255,0)'
+  );
+
+  layerCtx.globalCompositeOperation=
+    'destination-in';
+
+  layerCtx.fillStyle=falloff;
+  layerCtx.fillRect(
+    0,0,width,height
+  );
+
+  layerCtx.globalCompositeOperation=
+    'source-over';
+
+  ctx.save();
+
+  ctx.globalCompositeOperation=
+    'screen';
+
+  ctx.globalAlpha=
+    Math.max(
+      .08,
+      Math.min(
+        1,
+        projector.intensity/100
+      )
+    );
+
+  const blurPx=
+    Math.round(
+      projector.blur*
+      .09
+    );
+
+  if(blurPx>0){
+    ctx.filter=
+      `blur(${blurPx}px)`;
+  }
+
+  ctx.drawImage(
+    layer,
+    0,
+    0
+  );
+
   ctx.restore();
 }
 
@@ -862,6 +1003,15 @@ function renderColoredLights(ctx, drawShape, cx, cy, rx, ry, lighting) {
       ry * 2
     );
   });
+
+  renderProjectedLightPattern(
+    ctx,
+    cx,
+    cy,
+    rx,
+    ry,
+    lighting
+  );
 
   ctx.restore();
 }

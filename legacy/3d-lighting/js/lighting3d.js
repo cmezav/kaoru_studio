@@ -1,4 +1,5 @@
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { drawLightProjectorPattern, lightProjectorSignature, normalizeLightProjector, projectorIsMulticolor } from '../../shared/lightPatterns.js?cache=projector-real-v1';
 
 export const LIGHTING3D_PHASE = 5;
 export const MAX_3D_LIGHTS = 8;
@@ -96,6 +97,10 @@ export function normalizeLightingState(lighting = {}) {
     enabled: lighting.enabled !== false,
     showHelpers: lighting.showHelpers !== false,
     selectedLightId,
+    projector:
+      normalizeLightProjector(
+        lighting.projector||{}
+      ),
     ambient: {
       color: String(lighting.ambient?.color || '#D8DEFF').toUpperCase(),
       intensity: clamp(lighting.ambient?.intensity ?? 18, 0, 100)
@@ -191,6 +196,118 @@ export function createLightingRig(options) {
   let shadowsEnabled = true;
   let syncingTransform = false;
 
+  function disposeProjectorTexture(entry){
+    if(entry.projectorTexture){
+      entry.projectorTexture.dispose();
+      entry.projectorTexture=null;
+    }
+
+    entry.light.map=null;
+    entry.projectorSignature='';
+  }
+
+  function syncProjectorTexture(
+    entry,
+    config,
+    index
+  ){
+    const projector=
+      normalizeLightProjector(
+        currentState.projector||{}
+      );
+
+    const targetLightId=
+      projector.lightId||
+      currentState.lights[0]?.id;
+
+    const applies=
+      projector.enabled &&
+      config.id===targetLightId;
+
+    if(!applies){
+      if(
+        entry.projectorTexture ||
+        entry.light.map
+      ){
+        disposeProjectorTexture(
+          entry
+        );
+      }
+
+      return null;
+    }
+
+    const signature=
+      lightProjectorSignature(
+        projector
+      );
+
+    if(
+      signature!==
+      entry.projectorSignature
+    ){
+      disposeProjectorTexture(
+        entry
+      );
+
+      const canvas=
+        document.createElement(
+          'canvas'
+        );
+
+      canvas.width=512;
+      canvas.height=512;
+
+      const ctx=
+        canvas.getContext('2d');
+
+      if(ctx){
+        drawLightProjectorPattern(
+          ctx,
+          canvas.width,
+          canvas.height,
+          projector,
+          {cookie:true}
+        );
+
+        const texture=
+          new THREE.CanvasTexture(
+            canvas
+          );
+
+        if(
+          'colorSpace' in texture &&
+          THREE.SRGBColorSpace
+        ){
+          texture.colorSpace=
+            THREE.SRGBColorSpace;
+        }
+
+        texture.minFilter=
+          THREE.LinearFilter;
+
+        texture.magFilter=
+          THREE.LinearFilter;
+
+        texture.generateMipmaps=
+          false;
+
+        texture.needsUpdate=true;
+
+        entry.projectorTexture=
+          texture;
+
+        entry.projectorSignature=
+          signature;
+
+        entry.light.map=
+          texture;
+      }
+    }
+
+    return projector;
+  }
+
   const transform = new TransformControls(camera, renderer.domElement);
   transform.setMode('translate');
   transform.setSize(0.72);
@@ -276,7 +393,9 @@ export function createLightingRig(options) {
       markerMaterial,
       line,
       lineMaterial,
-      lineGeometry
+      lineGeometry,
+      projectorTexture:null,
+      projectorSignature:''
     };
 
     entries.set(config.id, entry);
@@ -295,6 +414,10 @@ export function createLightingRig(options) {
       entry.line
     );
 
+    disposeProjectorTexture(
+      entry
+    );
+
     entry.markerMaterial.dispose();
     entry.lineMaterial.dispose();
     entry.lineGeometry.dispose();
@@ -311,7 +434,22 @@ export function createLightingRig(options) {
   }
 
   function updateEntry(entry, config, index) {
-    entry.light.color.set(config.color);
+    const projector=
+      syncProjectorTexture(
+        entry,
+        config,
+        index
+      );
+
+    entry.light.color.set(
+      projector &&
+      projectorIsMulticolor(
+        projector.type
+      )
+        ? '#FFFFFF'
+        : config.color
+    );
+
     entry.markerMaterial.color.set(config.color);
     entry.lineMaterial.color.set(config.color);
 
@@ -320,12 +458,30 @@ export function createLightingRig(options) {
       : 0;
 
     entry.light.penumbra = clamp(config.softness, 0, 100) / 100;
+
+    entry.light.angle=
+      projector
+        ? THREE.MathUtils.degToRad(
+            16+
+            Math.min(
+              46,
+              projector.scale*.18
+            )
+          )
+        : Math.PI*.34;
+
     entry.light.shadow.radius = 1 + clamp(config.softness, 0, 100) * 0.055;
+
     entry.light.castShadow = Boolean(
-      shadowsEnabled &&
+      (
+        projector ||
+        (
+          shadowsEnabled &&
+          index < 4
+        )
+      ) &&
       currentState.enabled &&
-      config.enabled &&
-      index < 4
+      config.enabled
     );
 
     const position = sphericalToPosition(THREE, config, target);
