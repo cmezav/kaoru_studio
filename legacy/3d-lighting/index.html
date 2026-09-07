@@ -8,7 +8,7 @@
   <title>Kaoru's Studio - 3D Lighting Studio</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-browser-v4-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=preset-library-v5-20260907">
 
   <script type="importmap">
   {
@@ -84,6 +84,8 @@
           <button type="button" class="is-active" data-atmo-filter="all">Todos</button>
           <button type="button" data-atmo-filter="new">Nuevos</button>
           <button type="button" data-atmo-filter="classic">Anteriores</button>
+          <button type="button" data-atmo-filter="favorite">★ Favoritos</button>
+          <button type="button" data-atmo-filter="custom">Mis presets</button>
           <button type="button" data-atmo-filter="natural">Natural</button>
           <button type="button" data-atmo-filter="color">Color</button>
           <button type="button" data-atmo-filter="pattern">Patrones</button>
@@ -93,6 +95,11 @@
         </div>
 
         <div id="creativeAtmosphereGrid" class="atmosphere-creative-strip" aria-label="Estilos creativos 3D"></div>
+
+        <div class="preset-library-save">
+          <input id="customAtmosphereName3d" type="text" maxlength="60" placeholder="Nombre para esta variante..." aria-label="Nombre del preset personal 3D">
+          <button id="saveCustomAtmosphere3d" type="button">Guardar variante</button>
+        </div>
 
         <details class="atmosphere-editor">
           <summary>Editar estilo seleccionado</summary>
@@ -133,13 +140,15 @@
                   <option value="stripe">Franja</option>
                   <option value="window">Ventana</option>
                   <option value="leaves">Hojas</option>
-                  <option value="blinds">Persianas</option>`n                  <option value="grid">Rejilla</option>
+                  <option value="blinds">Persianas</option>
+                  <option value="grid">Rejilla</option>
                   <option value="neon">Neon</option>
                   <option value="rim">Contraluz</option>
                   <option value="iridescent">Iridiscente</option>
                   <option value="rainbow">Arcoiris</option>
                   <option value="bokeh">Circulos / bokeh</option>
-                  <option value="sparkles">Brillos</option>`n                  <option value="blacklight">Blacklight / pintura neon</option>
+                  <option value="sparkles">Brillos</option>
+                  <option value="blacklight">Blacklight / pintura neon</option>
                   <option value="flash">Flash</option>
                   <option value="caustics">Causticas</option>
                   <option value="underwater">Bajo el mar</option>
@@ -534,7 +543,7 @@
   }());
   </script>
 
-  <script type="module" src="./js/main.js?cache=preset-browser-v4-20260907"></script>
+  <script type="module" src="./js/main.js?cache=preset-library-v5-20260907"></script>
   <script src="../shared/precisionControls.js?cache=controls"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
   <title>Kaoru's Studio — Light Lab</title>
   <link rel="icon" href="../../logo.png" type="image/png">
   <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
-  <link rel="stylesheet" href="./styles.css?cache=preset-browser-v4-20260907">
+  <link rel="stylesheet" href="./styles.css?cache=preset-library-v5-20260907">
   <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
 </head>
 <body class="studio-light" data-studio="light">
@@ -93,6 +93,8 @@
             <button type="button" class="is-active" data-atmo-filter="all">Todos</button>
             <button type="button" data-atmo-filter="new">Nuevos</button>
             <button type="button" data-atmo-filter="classic">Anteriores</button>
+            <button type="button" data-atmo-filter="favorite">★ Favoritos</button>
+            <button type="button" data-atmo-filter="custom">Mis presets</button>
             <button type="button" data-atmo-filter="natural">Natural</button>
             <button type="button" data-atmo-filter="color">Color</button>
             <button type="button" data-atmo-filter="pattern">Patrones</button>
@@ -102,6 +104,11 @@
           </div>
 
           <div id="creativeAtmosphereScenes" class="atmosphere-creative-strip" aria-label="Estilos creativos"></div>
+
+          <div class="preset-library-save">
+            <input id="customAtmosphereName" type="text" maxlength="60" placeholder="Nombre para esta variante..." aria-label="Nombre del preset personal">
+            <button id="saveCustomAtmosphere" type="button">Guardar variante</button>
+          </div>
 
           <details class="light-atmosphere-editor">
             <summary>Editar ambiente seleccionado</summary>
@@ -151,13 +158,15 @@
                     <option value="stripe">Franja</option>
                     <option value="window">Ventana</option>
                     <option value="leaves">Hojas</option>
-                    <option value="blinds">Persianas</option>`n                  <option value="grid">Rejilla</option>
+                    <option value="blinds">Persianas</option>
+                  <option value="grid">Rejilla</option>
                     <option value="neon">Neón</option>
                     <option value="rim">Contraluz</option>
                     <option value="iridescent">Iridiscente</option>
                     <option value="rainbow">Arcoíris</option>
                     <option value="bokeh">Círculos / bokeh</option>
-                    <option value="sparkles">Brillos</option>`n                  <option value="blacklight">Blacklight / pintura neon</option>
+                    <option value="sparkles">Brillos</option>
+                  <option value="blacklight">Blacklight / pintura neon</option>
                     <option value="flash">Flash</option>
                     <option value="caustics">Caústicas</option>
                     <option value="underwater">Bajo el mar</option>
@@ -400,7 +409,7 @@
   <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
   <script src="../shared/studioBridge.js?cache=current"></script>
   <script src="../shared/studioGallery.js?cache=current"></script>
-  <script type="module" src="./js/main.js?cache=preset-browser-v4-20260907"></script>
+  <script type="module" src="./js/main.js?cache=preset-library-v5-20260907"></script>
   <script type="module" src="./js/advancedTools.js?cache=current"></script>
   
   <script type="module" src="./js/bridge3d.js?cache=current"></script>

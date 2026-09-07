@@ -29,6 +29,14 @@ import {
 } from './storage3d.js?v=6.0';
 import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=lighting-calibration-v3-20260907';
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
+import {
+  customLightingPresetById,
+  deleteCustomLightingPreset,
+  isFavoriteLightingPreset,
+  listCustomLightingPresets,
+  saveCustomLightingPreset,
+  toggleFavoriteLightingPreset
+} from '../../shared/lightingPresetLibrary.js?cache=preset-library-v5-20260907';
 
 const store = create3dStore();
 window.ThreeLightingStore = store;
@@ -72,6 +80,8 @@ const elements = {
   creativeAtmosphereFilters: byId('creativeAtmosphereFilters3d'),
   creativeAtmosphereCount: byId('creativeAtmosphereCount3d'),
   creativeAtmosphereSearch: byId('creativeAtmosphereSearch3d'),
+  customAtmosphereName: byId('customAtmosphereName3d'),
+  saveCustomAtmosphere: byId('saveCustomAtmosphere3d'),
   viewportCard: document.querySelector('.viewport-card'),
   atmosphereEditorLabel: byId('atmosphereEditorLabel'),
   atmosphereBackground: byId('atmosphereBackground'),
@@ -322,10 +332,25 @@ function kaoruCreativeAtmosphereMatches(
   const isNew=
     id.startsWith('ref-');
 
+  const isCustom=
+    id.startsWith('user-atmo-');
+
   const filterMatch=
     filter==='all'||
     (filter==='new'&&isNew)||
-    (filter==='classic'&&!isNew)||
+    (
+      filter==='classic'&&
+      !isNew&&
+      !isCustom
+    )||
+    (
+      filter==='favorite'&&
+      isFavoriteLightingPreset(id)
+    )||
+    (
+      filter==='custom'&&
+      isCustom
+    )||
     tags.has(filter);
 
   if(!filterMatch){
@@ -354,6 +379,113 @@ function kaoruCreativeAtmosphereMatches(
   return haystack.includes(query);
 }
 
+
+
+function kaoruUserAtmospheres3d(){
+  return listCustomLightingPresets('3d')
+    .map((record)=>{
+      const atmosphere=
+        record.snapshot?.atmosphere||{};
+      const lighting=
+        record.snapshot?.lighting||{};
+      const lights=
+        Array.isArray(lighting.lights)
+          ?lighting.lights
+          :[];
+      const key=lights[0]||{
+        color:'#FFFFFF',
+        intensity:70,
+        azimuth:0,
+        elevation:45,
+        distance:5.4,
+        softness:50
+      };
+      const fill=lights[1]||key;
+
+      return{
+        id:record.id,
+        group:'creative',
+        tags:['custom'],
+        name:record.name,
+        description:
+          record.description||
+          'Variante personalizada',
+        userPreset:true,
+        scene:{
+          id:record.id,
+          background:
+            atmosphere.background||
+            '#15121A',
+          fog:
+            atmosphere.fog||
+            atmosphere.background||
+            '#15121A',
+          floor:
+            atmosphere.floor||
+            '#29242F',
+          exposure:
+            Number(
+              atmosphere.exposure??1
+            ),
+          weather:
+            atmosphere.weather||
+            'clear',
+          effect:
+            structuredClone(
+              atmosphere.effect||
+              lighting.projector||
+              {type:'none'}
+            )
+        },
+        lighting:{
+          ambient:{
+            ...(lighting.ambient||{
+              color:'#777777',
+              intensity:20
+            })
+          },
+          shadow:{
+            ...(lighting.shadow||{
+              color:'#202020',
+              intensity:45
+            })
+          },
+          bounce:{
+            ...(lighting.bounce||{
+              color:'#555555',
+              intensity:12
+            })
+          },
+          rim:{
+            ...(lighting.rim||{
+              color:'#FFFFFF',
+              intensity:10
+            })
+          },
+          key:{...key},
+          fill:{...fill}
+        }
+      };
+    });
+}
+
+function kaoruAllCreativeAtmospheres3d(){
+  return[
+    ...THREE_ATMOSPHERES.filter(
+      preset=>preset.group==='creative'
+    ),
+    ...kaoruUserAtmospheres3d()
+  ];
+}
+
+function kaoruRefreshCreativeAtmospheres3d(){
+  elements.creativeAtmosphereGrid
+    ?.replaceChildren();
+
+  renderAtmospheres3d(
+    store.getState()
+  );
+}
 
 function normalizeHex(
   value
@@ -922,13 +1054,40 @@ function kaoruPopulateAtmosphereGrid(
           effect.colorB||'#7C3AED'
         );
 
+        const favorite=
+          isFavoriteLightingPreset(
+            preset.id
+          );
+
         button.innerHTML=`
           <span class="atmosphere-3d-preview" aria-hidden="true">
             <i></i>
           </span>
-          <span>
+          <span class="atmo-card-copy">
             <strong>${preset.name}</strong>
             <small>${preset.description}</small>
+            <span class="atmo-card-actions">
+              <span
+                class="atmo-favorite-toggle"
+                data-favorite-toggle="${preset.id}"
+                role="button"
+                tabindex="0"
+                title="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
+                aria-label="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
+              >${favorite?'★':'☆'}</span>
+              ${
+                preset.userPreset
+                  ?`<span
+                      class="atmo-delete-user"
+                      data-user-preset-delete="${preset.id}"
+                      role="button"
+                      tabindex="0"
+                      title="Eliminar preset personal"
+                      aria-label="Eliminar preset personal"
+                    >×</span>`
+                  :''
+              }
+            </span>
           </span>
         `;
 
@@ -958,11 +1117,7 @@ function renderAtmospheres3d(
     );
 
   const creativePresets=
-    THREE_ATMOSPHERES
-      .filter(
-        preset=>
-          preset.group==='creative'
-      )
+    kaoruAllCreativeAtmospheres3d()
       .filter(
         preset=>
           kaoruCreativeAtmosphereMatches(
@@ -2171,6 +2326,39 @@ elements.shadowToggle.addEventListener(
 function kaoruApplyAtmospherePreset(
   id
 ){
+  const custom=
+    customLightingPresetById(
+      id,
+      '3d'
+    );
+
+  if(custom){
+    const snapshot=
+      structuredClone(
+        custom.snapshot
+      );
+
+    store.setState(state=>({
+      ...state,
+      scene:{
+        ...state.scene,
+        atmosphere:{
+          ...(snapshot.atmosphere||{}),
+          id:custom.id,
+          name:custom.name
+        }
+      },
+      lighting:{
+        ...snapshot.lighting
+      }
+    }));
+
+    toast(
+      `Mi preset: ${custom.name}`
+    );
+    return;
+  }
+
   const result=
     build3dAtmosphere(
       id,
@@ -2198,6 +2386,58 @@ function kaoruApplyAtmospherePreset(
 function kaoruAtmosphereClick(
   event
 ){
+  const favoriteToggle=
+    event.target.closest(
+      '[data-favorite-toggle]'
+    );
+
+  if(favoriteToggle){
+    event.preventDefault();
+    event.stopPropagation();
+
+    const active=
+      toggleFavoriteLightingPreset(
+        favoriteToggle.dataset
+          .favoriteToggle
+      );
+
+    toast(
+      active
+        ?'Agregado a favoritos'
+        :'Quitado de favoritos'
+    );
+
+    kaoruRefreshCreativeAtmospheres3d();
+    return;
+  }
+
+  const deleteToggle=
+    event.target.closest(
+      '[data-user-preset-delete]'
+    );
+
+  if(deleteToggle){
+    event.preventDefault();
+    event.stopPropagation();
+
+    if(
+      confirm(
+        '¿Eliminar este preset personal?'
+      )
+    ){
+      deleteCustomLightingPreset(
+        deleteToggle.dataset
+          .userPresetDelete,
+        '3d'
+      );
+
+      toast('Preset personal eliminado');
+      kaoruRefreshCreativeAtmospheres3d();
+    }
+
+    return;
+  }
+
   const button=
     event.target.closest(
       '[data-atmosphere]'
@@ -2515,6 +2755,77 @@ elements.atmosphereProjectorLight
   }
 );
 
+elements.saveCustomAtmosphere
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const state=
+        store.getState();
+
+      const currentId=
+        state.scene?.atmosphere?.id||
+        'day';
+
+      const currentName=
+        kaoruAllCreativeAtmospheres3d()
+          .find(
+            preset=>
+              preset.id===currentId
+          )?.name||
+        atmosphere3dById(
+          currentId
+        )?.name||
+        'Iluminación';
+
+      const name=
+        elements.customAtmosphereName
+          ?.value
+          .trim()||
+        `${currentName} · variante`;
+
+      const record=
+        saveCustomLightingPreset({
+          studio:'3d',
+          name,
+          description:
+            `Variante personal de ${currentName}`,
+          snapshot:{
+            atmosphere:
+              structuredClone(
+                state.scene?.atmosphere||{}
+              ),
+            lighting:
+              structuredClone(
+                state.lighting
+              )
+          }
+        });
+
+      store.setState(current=>({
+        ...current,
+        scene:{
+          ...current.scene,
+          atmosphere:{
+            ...(current.scene
+              ?.atmosphere||{}),
+            id:record.id,
+            name:record.name,
+            edited:false
+          }
+        }
+      }));
+
+      if(elements.customAtmosphereName){
+        elements.customAtmosphereName.value='';
+      }
+
+      toast(
+        `Guardado: ${record.name}`
+      );
+
+      kaoruRefreshCreativeAtmospheres3d();
+    }
+  );
 elements.resetAtmosphere?.addEventListener(
   'click',
   ()=>{

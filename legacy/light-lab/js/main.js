@@ -8,6 +8,14 @@ import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile,
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
 import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=lighting-calibration-v3-20260907';
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
+import {
+  customLightingPresetById,
+  deleteCustomLightingPreset,
+  isFavoriteLightingPreset,
+  listCustomLightingPresets,
+  saveCustomLightingPreset,
+  toggleFavoriteLightingPreset
+} from '../../shared/lightingPresetLibrary.js?cache=preset-library-v5-20260907';
 
 const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
 const store = createStore();
@@ -73,7 +81,7 @@ const byId = (id) => document.getElementById(id);
 const elements = {
   categoryGrid: byId('categoryGrid'),
   basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
-  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), creativeAtmosphereSearch: byId('creativeAtmosphereSearch'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), creativeAtmosphereSearch: byId('creativeAtmosphereSearch'), customAtmosphereName: byId('customAtmosphereName'), saveCustomAtmosphere: byId('saveCustomAtmosphere'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
   atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
   atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
   atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
@@ -227,10 +235,25 @@ function kaoruCreativeAtmosphereMatches(
   const isNew=
     id.startsWith('ref-');
 
+  const isCustom=
+    id.startsWith('user-atmo-');
+
   const filterMatch=
     filter==='all'||
     (filter==='new'&&isNew)||
-    (filter==='classic'&&!isNew)||
+    (
+      filter==='classic'&&
+      !isNew&&
+      !isCustom
+    )||
+    (
+      filter==='favorite'&&
+      isFavoriteLightingPreset(id)
+    )||
+    (
+      filter==='custom'&&
+      isCustom
+    )||
     tags.has(filter);
 
   if(!filterMatch){
@@ -259,6 +282,69 @@ function kaoruCreativeAtmosphereMatches(
   return haystack.includes(query);
 }
 
+
+
+function kaoruUserAtmospheresLight(){
+  return listCustomLightingPresets('light')
+    .map((record)=>{
+      const lighting=
+        record.snapshot?.lighting||{};
+      const backdrop=
+        lighting.atmosphere?.backdrop||{};
+
+      return{
+        id:record.id,
+        group:'creative',
+        tags:['custom'],
+        name:record.name,
+        description:
+          record.description||
+          'Variante personalizada',
+        userPreset:true,
+        backdrop:{
+          top:
+            backdrop.top||
+            '#2A2432',
+          mid:
+            backdrop.mid||
+            backdrop.top||
+            '#3C3348',
+          bottom:
+            backdrop.bottom||
+            '#241F2A',
+          accent:
+            backdrop.accent||
+            lighting.lights?.[0]?.color||
+            '#FFFFFF',
+          weather:
+            backdrop.weather||
+            'clear',
+          effect:
+            structuredClone(
+              backdrop.effect||
+              lighting.projector||
+              {type:'none'}
+            )
+        }
+      };
+    });
+}
+
+function kaoruAllCreativeAtmospheresLight(){
+  return[
+    ...creativeAtmospheres(),
+    ...kaoruUserAtmospheresLight()
+  ];
+}
+
+function kaoruRefreshCreativeAtmospheresLight(){
+  elements.creativeAtmosphereScenes
+    ?.replaceChildren();
+
+  renderLightingControls(
+    store.getState()
+  );
+}
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
@@ -836,7 +922,7 @@ function renderLightingControls(state) {
   ){
     elements.creativeAtmosphereScenes
       .replaceChildren(
-        ...creativeAtmospheres()
+        ...kaoruAllCreativeAtmospheresLight()
           .filter(
             (preset)=>
               kaoruCreativeAtmosphereMatches(
@@ -880,13 +966,40 @@ function renderLightingControls(state) {
               preset.backdrop.accent
             );
 
+            const favorite=
+              isFavoriteLightingPreset(
+                preset.id
+              );
+
             button.innerHTML=`
               <span class="atmosphere-preview" aria-hidden="true">
                 <i></i>
               </span>
-              <span>
+              <span class="atmo-card-copy">
                 <strong>${escapeHtml(preset.name)}</strong>
                 <small>${escapeHtml(preset.description)}</small>
+                <span class="atmo-card-actions">
+                  <span
+                    class="atmo-favorite-toggle"
+                    data-favorite-toggle="${preset.id}"
+                    role="button"
+                    tabindex="0"
+                    title="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
+                    aria-label="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
+                  >${favorite?'★':'☆'}</span>
+                  ${
+                    preset.userPreset
+                      ?`<span
+                          class="atmo-delete-user"
+                          data-user-preset-delete="${preset.id}"
+                          role="button"
+                          tabindex="0"
+                          title="Eliminar preset personal"
+                          aria-label="Eliminar preset personal"
+                        >×</span>`
+                      :''
+                  }
+                </span>
               </span>
             `;
 
@@ -897,7 +1010,7 @@ function renderLightingControls(state) {
 
   if(elements.creativeAtmosphereCount){
     const visibleCount=
-      creativeAtmospheres()
+      kaoruAllCreativeAtmospheresLight()
         .filter(
           (preset)=>
             kaoruCreativeAtmosphereMatches(
@@ -1542,6 +1655,61 @@ elements.creativeAtmosphereFilters
 elements.creativeAtmosphereScenes?.addEventListener(
   'click',
   (event)=>{
+    const favoriteToggle=
+      event.target.closest(
+        '[data-favorite-toggle]'
+      );
+
+    if(favoriteToggle){
+      event.preventDefault();
+      event.stopPropagation();
+
+      const active=
+        toggleFavoriteLightingPreset(
+          favoriteToggle.dataset
+            .favoriteToggle
+        );
+
+      showToast(
+        active
+          ?'Agregado a favoritos'
+          :'Quitado de favoritos'
+      );
+
+      kaoruRefreshCreativeAtmospheresLight();
+      return;
+    }
+
+    const deleteToggle=
+      event.target.closest(
+        '[data-user-preset-delete]'
+      );
+
+    if(deleteToggle){
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(
+        confirm(
+          '¿Eliminar este preset personal?'
+        )
+      ){
+        deleteCustomLightingPreset(
+          deleteToggle.dataset
+            .userPresetDelete,
+          'light'
+        );
+
+        showToast(
+          'Preset personal eliminado'
+        );
+
+        kaoruRefreshCreativeAtmospheresLight();
+      }
+
+      return;
+    }
+
     const button =
       event.target.closest(
         '[data-atmosphere]'
@@ -1549,12 +1717,48 @@ elements.creativeAtmosphereScenes?.addEventListener(
 
     if(!button)return;
 
+    const custom=
+      customLightingPresetById(
+        button.dataset.atmosphere,
+        'light'
+      );
+
+    lightsRenderSignature='';
+
+    if(custom){
+      const snapshot=
+        structuredClone(
+          custom.snapshot
+        );
+
+      store.setState((state)=>({
+        ...state,
+        lighting:{
+          ...(snapshot.lighting||{}),
+          atmosphere:{
+            ...(snapshot.lighting
+              ?.atmosphere||{}),
+            id:custom.id,
+            name:custom.name
+          }
+        },
+        ui:{
+          ...state.ui,
+          paletteView:'illuminated'
+        }
+      }));
+
+      showToast(
+        `Mi preset: ${custom.name}`
+      );
+
+      return;
+    }
+
     const preset =
       atmosphereById(
         button.dataset.atmosphere
       );
-
-    lightsRenderSignature='';
 
     store.setState((state)=>({
       ...state,
@@ -1720,6 +1924,77 @@ elements.atmoProjectorLight
   }
 );
 
+elements.saveCustomAtmosphere
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const state=
+        store.getState();
+
+      const currentId=
+        state.lighting
+          .atmosphere
+          ?.id||
+        'day';
+
+      const currentName=
+        kaoruAllCreativeAtmospheresLight()
+          .find(
+            preset=>
+              preset.id===currentId
+          )?.name||
+        state.lighting
+          .atmosphere
+          ?.name||
+        atmosphereById(
+          currentId
+        )?.name||
+        'Iluminación';
+
+      const name=
+        elements.customAtmosphereName
+          ?.value
+          .trim()||
+        `${currentName} · variante`;
+
+      const record=
+        saveCustomLightingPreset({
+          studio:'light',
+          name,
+          description:
+            `Variante personal de ${currentName}`,
+          snapshot:{
+            lighting:
+              structuredClone(
+                state.lighting
+              )
+          }
+        });
+
+      store.setState(current=>({
+        ...current,
+        lighting:{
+          ...current.lighting,
+          atmosphere:{
+            ...(current.lighting
+              .atmosphere||{}),
+            id:record.id,
+            name:record.name
+          }
+        }
+      }));
+
+      if(elements.customAtmosphereName){
+        elements.customAtmosphereName.value='';
+      }
+
+      showToast(
+        `Guardado: ${record.name}`
+      );
+
+      kaoruRefreshCreativeAtmospheresLight();
+    }
+  );
 elements.resetAtmosphere
   .addEventListener(
     'click',
@@ -1730,12 +2005,34 @@ elements.resetAtmosphere
           .atmosphere
           ?.id || 'day';
 
+      const custom=
+        customLightingPresetById(
+          id,
+          'light'
+        );
+
       store.setState((state)=>({
         ...state,
         lighting:
-          buildAtmosphereLighting(
-            id
-          ),
+          custom
+            ?{
+                ...structuredClone(
+                  custom.snapshot
+                    .lighting
+                ),
+                atmosphere:{
+                  ...structuredClone(
+                    custom.snapshot
+                      .lighting
+                      .atmosphere||{}
+                  ),
+                  id:custom.id,
+                  name:custom.name
+                }
+              }
+            :buildAtmosphereLighting(
+                id
+              ),
         ui:{
           ...state.ui,
           paletteView:'illuminated'

@@ -1049,3 +1049,69 @@ body[data-atmo-effect="underwater"]
 .atmosphere-filterbar button[data-atmo-filter="classic"]{
   font-weight:650;
 }
+
+/* === KAORU PRESET LIBRARY V5 === */
+.preset-library-save{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  margin:8px 0 10px;
+}
+.preset-library-save input{
+  min-width:0;
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid var(--line,rgba(127,127,127,.28));
+  border-radius:10px;
+  padding:9px 11px;
+  background:var(--surface,#fff);
+  color:inherit;
+  font:inherit;
+  outline:none;
+}
+.preset-library-save input:focus{
+  border-color:var(--accent,var(--lab-accent,#8a67d5));
+}
+.preset-library-save button{
+  border-radius:10px;
+  padding:9px 12px;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.atmo-card-copy{
+  min-width:0;
+}
+.atmo-card-actions{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-top:6px;
+}
+.atmo-favorite-toggle,
+.atmo-delete-user{
+  display:inline-grid;
+  place-items:center;
+  min-width:26px;
+  height:24px;
+  padding:0 5px;
+  border:1px solid currentColor;
+  border-radius:8px;
+  opacity:.72;
+  font-size:15px;
+  line-height:1;
+  cursor:pointer;
+  user-select:none;
+}
+.atmo-favorite-toggle:hover,
+.atmo-delete-user:hover{
+  opacity:1;
+  transform:translateY(-1px);
+}
+.atmo-delete-user{
+  font-size:18px;
+}
+@media(max-width:720px){
+  .preset-library-save{
+    grid-template-columns:1fr;
+  }
+}
