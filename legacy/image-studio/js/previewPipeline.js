@@ -135,6 +135,94 @@ class PreviewPipeline{
     }
   }
 
+  captureLensLayout(){
+    if(!this.state?.lens?.enabled){
+      return null;
+    }
+
+    const viewport=
+      document.getElementById(
+        'canvasViewport'
+      );
+
+    const properties=
+      document.getElementById(
+        'propertiesPanel'
+      );
+
+    return{
+      viewport,
+      viewportTop:
+        viewport?.scrollTop||0,
+      viewportLeft:
+        viewport?.scrollLeft||0,
+      properties,
+      propertiesTop:
+        properties?.scrollTop||0,
+      propertiesLeft:
+        properties?.scrollLeft||0,
+      pageX:
+        window.scrollX||0,
+      pageY:
+        window.scrollY||0,
+      cssWidth:
+        this.canvas.style.width,
+      cssHeight:
+        this.canvas.style.height
+    };
+  }
+
+  restoreLensLayout(snapshot){
+    if(!snapshot)return;
+
+    /*
+      Chrome puede recalcular el origen del contenedor flex cuando
+      termina un render pesado de Canvas2D. Reasignar el tamaño CSS
+      y devolver los scrolls evita el salto visual de Lens Blur.
+    */
+    if(snapshot.cssWidth){
+      this.canvas.style.width=
+        snapshot.cssWidth;
+    }
+
+    if(snapshot.cssHeight){
+      this.canvas.style.height=
+        snapshot.cssHeight;
+    }
+
+    requestAnimationFrame(
+      ()=>{
+        if(snapshot.viewport){
+          snapshot.viewport.scrollTop=
+            snapshot.viewportTop;
+
+          snapshot.viewport.scrollLeft=
+            snapshot.viewportLeft;
+        }
+
+        if(snapshot.properties){
+          snapshot.properties.scrollTop=
+            snapshot.propertiesTop;
+
+          snapshot.properties.scrollLeft=
+            snapshot.propertiesLeft;
+        }
+
+        if(
+          window.scrollX!==
+            snapshot.pageX||
+          window.scrollY!==
+            snapshot.pageY
+        ){
+          window.scrollTo(
+            snapshot.pageX,
+            snapshot.pageY
+          );
+        }
+      }
+    );
+  }
+
   schedule(
     mode='fast',
     delay
@@ -389,6 +477,9 @@ class PreviewPipeline{
     ){
       return;
     }
+
+    const lensLayout=
+      this.captureLensLayout();
 
     this.activeRequest=
       request;
@@ -662,6 +753,10 @@ class PreviewPipeline{
           false
         );
       }
+
+      this.restoreLensLayout(
+        lensLayout
+      );
     }
   }
 
