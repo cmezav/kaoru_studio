@@ -5,6 +5,7 @@
     sharpness:{amount:0,radius:1,threshold:0},
     filters:{gaussianBlur:0,blur:0,grayscale:0,monochrome:0,monochromeColor:'#7c3aed',sepia:0,invert:0,motionBlur:0,motionAngle:0,pixelate:1,vignette:0,vignetteSize:48,vignetteSoftness:45},
     grain:{amount:0,size:1,opacity:.5},
+    contourBlur:{enabled:false,intensity:75,radius:16,width:48,feather:18,roundness:0},
     lens:{
       enabled:false,
       radius:12,
@@ -35,6 +36,7 @@
     sharpness:{...base.sharpness,...(source.sharpness||{})},
     filters:{...base.filters,...(source.filters||{})},
     grain:{...base.grain,...(source.grain||{})},
+    contourBlur:{...base.contourBlur,...(source.contourBlur||{})},
     lens:{...base.lens,...(source.lens||{}),strokes:Array.isArray(source.lens&&source.lens.strokes)?clone(source.lens.strokes):[]},
     transform:{...base.transform,...(source.transform||{})},
     crop:{...base.crop,...(source.crop||{})}

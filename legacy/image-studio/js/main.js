@@ -72,6 +72,54 @@
   history.onChange=({canUndo,canRedo})=>{$('#undoBtn').disabled=!canUndo;$('#redoBtn').disabled=!canRedo};
 
   function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterControls','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const el=$(selector);el.dataset.group=group;ImageUI.build(el,state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
+
+  function syncContourBlurControls(){
+    const c=state.contourBlur||{};
+    const value=(selector,next)=>{
+      const el=$(selector);
+      if(el&&document.activeElement!==el)el.value=String(next)
+    };
+    const text=(selector,next)=>{
+      const el=$(selector);
+      if(el)el.textContent=next
+    };
+
+    const intensity=Math.max(0,Math.min(100,Number(c.intensity)||0));
+    const radius=Math.max(0,Math.min(80,Number(c.radius)||0));
+    const width=Math.max(1,Math.min(220,Number(c.width)||1));
+    const feather=Math.max(0,Math.min(120,Number(c.feather)||0));
+    const roundness=Math.max(0,Math.min(200,Number(c.roundness)||0));
+
+    const enabled=$('#edgeBlurEnabled');
+    if(enabled)enabled.checked=!!c.enabled;
+
+    value('#edgeBlurIntensity',Math.round(intensity));
+    value('#edgeBlurRadius',Math.round(radius));
+    value('#edgeBlurWidth',Math.round(width));
+    value('#edgeBlurFeather',Math.round(feather));
+    value('#edgeBlurRoundness',Math.round(roundness));
+
+    text('#edgeBlurIntensityOut',`${Math.round(intensity)}%`);
+    text('#edgeBlurRadiusOut',`${Math.round(radius)} px`);
+    text('#edgeBlurWidthOut',`${Math.round(width)} px`);
+    text('#edgeBlurFeatherOut',`${Math.round(feather)} px`);
+    text('#edgeBlurRoundnessOut',`${Math.round(roundness)} px`)
+  }
+
+  function contourBlurPreview(){
+    preview.setState(state);
+    preview.schedule('fast',30);
+    scheduleRecovery()
+  }
+
+  function contourBlurCommit(){
+    history.push(state);
+    preview.setState(state);
+    preview.schedule('full',0);
+    scheduleRecovery();
+    const status=$('#statusText');
+    if(status)status.textContent='Blur de contorno actualizado'
+  }
   function syncAll(){
     try{
       ImageUI.sync(state)
@@ -104,6 +152,7 @@
     value('#cropY',Math.round(state.crop.y));
     value('#cropWidth',Math.round(state.crop.width));
     value('#cropHeight',Math.round(state.crop.height));
+    syncContourBlurControls();
 
     const focusButton=$('#focusModeBtn');
     if(focusButton){
@@ -338,6 +387,30 @@
     $('#undoBtn').addEventListener('click',()=>applyHistory(history.undo()));$('#redoBtn').addEventListener('click',()=>applyHistory(history.redo()));document.addEventListener('keydown',e=>{const mod=e.ctrlKey||e.metaKey;if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();applyHistory(e.shiftKey?history.redo():history.undo())}});
     $('#repairPreviewBtn').addEventListener('click',()=>{if(!source)return;$('#renderBadge').hidden=true;preview.setState(state);preview.repair();requestAnimationFrame(()=>{const saved=zoom;zoom=Math.max(.08,saved*.985);applyZoom();requestAnimationFrame(()=>{zoom=saved;applyZoom();fitView();toast('Preview refrescada.');})})});
     $('#zoomOut').addEventListener('click',()=>{zoom=Math.max(.08,zoom/1.2);applyZoom()});$('#zoomIn').addEventListener('click',()=>{zoom=Math.min(4,zoom*1.2);applyZoom()});$('#fitView').addEventListener('click',fitView);window.addEventListener('resize',()=>{if(source){applyZoom();updateFocusRing()}});
+    const contourFields=[
+      ['#edgeBlurIntensity','intensity'],
+      ['#edgeBlurRadius','radius'],
+      ['#edgeBlurWidth','width'],
+      ['#edgeBlurFeather','feather'],
+      ['#edgeBlurRoundness','roundness']
+    ];
+
+    $('#edgeBlurEnabled').addEventListener('change',e=>{
+      state.contourBlur.enabled=e.target.checked;
+      syncContourBlurControls();
+      contourBlurCommit()
+    });
+
+    contourFields.forEach(([selector,key])=>{
+      const input=$(selector);
+      input.addEventListener('input',e=>{
+        state.contourBlur[key]=Number(e.target.value)||0;
+        syncContourBlurControls();
+        contourBlurPreview()
+      });
+      input.addEventListener('change',()=>contourBlurCommit())
+    });
+
     $('#exportScale').addEventListener('change',()=>updateExportDimensions(true));$('#exportWidth').addEventListener('input',()=>{if(!source)return;const w=Number($('#exportWidth').value)||1;$('#exportHeight').value=Math.max(1,Math.round(w*state.crop.height/state.crop.width));updateExportInfo()});$('#exportHeight').addEventListener('input',()=>{if(!source)return;const h=Number($('#exportHeight').value)||1;$('#exportWidth').value=Math.max(1,Math.round(h*state.crop.width/state.crop.height));updateExportInfo()});$('#exportFormat').addEventListener('change',()=>{syncExportVisibility();scheduleRecovery()});$('#transparentBg').addEventListener('change',()=>{syncExportVisibility();scheduleRecovery()});$('#exportQuality').addEventListener('input',e=>{const output=$('#qualityRow output');if(output)output.textContent=`${e.target.value}%`});['exportWidth','exportHeight','exportScale','exportQuality','backgroundColor'].forEach(id=>$(`#${id}`).addEventListener('change',scheduleRecovery));
     $('#exportBtn').addEventListener('click',exportImage);$('#exportTopBtn').addEventListener('click',exportImage);$('#saveProjectBtn').addEventListener('click',()=>saveGallery('project'));$('#saveTemplateBtn').addEventListener('click',()=>saveGallery('template'));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')scheduleRecovery()});
   }

@@ -124,6 +124,169 @@ function hasColorAdjustments(state){
   );
 }
 
+function roundedRectPath(ctx,x,y,w,h,radiusValue){
+  const radius=clamp(
+    number(radiusValue,0),
+    0,
+    Math.min(w,h)/2
+  );
+
+  ctx.beginPath();
+
+  if(radius<=0){
+    ctx.rect(x,y,w,h);
+    return
+  }
+
+  ctx.moveTo(x+radius,y);
+  ctx.lineTo(x+w-radius,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+radius);
+  ctx.lineTo(x+w,y+h-radius);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-radius,y+h);
+  ctx.lineTo(x+radius,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-radius);
+  ctx.lineTo(x,y+radius);
+  ctx.quadraticCurveTo(x,y,x+radius,y);
+  ctx.closePath()
+}
+
+function buildContourMask(width,height,opt){
+  const band=Math.max(
+    1,
+    Math.min(
+      Math.floor(Math.min(width,height)/2),
+      Math.round(number(opt.width,48))
+    )
+  );
+
+  const feather=Math.max(
+    0,
+    number(opt.feather,18)
+  );
+
+  const roundness=clamp(
+    number(opt.roundness,0),
+    0,
+    Math.min(width,height)/2
+  );
+
+  const raw=F.canvas(width,height);
+  const ctx=raw.getContext('2d',{alpha:true});
+
+  ctx.clearRect(0,0,width,height);
+  ctx.fillStyle='#fff';
+  roundedRectPath(
+    ctx,
+    0,
+    0,
+    width,
+    height,
+    roundness
+  );
+  ctx.fill();
+
+  const innerWidth=Math.max(1,width-band*2);
+  const innerHeight=Math.max(1,height-band*2);
+
+  ctx.globalCompositeOperation='destination-out';
+  roundedRectPath(
+    ctx,
+    band,
+    band,
+    innerWidth,
+    innerHeight,
+    Math.max(0,roundness-band)
+  );
+  ctx.fill();
+  ctx.globalCompositeOperation='source-over';
+
+  if(feather<=0){
+    return raw
+  }
+
+  const soft=F.canvas(width,height);
+  const sctx=soft.getContext('2d',{alpha:true});
+  sctx.filter=`blur(${Math.min(120,feather)}px)`;
+  sctx.drawImage(raw,0,0);
+  sctx.filter='none';
+
+  return soft
+}
+
+function applyContourBlur(source,opt,scaleFactor=1){
+  opt=opt||{};
+
+  const intensity=clamp(
+    number(opt.intensity,75)/100,
+    0,
+    1
+  );
+
+  const radius=Math.max(
+    0,
+    number(opt.radius,16)*
+    scaleFactor
+  );
+
+  if(
+    !opt.enabled||
+    intensity<=0||
+    radius<=0
+  ){
+    return source
+  }
+
+  const width=source.width;
+  const height=source.height;
+
+  const mask=buildContourMask(
+    width,
+    height,
+    {
+      width:
+        number(opt.width,48)*
+        scaleFactor,
+      feather:
+        number(opt.feather,18)*
+        scaleFactor,
+      roundness:
+        number(opt.roundness,0)*
+        scaleFactor
+    }
+  );
+
+  const blurred=F.canvas(width,height);
+  const bctx=blurred.getContext('2d',{alpha:true});
+  bctx.filter=`blur(${Math.min(120,radius)}px)`;
+  bctx.drawImage(source,0,0);
+  bctx.filter='none';
+
+  const blurredEdge=F.canvas(width,height);
+  const ectx=blurredEdge.getContext('2d',{alpha:true});
+  ectx.drawImage(blurred,0,0);
+  ectx.globalCompositeOperation='destination-in';
+  ectx.drawImage(mask,0,0);
+  ectx.globalCompositeOperation='source-over';
+
+  const out=F.canvas(width,height);
+  const ctx=out.getContext('2d',{alpha:true});
+  ctx.drawImage(source,0,0);
+
+  ctx.save();
+  ctx.globalAlpha=intensity;
+  ctx.globalCompositeOperation='destination-out';
+  ctx.drawImage(mask,0,0);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha=intensity;
+  ctx.globalCompositeOperation='source-over';
+  ctx.drawImage(blurredEdge,0,0);
+  ctx.restore();
+
+  return out
+}
+
 function render(source,state={},options={}){
   if(!source){
     throw new Error(
@@ -408,6 +571,29 @@ function render(source,state={},options={}){
         work,
         state,
         quality
+      )
+    );
+  }
+
+  if(
+    state?.contourBlur?.enabled&&
+    number(
+      state.contourBlur.intensity
+    )>0&&
+    number(
+      state.contourBlur.radius
+    )>0
+  ){
+    work=safeStage(
+      'blur de contorno',
+      work,
+      ()=>applyContourBlur(
+        work,
+        state.contourBlur,
+        Math.min(
+          scaleX,
+          scaleY
+        )
       )
     );
   }
