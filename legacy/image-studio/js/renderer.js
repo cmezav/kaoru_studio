@@ -227,22 +227,28 @@ function buildAlphaContourMask(source,opt,scaleFactor=1){
     scaleFactor
   );
 
+  const softness=Math.max(
+    .5,
+    radius+feather
+  );
+
   const alpha=alphaMask(source);
 
   /*
-    Versión tipo Silueta Studio:
-    - tomamos la silueta alfa real del PNG;
-    - creamos una banda de contorno basada en esa silueta;
-    - suavizamos LA MÁSCARA del borde, no los colores del dibujo.
-    Así el PNG no genera franjas o manchas rectangulares sobre el lienzo.
+    Feather real del contorno:
+    - innerCore preserva el centro totalmente nítido;
+    - hardEdge es la franja dura original;
+    - softEdge es esa misma zona, pero suavizada con blur SOLO en alfa.
+    Esto se comporta más como un suavizado de silueta y evita el efecto
+    de imagen encogida o fantasma translúcido.
   */
-  const inner=morphMask(
+  const innerCore=morphMask(
     alpha,
     inside,
     'erode'
   );
 
-  const outer=outside>0
+  const outerBase=outside>0
     ?morphMask(
         alpha,
         outside,
@@ -250,20 +256,25 @@ function buildAlphaContourMask(source,opt,scaleFactor=1){
       )
     :copyMask(alpha);
 
-  const edgeBand=subtractMask(
-    outer,
-    inner
+  const hardEdge=subtractMask(
+    outerBase,
+    innerCore
   );
 
-  const softBand=blurMask(
-    edgeBand,
-    feather+(radius*.6)
+  const softOuter=blurMask(
+    outerBase,
+    softness
+  );
+
+  const softEdge=subtractMask(
+    softOuter,
+    innerCore
   );
 
   return {
-    base:alpha,
-    edgeBand,
-    softBand
+    innerCore,
+    hardEdge,
+    softEdge
   }
 }
 
@@ -276,56 +287,65 @@ function applyContourBlur(source,opt,scaleFactor=1){
     1
   );
 
-  const radius=Math.max(
+  const softness=Math.max(
     0,
-    number(opt.radius,16)*
-    scaleFactor
+    (
+      number(opt.radius,16)+
+      number(opt.feather,18)
+    )*scaleFactor
   );
 
   if(
     !opt.enabled||
     intensity<=0||
-    radius<=0
+    softness<=0
   ){
     return source
   }
 
   const {
-    base,
-    edgeBand,
-    softBand
+    innerCore,
+    hardEdge,
+    softEdge
   }=buildAlphaContourMask(
     source,
     opt,
     scaleFactor
   );
 
-  const mixedMask=copyMask(base);
-  const mctx=mixedMask.getContext('2d',{alpha:true});
+  const finalMask=F.canvas(
+    source.width,
+    source.height
+  );
+  const mctx=finalMask.getContext('2d',{alpha:true});
 
   /*
-    Reemplazamos solo la franja del contorno:
-    - quitamos una parte del borde nítido;
-    - añadimos una versión suavizada de ESA silueta.
-    Esto sí sigue la forma real del PNG y evita blur por rectángulo.
+    Mezcla correcta:
+    - centro 100% intacto
+    - parte del borde duro original
+    - parte del borde suavizado
+    Así el blur se siente como feather del borde,
+    no como encogimiento de toda la imagen.
   */
-  mctx.save();
-  mctx.globalAlpha=intensity;
-  mctx.globalCompositeOperation='destination-out';
-  mctx.drawImage(edgeBand,0,0);
-  mctx.restore();
+  mctx.drawImage(innerCore,0,0);
+
+  if(intensity<1){
+    mctx.save();
+    mctx.globalAlpha=1-intensity;
+    mctx.drawImage(hardEdge,0,0);
+    mctx.restore()
+  }
 
   mctx.save();
   mctx.globalAlpha=intensity;
-  mctx.globalCompositeOperation='source-over';
-  mctx.drawImage(softBand,0,0);
+  mctx.drawImage(softEdge,0,0);
   mctx.restore();
 
   const out=F.canvas(source.width,source.height);
   const ctx=out.getContext('2d',{alpha:true});
   ctx.drawImage(source,0,0);
   ctx.globalCompositeOperation='destination-in';
-  ctx.drawImage(mixedMask,0,0);
+  ctx.drawImage(finalMask,0,0);
   ctx.globalCompositeOperation='source-over';
 
   return out
