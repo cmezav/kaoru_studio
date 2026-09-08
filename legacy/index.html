@@ -290,6 +290,46 @@ html[data-theme=night] .eyedropper-btn{
 <script>if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
 <link rel="stylesheet" href="./shared/kaoruLegacy.css?cache=silhouette-night-bg-1">
   <link rel="stylesheet" href="./shared/precisionControls.css?cache=controls">
+<style id="silhouette-preview-layout-v13">
+@media (min-width:951px){
+  html.kaoru-embedded body.studio-silhouette .preview-panel{
+    top:16px!important;
+    height:calc(100vh - 32px)!important;
+    max-height:calc(100vh - 32px)!important;
+    min-height:0!important;
+  }
+
+  html.kaoru-embedded body.studio-silhouette .preview-area{
+    padding:12px!important;
+    align-items:stretch!important;
+    overflow:hidden!important;
+  }
+
+  html.kaoru-embedded body.studio-silhouette .canvas-wrap{
+    height:100%!important;
+    min-height:0!important;
+    align-items:stretch!important;
+  }
+
+  html.kaoru-embedded body.studio-silhouette .preview-card{
+    height:100%!important;
+    min-height:0!important;
+  }
+
+  html.kaoru-embedded body.studio-silhouette .preview-stage{
+    flex:1 1 auto!important;
+    height:auto!important;
+    min-height:0!important;
+    overflow:hidden!important;
+    padding:10px!important;
+  }
+
+  html.kaoru-embedded body.studio-silhouette .preview-card canvas{
+    max-width:100%!important;
+    max-height:100%!important;
+  }
+}
+</style>
 </head>
 <body class="studio-silhouette" data-studio="silhouette">
 <header class="topbar">
@@ -538,7 +578,7 @@ html[data-theme=night] .eyedropper-btn{
 <script src="./shared/namingSystem.js?cache=current"></script>
 <script src="./shared/studioBridge.js?cache=current"></script>
 <script src="./shared/studioGallery.js?cache=current"></script>
-<script src="./shared/silhouetteBrushFill.js?cache=brush-fill-v1-1-20260907"></script>
+<script src="./shared/silhouetteBrushFill.js?cache=brush-fill-v1-3-20260907"></script>
 <script>
 (() => {
 'use strict';
@@ -605,7 +645,51 @@ function fmtBytes(b){if(b<1024)return b+' B';let n=b/1024;if(n<1024)return n.toF
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function showMeta(el,file,img){el.classList.remove('hidden');el.innerHTML=`<span title="${esc(file.name)}">${esc(file.name)}</span><small>${img.naturalWidth.toLocaleString()} × ${img.naturalHeight.toLocaleString()} px${file.size?' · '+fmtBytes(file.size):''}</small>`;}
 function drawChecker(ctx,w,h){ctx.fillStyle='#f3f3f6';ctx.fillRect(0,0,w,h);const s=24;ctx.fillStyle='#e7e7ec';for(let y=0;y<h;y+=s)for(let x=0;x<w;x+=s)if((((x/s)+(y/s))&1)===0)ctx.fillRect(x,y,s,s);}
-function fitCanvas(canvas,w,h){const scale=Math.min(860/w,510/h,1);canvas.width=w;canvas.height=h;canvas.style.width=Math.max(1,Math.round(w*scale))+'px';canvas.style.height=Math.max(1,Math.round(h*scale))+'px';}
+function fitCanvas(canvas,w,h){
+  canvas.width=w;
+  canvas.height=h;
+
+  const stage=
+    canvas.closest(
+      '.preview-stage'
+    );
+
+  const rect=
+    stage?.getBoundingClientRect();
+
+  const maxW=
+    Math.max(
+      1,
+      (rect?.width||860)-28
+    );
+
+  const maxH=
+    Math.max(
+      1,
+      (rect?.height||510)-28
+    );
+
+  const scale=
+    Math.min(
+      maxW/w,
+      maxH/h,
+      1
+    );
+
+  canvas.style.width=
+    Math.max(
+      1,
+      Math.round(w*scale)
+    )+
+    'px';
+
+  canvas.style.height=
+    Math.max(
+      1,
+      Math.round(h*scale)
+    )+
+    'px';
+}
 function sourceFromImage(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);const d=ctx.getImageData(0,0,c.width,c.height).data;const alpha=new Uint8ClampedArray(c.width*c.height);const rgba=new Uint8ClampedArray(d);let transparent=false;for(let p=0,i=0;p<alpha.length;p++,i+=4){alpha[p]=d[i+3];if(d[i+3]<250)transparent=true;}return{alpha,rgba,transparent};}
 
 /* Geometric-looking mask regularization: blur only the working mask, threshold it back to a crisp binary contour. */
@@ -1197,7 +1281,23 @@ els.saveTemplateBtn.onclick=saveBlackSilhouetteTemplate;
 window.SilhouetteStudioActions=Object.assign(window.SilhouetteStudioActions||{}, {
   saveBlackTemplate: saveBlackSilhouetteTemplate,
   exportPNG: ()=>{ if(els.downloadBtn&&!els.downloadBtn.disabled) els.downloadBtn.click(); },
-  refreshTemplates: refreshGallery
+  refreshTemplates: refreshGallery,
+  render: renderAll
+});
+
+let silhouettePreviewResizeTimer=null;
+window.addEventListener('resize',()=>{
+  if(!state.baseImage)return;
+
+  clearTimeout(
+    silhouettePreviewResizeTimer
+  );
+
+  silhouettePreviewResizeTimer=
+    setTimeout(
+      renderAll,
+      80
+    );
 });
 
 els.downloadBtn.onclick=()=>{if(!state.alpha)return;const mask=smoothMask(makeBaseMask(),state.w,state.h,state.smooth),canvas=composeResult(mask),a=document.createElement('a');a.download=generateFastPNGName();a.href=canvas.toDataURL('image/png');a.click();};
