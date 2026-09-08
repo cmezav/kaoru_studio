@@ -538,6 +538,7 @@ html[data-theme=night] .eyedropper-btn{
 <script src="./shared/namingSystem.js?cache=current"></script>
 <script src="./shared/studioBridge.js?cache=current"></script>
 <script src="./shared/studioGallery.js?cache=current"></script>
+<script src="./shared/silhouetteBrushFill.js?cache=brush-fill-v1-1-20260907"></script>
 <script>
 (() => {
 'use strict';
@@ -680,7 +681,7 @@ function drawImageLayer(ctx,layer){const g=getFillGeometry(layer);if(!g)return;c
 function makeFillLayer(){const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';if(state.mode==='original'){ctx.drawImage(state.baseImage,0,0,state.w,state.h);return c;}if(state.mode==='color'){ctx.fillStyle=state.colorFillType==='gradient'?hslGradient(ctx,state.gradient.angle,state.gradient.stops):`rgb(${hsvToRgb(state.color.h,state.color.s,state.color.v).join(',')})`;ctx.fillRect(0,0,state.w,state.h);return c;}if(state.mode==='image'){state.fillLayers.forEach(layer=>drawImageLayer(ctx,layer));}return c;}
 function effectLayer(mask,e){if(!e.enabled)return null;const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');const layer=maskCanvas(mask,e.color);ctx.save();ctx.filter=`blur(${e.blur}px)`;ctx.globalAlpha=(100-e.opacity)/100;const a=e.angle*Math.PI/180;ctx.drawImage(layer,Math.cos(a)*e.offset,Math.sin(a)*e.offset);ctx.restore();return c;}
 function drawDirectionalBorder(ctx,mask,b){const border=maskCanvas(expandMask(mask,b.width),b.color);const a=(Number(b.angle)||0)*Math.PI/180;const d=Number(b.offset)||0;ctx.drawImage(border,Math.cos(a)*d,Math.sin(a)*d);}
-function composeResult(mask){const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const shadow=effectLayer(mask,state.shadow);if(shadow)ctx.drawImage(shadow,0,0);const glow=effectLayer(mask,state.glow);if(glow)ctx.drawImage(glow,0,0);for(let i=state.borders.length-1;i>=0;i--){const b=state.borders[i];if(!b.enabled)continue;drawDirectionalBorder(ctx,mask,b);}ctx.drawImage(applyMask(makeFillLayer(),mask),0,0);return c;}
+function composeResult(mask){const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const shadow=effectLayer(mask,state.shadow);if(shadow)ctx.drawImage(shadow,0,0);const glow=effectLayer(mask,state.glow);if(glow)ctx.drawImage(glow,0,0);for(let i=state.borders.length-1;i>=0;i--){const b=state.borders[i];if(!b.enabled)continue;drawDirectionalBorder(ctx,mask,b);}ctx.drawImage(applyMask(makeFillLayer(),mask),0,0);if(window.SilhouetteBrushFill)window.SilhouetteBrushFill.applyToCanvas(c,mask,state.w,state.h);return c;}
 
 function hsvToRgb(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r=0,g=0,b=0;if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];}
 function rgbToHsv(r,g,b){r/=255;g/=255;b/=255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;let h=0;if(d){if(max===r)h=60*((g-b)/d%6);else if(max===g)h=60*((b-r)/d+2);else h=60*((r-g)/d+4);if(h<0)h+=360;}return{h,s:max?d/max:0,v:max};}
@@ -1088,7 +1089,7 @@ async function serializeSilhouetteProject(){
   syncBaseFromState();if(state.mode==='image')syncActiveLayerFromState();
   const config=configSnapshot();
   return{
-    schema:'silueta-studio-project',version:11,width:state.w,height:state.h,config,
+    schema:'silueta-studio-project',version:11,width:state.w,height:state.h,config,brushFill:window.SilhouetteBrushFill?.serialize?.()||null,
     baseLayers:state.baseLayers.map((layer,i)=>({
       id:layer.id,name:layer.file?.name||`Base ${i+1}`,src:imageToProjectDataUrl(layer.image),
       scale:layer.scale,width:layer.width,height:layer.height,rotation:layer.rotation,x:layer.x,y:layer.y,flipX:!!layer.flipX,flipY:!!layer.flipY
@@ -1116,7 +1117,7 @@ async function applySilhouetteProject(payload){
     syncActiveBase();if(state.mode==='image')syncActiveFill();
     showMeta(els.baseMeta,state.baseFile,state.baseImage);els.opaqueWarning.classList.toggle('hidden',parsed.transparent);
     history.undo=[];history.redo=[];history.gesture=null;
-    renderFillLayersUI();renderBaseLayersUI();syncAllUI();renderAll();
+    renderFillLayersUI();renderBaseLayersUI();syncAllUI();if(window.SilhouetteBrushFill?.restore)await window.SilhouetteBrushFill.restore(payload.brushFill,state.w,state.h);renderAll();
   }finally{els.loading.classList.add('hidden');}
 }
 async function saveSilhouetteToGallery(kind,nameOverride=null){
