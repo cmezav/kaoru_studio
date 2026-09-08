@@ -1,9 +1,9 @@
-/* KAORU SILUETA BRUSH FILL V1.3 */
+/* KAORU SILUETA BRUSH FILL V1.4 */
 (function(){
 'use strict';
 
 const previous=window.SilhouetteBrushFill;
-if(previous?.__v13)return;
+if(previous?.__v14)return;
 
 const state={
   width:0,
@@ -127,12 +127,9 @@ function ensureSize(width,height){
   state.undoUrl=null;
   state.hasPaint=false;
 
-  if(state.overlay){
-    state.overlay.width=width;
-    state.overlay.height=height;
-  }
-
+  syncOverlayGeometry();
   renderOverlay();
+
   refreshUI();
 
   return true;
@@ -236,6 +233,75 @@ function rerenderStudio(){
   }
 }
 
+function outputFrameInfo(){
+  const frame=
+    window.SilhouetteStudioActions
+      ?.getOutputFrame?.();
+
+  if(
+    frame&&
+    Number(frame.width)>0&&
+    Number(frame.height)>0
+  ){
+    return frame;
+  }
+
+  return{
+    format:'rect',
+    width:state.width,
+    height:state.height,
+    sourceWidth:state.width,
+    sourceHeight:state.height,
+    offsetX:0,
+    offsetY:0
+  };
+}
+
+function syncOverlayGeometry(){
+  if(!state.overlay)return;
+
+  const target=
+    document.getElementById(
+      'resultCanvas'
+    );
+
+  const frame=
+    outputFrameInfo();
+
+  const width=
+    Math.max(
+      1,
+      Number(
+        target?.width||
+        frame.width||
+        state.width
+      )
+    );
+
+  const height=
+    Math.max(
+      1,
+      Number(
+        target?.height||
+        frame.height||
+        state.height
+      )
+    );
+
+  if(
+    state.overlay.width!==
+      width||
+    state.overlay.height!==
+      height
+  ){
+    state.overlay.width=
+      width;
+
+    state.overlay.height=
+      height;
+  }
+}
+
 function renderOverlay(){
   if(
     !state.overlayCtx||
@@ -243,6 +309,8 @@ function renderOverlay(){
   ){
     return;
   }
+
+  syncOverlayGeometry();
 
   state.overlayCtx.clearRect(
     0,
@@ -252,10 +320,9 @@ function renderOverlay(){
   );
 
   /*
-    IMPORTANTE:
-    El resultadoCanvas ya contiene el pincel cuando no estamos
-    dibujando. La capa flotante solo se pinta durante el trazo.
-    Así no aparecen dos siluetas superpuestas.
+    Mientras se pinta, la capa temporal se coloca dentro de la
+    zona real de la silueta. En formato cuadrado el padding queda
+    transparente y NO se estira el pincel.
   */
   if(
     state.drawing&&
@@ -263,12 +330,15 @@ function renderOverlay(){
     state.width&&
     state.height
   ){
+    const frame=
+      outputFrameInfo();
+
     state.overlayCtx.drawImage(
       state.layer,
-      0,
-      0,
-      state.overlay.width,
-      state.overlay.height
+      Number(frame.offsetX)||0,
+      Number(frame.offsetY)||0,
+      state.width,
+      state.height
     );
   }
 
@@ -529,31 +599,61 @@ function clear(){
 }
 
 function pointFromEvent(event){
+  syncOverlayGeometry();
+
   const rect=
     state.overlay.getBoundingClientRect();
 
+  const frame=
+    outputFrameInfo();
+
   const sx=
-    state.width/
+    Number(frame.width)/
     Math.max(
       1,
       rect.width
     );
 
   const sy=
-    state.height/
+    Number(frame.height)/
     Math.max(
       1,
       rect.height
     );
 
+  const outputX=
+    (event.clientX-rect.left)*
+    sx;
+
+  const outputY=
+    (event.clientY-rect.top)*
+    sy;
+
+  const x=
+    outputX-
+    (Number(frame.offsetX)||0);
+
+  const y=
+    outputY-
+    (Number(frame.offsetY)||0);
+
+  if(
+    x<0||
+    y<0||
+    x>state.width||
+    y>state.height
+  ){
+    return null;
+  }
+
   return{
     x:clamp(
-      (event.clientX-rect.left)*sx,
+      x,
       0,
       state.width
     ),
     y:clamp(
-      (event.clientY-rect.top)*sy,
+      y,
       0,
       state.height
     ),
@@ -664,6 +764,12 @@ function onPointerDown(event){
   state.last=
     pointFromEvent(event);
 
+  if(!state.last){
+    state.drawing=false;
+    renderOverlay();
+    return;
+  }
+
   try{
     state.overlay
       .setPointerCapture(
@@ -689,6 +795,8 @@ function onPointerMove(event){
 
   const next=
     pointFromEvent(event);
+
+  if(!next)return;
 
   drawSegment(
     state.last||next,
@@ -1418,7 +1526,7 @@ function boot(){
 }
 
 window.SilhouetteBrushFill={
-  __v13:true,
+  __v14:true,
   applyToCanvas,
   serialize,
   restore,

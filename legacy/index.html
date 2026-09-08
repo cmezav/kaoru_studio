@@ -290,6 +290,62 @@ html[data-theme=night] .eyedropper-btn{
 <script>if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
 <link rel="stylesheet" href="./shared/kaoruLegacy.css?cache=silhouette-night-bg-1">
   <link rel="stylesheet" href="./shared/precisionControls.css?cache=controls">
+
+<style id="silhouette-output-format-v14">
+.output-format-box{
+  margin-top:10px;
+  padding:9px;
+  border:1px solid #ededf2;
+  border-radius:11px;
+  background:#fafafd;
+}
+.output-format-head strong{
+  display:block;
+  font-size:10px;
+}
+.output-format-head small{
+  display:block;
+  margin-top:3px;
+  color:#85858e;
+  font-size:9px;
+  line-height:1.35;
+}
+.output-format-toggle{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4px;
+  margin-top:8px;
+  padding:4px;
+  border:1px solid #e9e9ee;
+  border-radius:10px;
+  background:#f2f2f5;
+}
+.output-format-toggle button{
+  min-height:30px;
+  border:0;
+  border-radius:7px;
+  background:transparent;
+  color:#777780;
+  font-size:9px;
+  font-weight:850;
+}
+.output-format-toggle button.active{
+  background:#fff;
+  color:var(--purple);
+  box-shadow:0 1px 5px rgba(0,0,0,.07);
+}
+html[data-theme=night] .output-format-box{
+  border-color:rgba(231,218,248,.11);
+  background:rgba(255,255,255,.025);
+}
+html[data-theme=night] .output-format-toggle{
+  border-color:rgba(231,218,248,.10);
+  background:rgba(255,255,255,.035);
+}
+html[data-theme=night] .output-format-toggle button.active{
+  background:rgba(139,92,246,.14);
+}
+</style>
 <style id="silhouette-preview-layout-v13">
 @media (min-width:951px){
   html.kaoru-embedded body.studio-silhouette .preview-panel{
@@ -393,6 +449,19 @@ html[data-theme=night] .eyedropper-btn{
     <div class="section-title"><span class="num">1</span><div><strong>PNG de la silueta</strong><small>Se respeta el canal alfa original.</small></div></div>
 
     <div id="baseMeta" class="file-meta hidden"></div>
+
+    <div class="output-format-box">
+      <div class="output-format-head">
+        <div>
+          <strong>Proporción de salida</strong>
+          <small>Rectangular mantiene la proporción actual. Cuadrada añade transparencia alrededor: no recorta ni deforma la silueta.</small>
+        </div>
+      </div>
+      <div class="output-format-toggle" role="group" aria-label="Proporción de salida">
+        <button type="button" class="active" data-output-format="rect">Rectangular</button>
+        <button type="button" data-output-format="square">Cuadrada 1:1</button>
+      </div>
+    </div>
     <div id="opaqueWarning" class="hint hidden">La imagen no tiene transparencia. Para usarla como silueta necesitas una imagen con alfa real.</div>
   </div>
 
@@ -578,7 +647,7 @@ html[data-theme=night] .eyedropper-btn{
 <script src="./shared/namingSystem.js?cache=current"></script>
 <script src="./shared/studioBridge.js?cache=current"></script>
 <script src="./shared/studioGallery.js?cache=current"></script>
-<script src="./shared/silhouetteBrushFill.js?cache=brush-fill-v1-3-20260907"></script>
+<script src="./shared/silhouetteBrushFill.js?cache=brush-fill-v1-4-20260908"></script>
 <script>
 (() => {
 'use strict';
@@ -614,7 +683,7 @@ function generateFastPNGName(){return window.StudioNaming?window.StudioNaming.fi
 
 const state = {
  baseFile:null,fillFile:null,baseImage:null,fillImage:null,fillLayers:[],activeFillId:null,baseLayers:[],activeBaseId:null,alpha:null,rgba:null,w:0,h:0,
- smooth:5,mode:'original',
+ smooth:5,mode:'original',outputFormat:'rect',
  fillScale:100,fillWidth:100,fillHeight:100,fillRotation:0,fillX:0,fillY:0,flipX:false,flipY:false,
  color:{h:0,s:0,v:0},colorFillType:'solid',
  gradient:{angle:0,stops:[{id:1,pos:0,color:'#000000'},{id:2,pos:100,color:'#FFFFFF'}],selectedId:1,nextId:3},
@@ -628,7 +697,7 @@ let currentGalleryProjectId=null;
 const history={undo:[],redo:[],gesture:null};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const deep=v=>JSON.parse(JSON.stringify(v));
-function configSnapshot(){return deep({smooth:state.smooth,mode:state.mode,fillScale:state.fillScale,fillWidth:state.fillWidth,fillHeight:state.fillHeight,fillRotation:state.fillRotation,fillX:state.fillX,fillY:state.fillY,flipX:state.flipX,flipY:state.flipY,activeFillId:state.activeFillId,fillLayers:state.fillLayers.map(l=>({id:l.id,fillScale:l.fillScale,fillWidth:l.fillWidth,fillHeight:l.fillHeight,fillRotation:l.fillRotation,fillX:l.fillX,fillY:l.fillY,flipX:l.flipX,flipY:l.flipY})),baseLayers:state.baseLayers.map(l=>({id:l.id,scale:l.scale,width:l.width,height:l.height,rotation:l.rotation,x:l.x,y:l.y,flipX:l.flipX,flipY:l.flipY})),activeBaseId:state.activeBaseId,color:state.color,colorFillType:state.colorFillType,gradient:state.gradient,borders:state.borders,shadow:state.shadow,glow:state.glow});}
+function configSnapshot(){return deep({smooth:state.smooth,mode:state.mode,outputFormat:state.outputFormat,fillScale:state.fillScale,fillWidth:state.fillWidth,fillHeight:state.fillHeight,fillRotation:state.fillRotation,fillX:state.fillX,fillY:state.fillY,flipX:state.flipX,flipY:state.flipY,activeFillId:state.activeFillId,fillLayers:state.fillLayers.map(l=>({id:l.id,fillScale:l.fillScale,fillWidth:l.fillWidth,fillHeight:l.fillHeight,fillRotation:l.fillRotation,fillX:l.fillX,fillY:l.fillY,flipX:l.flipX,flipY:l.flipY})),baseLayers:state.baseLayers.map(l=>({id:l.id,scale:l.scale,width:l.width,height:l.height,rotation:l.rotation,x:l.x,y:l.y,flipX:l.flipX,flipY:l.flipY})),activeBaseId:state.activeBaseId,color:state.color,colorFillType:state.colorFillType,gradient:state.gradient,borders:state.borders,shadow:state.shadow,glow:state.glow});}
 function updateHistoryButtons(){els.undoBtn.disabled=!history.undo.length;els.redoBtn.disabled=!history.redo.length;}
 function pushHistory(snapshot){if(!snapshot)return;const now=JSON.stringify(configSnapshot());if(JSON.stringify(snapshot)===now)return;history.undo.push(snapshot);if(history.undo.length>80)history.undo.shift();history.redo=[];updateHistoryButtons();}
 function beginGesture(){if(!history.gesture)history.gesture=configSnapshot();}
@@ -689,6 +758,195 @@ function fitCanvas(canvas,w,h){
       Math.round(h*scale)
     )+
     'px';
+}
+
+function outputFrame(){
+  const format=
+    state.outputFormat==='square'
+      ?'square'
+      :'rect';
+
+  if(format==='square'){
+    const side=
+      Math.max(
+        state.w,
+        state.h
+      );
+
+    return{
+      format,
+      width:side,
+      height:side,
+      sourceWidth:state.w,
+      sourceHeight:state.h,
+      offsetX:
+        Math.floor(
+          (side-state.w)/2
+        ),
+      offsetY:
+        Math.floor(
+          (side-state.h)/2
+        )
+    };
+  }
+
+  return{
+    format,
+    width:state.w,
+    height:state.h,
+    sourceWidth:state.w,
+    sourceHeight:state.h,
+    offsetX:0,
+    offsetY:0
+  };
+}
+
+function frameOutputCanvas(source){
+  const frame=
+    outputFrame();
+
+  if(
+    frame.width===source.width&&
+    frame.height===source.height&&
+    !frame.offsetX&&
+    !frame.offsetY
+  ){
+    return source;
+  }
+
+  const canvas=
+    document.createElement(
+      'canvas'
+    );
+
+  canvas.width=
+    frame.width;
+
+  canvas.height=
+    frame.height;
+
+  const ctx=
+    canvas.getContext(
+      '2d'
+    );
+
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  ctx.drawImage(
+    source,
+    frame.offsetX,
+    frame.offsetY
+  );
+
+  return canvas;
+}
+
+function composeOutputResult(mask){
+  return frameOutputCanvas(
+    composeResult(mask)
+  );
+}
+
+function drawOriginalBaseLayer(
+  ctx,
+  layer
+){
+  const g=
+    getBaseGeometry(layer);
+
+  if(
+    !g||
+    !layer?.image
+  ){
+    return;
+  }
+
+  ctx.save();
+
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  ctx.translate(
+    g.x+g.dw/2,
+    g.y+g.dh/2
+  );
+
+  ctx.rotate(
+    (layer.rotation||0)*
+    Math.PI/
+    180
+  );
+
+  ctx.scale(
+    (g.sx<0?-1:1)*
+      (layer.flipX?-1:1),
+    (g.sy<0?-1:1)*
+      (layer.flipY?-1:1)
+  );
+
+  ctx.drawImage(
+    layer.image,
+    -g.dw/2,
+    -g.dh/2,
+    g.dw,
+    g.dh
+  );
+
+  ctx.restore();
+}
+
+function makeBasePreviewComposite(){
+  const canvas=
+    document.createElement(
+      'canvas'
+    );
+
+  canvas.width=state.w;
+  canvas.height=state.h;
+
+  const ctx=
+    canvas.getContext(
+      '2d'
+    );
+
+  state.baseLayers.forEach(
+    layer=>
+      drawOriginalBaseLayer(
+        ctx,
+        layer
+      )
+  );
+
+  return canvas;
+}
+
+function syncOutputFormatUI(){
+  if(
+    state.outputFormat!=='square'
+  ){
+    state.outputFormat='rect';
+  }
+
+  document
+    .querySelectorAll(
+      '[data-output-format]'
+    )
+    .forEach(button=>{
+      button.classList.toggle(
+        'active',
+        button.dataset.outputFormat===
+          state.outputFormat
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(
+          button.dataset.outputFormat===
+          state.outputFormat
+        )
+      );
+    });
 }
 function sourceFromImage(img){const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const ctx=c.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0);const d=ctx.getImageData(0,0,c.width,c.height).data;const alpha=new Uint8ClampedArray(c.width*c.height);const rgba=new Uint8ClampedArray(d);let transparent=false;for(let p=0,i=0;p<alpha.length;p++,i+=4){alpha[p]=d[i+3];if(d[i+3]<250)transparent=true;}return{alpha,rgba,transparent};}
 
@@ -762,7 +1020,7 @@ function syncActiveFill(){const l=activeFill();if(l){state.fillImage=l.image;sta
 function syncActiveLayerFromState(){const l=activeFill();if(!l)return;l.fillScale=state.fillScale;l.fillWidth=state.fillWidth;l.fillHeight=state.fillHeight;l.fillRotation=state.fillRotation;l.fillX=state.fillX;l.fillY=state.fillY;l.flipX=state.flipX;l.flipY=state.flipY;}
 function getFillGeometry(layer=activeFill()){if(!layer||!layer.image)return null;const iw=layer.image.naturalWidth,ih=layer.image.naturalHeight;const cover=Math.max(state.w/iw,state.h/ih);const base=cover*(layer.fillScale/100),sx=base*(layer.fillWidth/100),sy=base*(layer.fillHeight/100),dw=iw*Math.abs(sx),dh=ih*Math.abs(sy);return{x:(state.w-dw)/2+layer.fillX,y:(state.h-dh)/2+layer.fillY,dw,dh,sx,sy};}
 function drawImageLayer(ctx,layer){const g=getFillGeometry(layer);if(!g)return;ctx.save();ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.translate(g.x+g.dw/2,g.y+g.dh/2);ctx.rotate((layer.fillRotation||0)*Math.PI/180);ctx.scale((g.sx<0?-1:1)*(layer.flipX?-1:1),(g.sy<0?-1:1)*(layer.flipY?-1:1));ctx.drawImage(layer.image,-g.dw/2,-g.dh/2,g.dw,g.dh);ctx.restore();}
-function makeFillLayer(){const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';if(state.mode==='original'){ctx.drawImage(state.baseImage,0,0,state.w,state.h);return c;}if(state.mode==='color'){ctx.fillStyle=state.colorFillType==='gradient'?hslGradient(ctx,state.gradient.angle,state.gradient.stops):`rgb(${hsvToRgb(state.color.h,state.color.s,state.color.v).join(',')})`;ctx.fillRect(0,0,state.w,state.h);return c;}if(state.mode==='image'){state.fillLayers.forEach(layer=>drawImageLayer(ctx,layer));}return c;}
+function makeFillLayer(){const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';if(state.mode==='original'){ctx.drawImage(makeBasePreviewComposite(),0,0);return c;}if(state.mode==='color'){ctx.fillStyle=state.colorFillType==='gradient'?hslGradient(ctx,state.gradient.angle,state.gradient.stops):`rgb(${hsvToRgb(state.color.h,state.color.s,state.color.v).join(',')})`;ctx.fillRect(0,0,state.w,state.h);return c;}if(state.mode==='image'){state.fillLayers.forEach(layer=>drawImageLayer(ctx,layer));}return c;}
 function effectLayer(mask,e){if(!e.enabled)return null;const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');const layer=maskCanvas(mask,e.color);ctx.save();ctx.filter=`blur(${e.blur}px)`;ctx.globalAlpha=(100-e.opacity)/100;const a=e.angle*Math.PI/180;ctx.drawImage(layer,Math.cos(a)*e.offset,Math.sin(a)*e.offset);ctx.restore();return c;}
 function drawDirectionalBorder(ctx,mask,b){const border=maskCanvas(expandMask(mask,b.width),b.color);const a=(Number(b.angle)||0)*Math.PI/180;const d=Number(b.offset)||0;ctx.drawImage(border,Math.cos(a)*d,Math.sin(a)*d);}
 function composeResult(mask){const c=document.createElement('canvas');c.width=state.w;c.height=state.h;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const shadow=effectLayer(mask,state.shadow);if(shadow)ctx.drawImage(shadow,0,0);const glow=effectLayer(mask,state.glow);if(glow)ctx.drawImage(glow,0,0);for(let i=state.borders.length-1;i>=0;i--){const b=state.borders[i];if(!b.enabled)continue;drawDirectionalBorder(ctx,mask,b);}ctx.drawImage(applyMask(makeFillLayer(),mask),0,0);if(window.SilhouetteBrushFill)window.SilhouetteBrushFill.applyToCanvas(c,mask,state.w,state.h);return c;}
@@ -804,9 +1062,217 @@ function applyBaseTransform(mutator){const b=activeBase();if(!b)return;mutator(b
 function syncTransformUI(){if(activeBase()&&state.mode!=='image')syncActiveBase();els.scaleRange.value=clamp(state.fillScale,25,300);els.scaleValue.textContent=Math.round(state.fillScale)+'%';els.widthRange.value=clamp(Math.abs(state.fillWidth),1,300);els.widthValue.textContent=Math.round(state.fillWidth)+'%';els.widthInput.value=Math.round(state.fillWidth);els.heightRange.value=clamp(Math.abs(state.fillHeight),1,300);els.heightValue.textContent=Math.round(state.fillHeight)+'%';els.heightInput.value=Math.round(state.fillHeight);els.rotateRange.value=clamp(state.fillRotation,-180,180);els.rotateInput.value=Math.round(state.fillRotation);els.flipXBtn.classList.toggle('active',state.flipX);els.flipYBtn.classList.toggle('active',state.flipY);}
 function syncAllUI(){els.smoothRange.value=state.smooth;els.smoothInput.value=state.smooth;els.smoothValue.textContent=state.smooth;syncTransformUI();syncBaseUI();renderGradientUI();renderBordersUI();syncEffectsUI();document.querySelectorAll('.seg').forEach(b=>b.classList.toggle('active',b.dataset.mode===state.mode));document.getElementById('originalMode').classList.toggle('hidden',state.mode!=='original');document.getElementById('colorMode').classList.toggle('hidden',state.mode!=='color');document.getElementById('imageMode').classList.toggle('hidden',state.mode!=='image');}
 
-function renderBefore(composite){fitCanvas(els.beforeCanvas,state.w,state.h);const ctx=els.beforeCanvas.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.clearRect(0,0,state.w,state.h);if(state.baseLayers&&state.baseLayers.length>1){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,state.w,state.h);ctx.drawImage(composite,0,0);}else{ctx.drawImage(state.baseImage,0,0,state.w,state.h);}}
-function renderResult(mask){fitCanvas(els.resultCanvas,state.w,state.h);const ctx=els.resultCanvas.getContext('2d');drawChecker(ctx,state.w,state.h);ctx.drawImage(composeResult(mask),0,0);}
-function renderAll(){if(!state.alpha||!state.baseImage)return;cancelAnimationFrame(state.raf);state.raf=requestAnimationFrame(()=>{const version=++state.renderVersion;const draggingBase=state.dragging&&state.dragTarget==='base';let mask,composite;if(draggingBase){composite=makeBaseComposite();mask=maskFromComposite(composite);state._maskSig=null;}else{const sig=baseSignature();if(state._maskSig===sig&&state._maskCache){mask=state._maskCache;composite=state._compositeCache;}else{composite=makeBaseComposite();mask=smoothMask(maskFromComposite(composite),state.w,state.h,state.smooth);state._maskSig=sig;state._maskCache=mask;state._compositeCache=composite;}}if(version!==state.renderVersion)return;renderBefore(composite);renderResult(mask);els.canvasWrap.classList.remove('hidden');els.emptyState.classList.add('hidden');const onTemplates=isTemplatesTabActive();els.transformPanel.classList.toggle('hidden',state.mode!=='image'||!activeFill());els.needFillHint.classList.toggle('hidden',state.mode!=='image'||!!activeFill());els.dragStatus.classList.toggle('hidden',onTemplates?!activeBase():(state.mode!=='image'||!activeFill()));els.statusText.textContent=onTemplates?(activeBase()?'Base seleccionada. Arrástrala para acomodarla.':'Selecciona una base para moverla.'):state.mode==='original'?'Colores originales preservados.':state.mode==='color'?(state.colorFillType==='gradient'?'Degradado aplicado.':'Silueta pintada con color.'):(state.fillImage?'Relleno listo. Arrástralo para acomodarlo.':'Sube una imagen de relleno.');els.dimensions.textContent=`${state.w.toLocaleString()} × ${state.h.toLocaleString()} px`;els.downloadBtn.disabled=false;if(els.saveDesignBtn)els.saveDesignBtn.disabled=false;els.saveTemplateBtn.disabled=false;updateHistoryButtons();});}
+function renderBefore(){
+  const source=
+    makeBasePreviewComposite();
+
+  const output=
+    frameOutputCanvas(
+      source
+    );
+
+  fitCanvas(
+    els.beforeCanvas,
+    output.width,
+    output.height
+  );
+
+  const ctx=
+    els.beforeCanvas.getContext(
+      '2d'
+    );
+
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  ctx.clearRect(
+    0,
+    0,
+    output.width,
+    output.height
+  );
+
+  ctx.drawImage(
+    output,
+    0,
+    0
+  );
+}
+
+function renderResult(mask){
+  const output=
+    composeOutputResult(mask);
+
+  fitCanvas(
+    els.resultCanvas,
+    output.width,
+    output.height
+  );
+
+  const ctx=
+    els.resultCanvas.getContext(
+      '2d'
+    );
+
+  drawChecker(
+    ctx,
+    output.width,
+    output.height
+  );
+
+  ctx.drawImage(
+    output,
+    0,
+    0
+  );
+}
+
+function renderAll(){
+  if(
+    !state.alpha||
+    !state.baseImage
+  )return;
+
+  cancelAnimationFrame(
+    state.raf
+  );
+
+  state.raf=
+    requestAnimationFrame(()=>{
+      const version=
+        ++state.renderVersion;
+
+      const draggingBase=
+        state.dragging&&
+        state.dragTarget==='base';
+
+      let mask;
+      let composite;
+
+      if(draggingBase){
+        composite=
+          makeBaseComposite();
+
+        mask=
+          maskFromComposite(
+            composite
+          );
+
+        state._maskSig=null;
+      }else{
+        const sig=
+          baseSignature();
+
+        if(
+          state._maskSig===sig&&
+          state._maskCache
+        ){
+          mask=
+            state._maskCache;
+
+          composite=
+            state._compositeCache;
+        }else{
+          composite=
+            makeBaseComposite();
+
+          mask=
+            smoothMask(
+              maskFromComposite(
+                composite
+              ),
+              state.w,
+              state.h,
+              state.smooth
+            );
+
+          state._maskSig=sig;
+          state._maskCache=mask;
+          state._compositeCache=
+            composite;
+        }
+      }
+
+      if(
+        version!==
+        state.renderVersion
+      )return;
+
+      renderBefore();
+      renderResult(mask);
+
+      els.canvasWrap.classList.remove(
+        'hidden'
+      );
+
+      els.emptyState.classList.add(
+        'hidden'
+      );
+
+      const onTemplates=
+        isTemplatesTabActive();
+
+      els.transformPanel.classList.toggle(
+        'hidden',
+        state.mode!=='image'||
+        !activeFill()
+      );
+
+      els.needFillHint.classList.toggle(
+        'hidden',
+        state.mode!=='image'||
+        !!activeFill()
+      );
+
+      els.dragStatus.classList.toggle(
+        'hidden',
+        onTemplates
+          ?!activeBase()
+          :(
+            state.mode!=='image'||
+            !activeFill()
+          )
+      );
+
+      els.statusText.textContent=
+        onTemplates
+          ?(
+            activeBase()
+              ?'Base seleccionada. Arrástrala para acomodarla.'
+              :'Selecciona una base para moverla.'
+          )
+          :state.mode==='original'
+            ?'Colores originales preservados.'
+            :state.mode==='color'
+              ?(
+                state.colorFillType==='gradient'
+                  ?'Degradado aplicado.'
+                  :'Silueta pintada con color.'
+              )
+              :(
+                state.fillImage
+                  ?'Relleno listo. Arrástralo para acomodarlo.'
+                  :'Sube una imagen de relleno.'
+              );
+
+      const frame=
+        outputFrame();
+
+      els.dimensions.textContent=
+        `${frame.width.toLocaleString()} × ${frame.height.toLocaleString()} px`;
+
+      els.downloadBtn.disabled=false;
+
+      if(els.saveDesignBtn){
+        els.saveDesignBtn.disabled=false;
+      }
+
+      els.saveTemplateBtn.disabled=false;
+
+      syncOutputFormatUI();
+      updateHistoryButtons();
+    });
+}
 
 async function setBaseImage(img,fileLike,asTemplate=false){state.baseImage=img;state.baseFile=fileLike;state.w=img.naturalWidth;state.h=img.naturalHeight;const parsed=sourceFromImage(img);state.alpha=parsed.alpha;state.rgba=parsed.rgba;els.opaqueWarning.classList.toggle('hidden',parsed.transparent);if(fileLike)showMeta(els.baseMeta,fileLike,img);state.fillImage=null;state.fillFile=null;state.fillLayers=[];state.activeFillId=null;els.fillMeta.classList.add('hidden');state.fillX=0;state.fillY=0;state.fillScale=100;state.fillWidth=100;state.fillHeight=100;state.fillRotation=0;state.flipX=false;state.flipY=false;state.baseLayers=[makeBaseLayer()];state.activeBaseId=state.baseLayers[0].id;state.mode=asTemplate?'color':'original';if(asTemplate){state.colorFillType='solid';state.color={h:0,s:0,v:0};}syncAllUI();renderAll();}
 async function handleBase(file){if(!file)return;currentGalleryProjectId=null;els.loading.classList.remove('hidden');els.loadingTitle.textContent='Leyendo imagen…';els.progressText.textContent='Usando directamente su canal alfa.';try{const img=await loadImage(URL.createObjectURL(file));await setBaseImage(img,file,false);els.statusText.textContent='PNG lista. Ajusta la forma y el relleno.';}catch(e){console.error(e);alert('No se pudo abrir la imagen.');}finally{els.loading.classList.add('hidden');}}
@@ -1161,7 +1627,7 @@ function imageToProjectDataUrl(image){
 }
 function projectThumbnail(){
   try{
-    const mask=smoothMask(makeBaseMask(),state.w,state.h,state.smooth),source=composeResult(mask);
+    const mask=smoothMask(makeBaseMask(),state.w,state.h,state.smooth),source=composeOutputResult(mask);
     const max=420,scale=Math.min(1,max/Math.max(source.width,source.height));
     const c=document.createElement('canvas');c.width=Math.max(1,Math.round(source.width*scale));c.height=Math.max(1,Math.round(source.height*scale));
     const ctx=c.getContext('2d');ctx.fillStyle='#f4f2f6';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(source,0,0,c.width,c.height);
@@ -1190,7 +1656,7 @@ async function applySilhouetteProject(payload){
   try{
     const bases=[];for(const raw of payload.baseLayers){const image=await loadImage(raw.src);bases.push({...raw,image,file:{name:raw.name||'Base guardada',size:0}});}
     const fills=[];for(const raw of (payload.fillLayers||[])){const image=await loadImage(raw.src);fills.push({...raw,image,file:{name:raw.name||'Imagen guardada',size:0}});}
-    const config=deep(payload.config||{});delete config.baseLayers;delete config.fillLayers;
+    const config=deep(payload.config||{});delete config.baseLayers;delete config.fillLayers;if(config.outputFormat!=='square')config.outputFormat='rect';
     Object.assign(state,config);
     state.baseLayers=bases;state.fillLayers=fills;state.baseImage=bases[0].image;state.baseFile=bases[0].file;
     state.w=Number(payload.width)||state.baseImage.naturalWidth;state.h=Number(payload.height)||state.baseImage.naturalHeight;
@@ -1282,7 +1748,8 @@ window.SilhouetteStudioActions=Object.assign(window.SilhouetteStudioActions||{},
   saveBlackTemplate: saveBlackSilhouetteTemplate,
   exportPNG: ()=>{ if(els.downloadBtn&&!els.downloadBtn.disabled) els.downloadBtn.click(); },
   refreshTemplates: refreshGallery,
-  render: renderAll
+  render: renderAll,
+  getOutputFrame: outputFrame
 });
 
 let silhouettePreviewResizeTimer=null;
@@ -1300,8 +1767,37 @@ window.addEventListener('resize',()=>{
     );
 });
 
-els.downloadBtn.onclick=()=>{if(!state.alpha)return;const mask=smoothMask(makeBaseMask(),state.w,state.h,state.smooth),canvas=composeResult(mask),a=document.createElement('a');a.download=generateFastPNGName();a.href=canvas.toDataURL('image/png');a.click();};
-els.resetBtn.onclick=()=>commit(()=>{state.smooth=5;state.fillLayers=[];state.activeFillId=null;state.baseLayers=state.baseImage?[makeBaseLayer()]:[];state.activeBaseId=state.baseLayers[0]?.id||null;syncActiveFill();state.colorFillType='solid';state.color={h:0,s:0,v:0};state.gradient={angle:0,stops:[{id:1,pos:0,color:'#000000'},{id:2,pos:100,color:'#FFFFFF'}],selectedId:1,nextId:3};state.borders=[];state.shadow={enabled:false,angle:45,offset:18,blur:18,opacity:45,color:'#000000'};state.glow={enabled:false,angle:0,offset:0,blur:28,opacity:20,color:'#7C3AED'};resetTransform();syncAllUI();renderAll();});
+els.downloadBtn.onclick=()=>{if(!state.alpha)return;const mask=smoothMask(makeBaseMask(),state.w,state.h,state.smooth),canvas=composeOutputResult(mask),a=document.createElement('a');a.download=generateFastPNGName();a.href=canvas.toDataURL('image/png');a.click();};
+els.resetBtn.onclick=()=>commit(()=>{state.smooth=5;state.outputFormat='rect';state.fillLayers=[];state.activeFillId=null;state.baseLayers=state.baseImage?[makeBaseLayer()]:[];state.activeBaseId=state.baseLayers[0]?.id||null;syncActiveFill();state.colorFillType='solid';state.color={h:0,s:0,v:0};state.gradient={angle:0,stops:[{id:1,pos:0,color:'#000000'},{id:2,pos:100,color:'#FFFFFF'}],selectedId:1,nextId:3};state.borders=[];state.shadow={enabled:false,angle:45,offset:18,blur:18,opacity:45,color:'#000000'};state.glow={enabled:false,angle:0,offset:0,blur:28,opacity:20,color:'#7C3AED'};resetTransform();syncAllUI();renderAll();});
+
+document
+  .querySelectorAll(
+    '[data-output-format]'
+  )
+  .forEach(button=>{
+    button.addEventListener(
+      'click',
+      ()=>{
+        const format=
+          button.dataset.outputFormat==='square'
+            ?'square'
+            :'rect';
+
+        if(
+          state.outputFormat===
+          format
+        )return;
+
+        commit(()=>{
+          state.outputFormat=
+            format;
+
+          syncOutputFormatUI();
+          renderAll();
+        });
+      }
+    );
+  });
 
 drawColorWheel();renderGradientUI();syncTransformUI();syncBaseUI();renderFillLayersUI();renderBaseLayersUI();syncEffectsUI();renderBordersUI();refreshGallery();updateHistoryButtons();initSilhouetteGalleryLaunch();
 })();
