@@ -1,0 +1,90 @@
+{
+    "version":  1,
+    "description":  "Reference sheets for Kaoru Light Lab hair types. Each sheet currently includes front, side and back visual references.",
+    "types":  [
+                  {
+                      "id":  "1a",
+                      "label":  "Tipo 1A",
+                      "family":  "Liso fino",
+                      "available":  true,
+                      "sheet":  "1a/reference-sheet.png"
+                  },
+                  {
+                      "id":  "1b",
+                      "label":  "Tipo 1B",
+                      "family":  "Liso con cuerpo",
+                      "available":  true,
+                      "sheet":  "1b/reference-sheet.png"
+                  },
+                  {
+                      "id":  "1c",
+                      "label":  "Tipo 1C",
+                      "family":  "Liso grueso",
+                      "available":  true,
+                      "sheet":  "1c/reference-sheet.png"
+                  },
+                  {
+                      "id":  "2a",
+                      "label":  "Tipo 2A",
+                      "family":  "Ondulado suave",
+                      "available":  true,
+                      "sheet":  "2a/reference-sheet.png"
+                  },
+                  {
+                      "id":  "2b",
+                      "label":  "Tipo 2B",
+                      "family":  "Ondulado",
+                      "available":  true,
+                      "sheet":  "2b/reference-sheet.png"
+                  },
+                  {
+                      "id":  "2c",
+                      "label":  "Tipo 2C",
+                      "family":  "Ondulado profundo",
+                      "available":  true,
+                      "sheet":  "2c/reference-sheet.png"
+                  },
+                  {
+                      "id":  "3a",
+                      "label":  "Tipo 3A",
+                      "family":  "Rizo suelto",
+                      "available":  true,
+                      "sheet":  "3a/reference-sheet.png"
+                  },
+                  {
+                      "id":  "3b",
+                      "label":  "Tipo 3B",
+                      "family":  "Rizado",
+                      "available":  true,
+                      "sheet":  "3b/reference-sheet.png"
+                  },
+                  {
+                      "id":  "3c",
+                      "label":  "Tipo 3C",
+                      "family":  "Rizo apretado",
+                      "available":  true,
+                      "sheet":  "3c/reference-sheet.png"
+                  },
+                  {
+                      "id":  "4a",
+                      "label":  "Tipo 4A",
+                      "family":  "Coil definido",
+                      "available":  true,
+                      "sheet":  "4a/reference-sheet.png"
+                  },
+                  {
+                      "id":  "4b",
+                      "label":  "Tipo 4B",
+                      "family":  "Patron Z",
+                      "available":  false,
+                      "sheet":  null
+                  },
+                  {
+                      "id":  "4c",
+                      "label":  "Tipo 4C",
+                      "family":  "Zigzag denso",
+                      "available":  false,
+                      "sheet":  null
+                  }
+              ]
+}
