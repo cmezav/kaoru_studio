@@ -60,7 +60,7 @@ function queueRefresh(){
   });
 }
 function getSheetUrl(typeId){
-  return `../assets/hair/${typeId}/reference-sheet.png`;
+  return `./assets/hair/${typeId}/reference-sheet.png`;
 }
 function ensureSheet(typeId){
   const id = normalizeType(typeId);
@@ -80,7 +80,7 @@ function ensureSheet(typeId){
     entry.error = new Error(`No se pudo cargar ${id}`);
     queueRefresh();
   };
-  img.src = `${getSheetUrl(id)}?v=hair-png-mask-v8-20260912`;
+  img.src = `${getSheetUrl(id)}?v=hair-png-mask-v8-2-20260912`;
   sheetCache.set(id, entry);
   return entry;
 }
