@@ -80,19 +80,23 @@ function ensureSheet(typeId){
     entry.error = new Error(`No se pudo cargar ${id}`);
     queueRefresh();
   };
-  img.src = `${getSheetUrl(id)}?v=hair-png-mask-v8-2-20260912`;
+  img.src = `${getSheetUrl(id)}?v=hair-png-mask-v8-3-20260912`;
   sheetCache.set(id, entry);
   return entry;
 }
 function getCrop(image, viewId){
   const view = normalizeView(viewId);
-  const index = VIEW_INDEX[view];
-  const third = image.width / 3;
+  const regions = {
+    front:[0.015, 0.335],
+    side: [0.335, 0.665],
+    back: [0.665, 0.985]
+  };
+  const region = regions[view] || regions.front;
   return {
-    sx: Math.round(third * index),
-    sy: 0,
-    sw: Math.round(index === 2 ? image.width - third * 2 : third),
-    sh: image.height
+    sx:Math.round(image.width * region[0]),
+    sy:Math.round(image.height * 0.105),
+    sw:Math.round(image.width * (region[1] - region[0])),
+    sh:Math.round(image.height * 0.455)
   };
 }
 function getTargetBox(width, height){
@@ -164,62 +168,77 @@ function buildPlacedRef(image, crop, placement){
 function buildMaskCanvas(refCanvas){
   const w = refCanvas.width;
   const h = refCanvas.height;
-
   const sourceCtx = refCanvas.getContext('2d');
   const sourceData = sourceCtx.getImageData(0, 0, w, h);
 
-  const lineCanvas = createCanvas(w, h);
-  const lineCtx = lineCanvas.getContext('2d');
-  const lineImage = lineCtx.createImageData(w, h);
+  const rawCanvas = createCanvas(w, h);
+  const rawCtx = rawCanvas.getContext('2d');
+  const rawImage = rawCtx.createImageData(w, h);
 
   for(let i = 0; i < sourceData.data.length; i += 4){
     const r = sourceData.data[i];
     const g = sourceData.data[i + 1];
     const b = sourceData.data[i + 2];
-    const a = sourceData.data[i + 3];
+    const sourceAlpha = sourceData.data[i + 3] / 255;
     const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    const ink = clamp(((248 - lum) / 130), 0, 1) * (a / 255);
-    lineImage.data[i] = 255;
-    lineImage.data[i + 1] = 255;
-    lineImage.data[i + 2] = 255;
-    lineImage.data[i + 3] = Math.round(ink * 255);
+    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+    const darkness = clamp((226 - lum) / 142, 0, 1);
+    const redExcess = Math.max(0, r - g - 10);
+    const neutralBrown = clamp(1 - redExcess / 72, 0.12, 1);
+    const chromaWeight = clamp(1 - chroma / 175, 0.34, 1);
+    const looksLikeSkin = r > g + 18 && g > b + 5 && lum > 82;
+
+    let hair = darkness * neutralBrown * chromaWeight * sourceAlpha;
+    if(looksLikeSkin) hair *= 0.055;
+    if(lum > 222) hair = 0;
+    hair = Math.pow(clamp((hair - 0.045) / 0.72, 0, 1), 0.72);
+
+    rawImage.data[i] = 255;
+    rawImage.data[i + 1] = 255;
+    rawImage.data[i + 2] = 255;
+    rawImage.data[i + 3] = Math.round(hair * 255);
   }
-  lineCtx.putImageData(lineImage, 0, 0);
+  rawCtx.putImageData(rawImage, 0, 0);
 
-  const dilateCanvas = createCanvas(w, h);
-  const dilateCtx = dilateCanvas.getContext('2d');
-  const radius = Math.max(6, Math.round(Math.min(w, h) * 0.018));
-  dilateCtx.globalAlpha = 0.12;
-  for(let dy = -radius; dy <= radius; dy += Math.max(1, Math.round(radius / 4))){
-    for(let dx = -radius; dx <= radius; dx += Math.max(1, Math.round(radius / 4))){
-      const dist = Math.hypot(dx, dy);
-      if(dist > radius) continue;
-      dilateCtx.drawImage(lineCanvas, dx, dy);
-    }
-  }
-  dilateCtx.globalAlpha = 1;
+  const softenedCanvas = createCanvas(w, h);
+  const softenedCtx = softenedCanvas.getContext('2d');
+  const blur = Math.max(3, Math.round(Math.min(w, h) * 0.009));
+  softenedCtx.filter = `blur(${blur}px)`;
+  softenedCtx.globalAlpha = 0.82;
+  softenedCtx.drawImage(rawCanvas, 0, 0);
+  softenedCtx.filter = 'none';
+  softenedCtx.globalAlpha = 0.72;
+  softenedCtx.drawImage(rawCanvas, 0, 0);
+  softenedCtx.globalAlpha = 1;
 
-  const blurCanvas = createCanvas(w, h);
-  const blurCtx = blurCanvas.getContext('2d');
-  blurCtx.filter = `blur(${Math.max(10, Math.round(Math.min(w, h) * 0.022))}px)`;
-  blurCtx.drawImage(dilateCanvas, 0, 0);
-  blurCtx.filter = 'none';
-
-  const blurred = blurCtx.getImageData(0, 0, w, h);
+  const softened = softenedCtx.getImageData(0, 0, w, h);
   const maskCanvas = createCanvas(w, h);
   const maskCtx = maskCanvas.getContext('2d');
   const maskImage = maskCtx.createImageData(w, h);
+  const lineCanvas = createCanvas(w, h);
+  const lineCtx = lineCanvas.getContext('2d');
+  const lineImage = lineCtx.createImageData(w, h);
 
-  for(let i = 0; i < blurred.data.length; i += 4){
-    const a = blurred.data[i + 3] / 255;
-    const strong = clamp((a - 0.03) / 0.24, 0, 1);
+  for(let i = 0; i < softened.data.length; i += 4){
+    const maskAlpha = clamp((softened.data[i + 3] / 255 - 0.018) / 0.82, 0, 1);
+    const r = sourceData.data[i];
+    const g = sourceData.data[i + 1];
+    const b = sourceData.data[i + 2];
+    const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const strand = clamp((178 - lum) / 118, 0, 1) * maskAlpha;
+
     maskImage.data[i] = 255;
     maskImage.data[i + 1] = 255;
     maskImage.data[i + 2] = 255;
-    maskImage.data[i + 3] = Math.round(Math.pow(strong, 0.75) * 255);
+    maskImage.data[i + 3] = Math.round(Math.pow(maskAlpha, 0.78) * 255);
+
+    lineImage.data[i] = 28;
+    lineImage.data[i + 1] = 20;
+    lineImage.data[i + 2] = 31;
+    lineImage.data[i + 3] = Math.round(strand * 150);
   }
   maskCtx.putImageData(maskImage, 0, 0);
-
+  lineCtx.putImageData(lineImage, 0, 0);
   return { maskCanvas, lineCanvas };
 }
 function drawTintedBase(ctx, w, h, colors, lightVector){
@@ -296,14 +315,11 @@ function drawLightPass(ctx, w, h, lighting){
   });
   ctx.restore();
 }
-function drawLineArtOverlay(ctx, refCanvas){
+function drawLineArtOverlay(ctx, lineCanvas){
   ctx.save();
-  ctx.globalAlpha = 0.75;
-  ctx.drawImage(refCanvas, 0, 0);
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'multiply';
-  ctx.fillStyle = 'rgba(35,24,36,.22)';
-  ctx.fillRect(0, 0, refCanvas.width, refCanvas.height);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 0.72;
+  ctx.drawImage(lineCanvas, 0, 0);
   ctx.restore();
 }
 function drawStudyMap(ctx, placement){
@@ -360,6 +376,9 @@ export function renderCompleteHairAsset(ctx, width, height, colors, lighting, te
 
   litCtx.drawImage(paintCanvas, 0, 0);
   drawLightPass(litCtx, litCanvas.width, litCanvas.height, lighting);
+  litCtx.globalCompositeOperation = 'destination-in';
+  litCtx.drawImage(maskCanvas, 0, 0);
+  litCtx.globalCompositeOperation = 'source-over';
   drawLineArtOverlay(litCtx, lineCanvas);
 
   ctx.save();
