@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=complete-hair-assets-v5-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-multiview-v6-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -134,6 +134,7 @@ const HAIR_TEXTURE_OPTIONS = [
 ];
 
 window.KAORU_HAIR_STUDY_MODE = window.KAORU_HAIR_STUDY_MODE || 'render';
+window.KAORU_HAIR_VIEW = window.KAORU_HAIR_VIEW || 'back';
 
 function hairTextureMeta(id){
   const found = HAIR_TEXTURE_OPTIONS.find((item) => item[0] === id);
@@ -296,6 +297,28 @@ function ensureHairTextureUI() {
     '</div>'
   ].join('');
   panel.appendChild(studyControls);
+  const viewControls = document.createElement('div');
+  viewControls.className = 'hair-view-controls';
+  viewControls.innerHTML = [
+    '<span>Vista del cabello</span>',
+    '<div class="hair-view-buttons">',
+    '<button type="button" data-hair-view="front">Frente</button>',
+    '<button type="button" data-hair-view="side">Costado</button>',
+    '<button type="button" data-hair-view="back">Atras</button>',
+    '</div>',
+    '<small>Cada tipo 1A-4C tiene las tres vistas y conserva color, sombras y luces.</small>'
+  ].join('');
+  panel.appendChild(viewControls);
+
+  viewControls.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-hair-view]');
+    if (!button) return;
+    const nextView = ['front','side','back'].includes(button.dataset.hairView)
+      ? button.dataset.hairView
+      : 'back';
+    window.KAORU_HAIR_VIEW = nextView;
+    render(store.getState());
+  });
 
   studyControls.addEventListener('click', (event) => {
     const button = event.target.closest('[data-hair-study]');
@@ -313,6 +336,13 @@ function ensureHairTextureUI() {
       '.hair-study-buttons{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
       '.hair-study-buttons button{min-height:36px;padding:7px 9px;border-radius:10px;font:600 12px/1.2 Inter,system-ui,sans-serif}',
       '.hair-study-buttons button.is-active{box-shadow:inset 0 0 0 1px currentColor}',
+      '.hair-view-controls{display:grid;gap:7px;margin-top:11px;padding-top:11px;border-top:1px solid var(--lab-line)}',
+      '.hair-view-controls>span{font-size:12px;font-weight:700}',
+      '.hair-view-controls>small{font-size:9px;line-height:1.35;color:var(--lab-muted)}',
+      '.hair-view-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}',
+      '.hair-view-buttons button{min-height:34px;padding:6px 8px;border:1px solid var(--lab-line);border-radius:10px;background:var(--lab-surface);color:var(--lab-text);font:700 10px/1.15 Inter,system-ui,sans-serif;cursor:pointer}',
+      '.hair-view-buttons button:hover{border-color:var(--lab-accent);color:var(--lab-accent)}',
+      '.hair-view-buttons button.is-active{border-color:var(--lab-accent);background:var(--lab-accent-soft);color:var(--lab-accent);box-shadow:inset 0 0 0 1px var(--lab-accent)}',
       '.hair-texture-panel.is-active-hair + *{}'
     ].join('');
     document.head.appendChild(style);
@@ -413,6 +443,12 @@ function syncHairTextureUI(state) {
   const studyMode = window.KAORU_HAIR_STUDY_MODE || 'render';
   panel.querySelectorAll('[data-hair-study]').forEach((button) => {
     const selected = button.dataset.hairStudy === studyMode;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const hairView = window.KAORU_HAIR_VIEW || 'back';
+  panel.querySelectorAll('[data-hair-view]').forEach((button) => {
+    const selected = button.dataset.hairView === hairView;
     button.classList.toggle('is-active', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
@@ -2575,7 +2611,7 @@ function render(state) {
   elements.canvasHint.textContent=referenceActive?(state.reference.image?'Haz clic sobre la imagen para capturar el color':'Sube, pega o arrastra una imagen'):(paletteView==='original'?'Paleta sin iluminaciÃ³n':paletteView==='selected'?`Solo ${selectedLight?.name || 'luz elegida'}`:lightingSummary(state.lighting));
   elements.previewTabs.querySelectorAll('[data-view]').forEach((button)=>{const active=button.dataset.view===state.selection.previewMode;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
   elements.paletteViewTabs.querySelectorAll('[data-palette-view]').forEach((button)=>{const active=button.dataset.paletteView===paletteView;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
-  if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting,{categoryId:state.selection.categoryId,hairTexture:state.selection.hairTexture||state.selection.undertoneId||'1b',hairStudyMode:window.KAORU_HAIR_STUDY_MODE||'render'}));}
+  if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting,{categoryId:state.selection.categoryId,hairTexture:state.selection.hairTexture||state.selection.undertoneId||'1b',hairStudyMode:window.KAORU_HAIR_STUDY_MODE||'render',hairView:window.KAORU_HAIR_VIEW||'back'}));}
 }
 
 function applyManualHex() {
