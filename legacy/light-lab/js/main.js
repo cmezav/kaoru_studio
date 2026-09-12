@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-png-mask-v8-3-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-preview-v8-4-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -43,7 +43,8 @@ const ADVANCED_PREVIEW_MODES = [
   ['silver', 'Plata'],
   ['steel', 'Acero'],
   ['head', 'Cabeza'],
-  ['asaro', 'Cabeza de estudio']
+  ['asaro', 'Cabeza de estudio'],
+  ['hair', 'Cabello']
 ];
 
 function setupAdvancedPreviewUI() {
@@ -55,7 +56,8 @@ function setupAdvancedPreviewUI() {
     silver: 'Material - plata',
     steel: 'Material - acero',
     head: 'Cabeza simplificada',
-    asaro: 'Cabeza para estudiar luz y sombra'
+    asaro: 'Cabeza para estudiar luz y sombra',
+    hair: 'Cabello recoloreable por vista'
   });
 
   document.title = "Kaoru's Studio - Light Lab";
@@ -77,7 +79,8 @@ function setupAdvancedPreviewUI() {
     const style = document.createElement('style');
     style.id = 'lightLabPhase5Styles';
     style.textContent = `
-      .preview-toolbar{align-items:flex-start;gap:12px}
+      .preview-column{grid-template-rows:auto minmax(280px,1fr) auto}
+      .preview-toolbar{min-height:48px;align-items:flex-start;gap:12px}
       .view-tabs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:4px;max-width:min(720px,72%)}
       .view-tabs button{white-space:nowrap}
       @media(max-width:1500px){.view-tabs{max-width:66%}.view-tabs button{padding-inline:8px}}
@@ -610,8 +613,8 @@ function syncHairTextureUI(state) {
   });
 
   if (elements.previewTabs) {
-    elements.previewTabs.style.opacity = active ? '.44' : '';
-    elements.previewTabs.style.pointerEvents = active ? 'none' : '';
+    elements.previewTabs.style.opacity = '';
+    elements.previewTabs.style.pointerEvents = '';
   }
 }
 
@@ -2907,7 +2910,7 @@ function captureReferenceColor(event) {
   } catch(error) { showToast(error.message || 'No se pudo leer ese pÃ­xel.'); }
 }
 
-elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const enteringHair=button.dataset.category==='hair-stylized';const next={...state,selection:{...state.selection,categoryId:button.dataset.category,presetId:'custom',hairTexture:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.hairTexture,undertoneId:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.undertoneId}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
+elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const enteringHair=button.dataset.category==='hair-stylized';const next={...state,selection:{...state.selection,categoryId:button.dataset.category,previewMode:enteringHair?'hair':(state.selection.previewMode==='hair'?'sphere':state.selection.previewMode),presetId:'custom',hairTexture:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.hairTexture,undertoneId:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.undertoneId}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
 elements.baseHex.addEventListener('input',()=>{const valid=Boolean(normalizeHex(elements.baseHex.value));elements.hexError.hidden=valid;elements.baseHex.setAttribute('aria-invalid',String(!valid));if(valid)elements.basePicker.value=normalizeHex(elements.baseHex.value);});
 elements.baseHex.addEventListener('keydown',(event)=>{if(event.key==='Enter')applyManualHex();}); elements.applyHex.addEventListener('click',applyManualHex);
 elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=elements.basePicker.value.toUpperCase();applyManualHex();});

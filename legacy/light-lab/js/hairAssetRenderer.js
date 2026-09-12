@@ -80,7 +80,7 @@ function ensureSheet(typeId){
     entry.error = new Error(`No se pudo cargar ${id}`);
     queueRefresh();
   };
-  img.src = `${getSheetUrl(id)}?v=hair-png-mask-v8-3-20260912`;
+  img.src = `${getSheetUrl(id)}?v=hair-preview-v8-4-20260912`;
   sheetCache.set(id, entry);
   return entry;
 }
