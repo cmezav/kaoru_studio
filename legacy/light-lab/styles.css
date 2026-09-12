@@ -1712,3 +1712,166 @@ html.kaoru-embedded .light-topbar{display:none}html.kaoru-embedded body{min-widt
   }
 }
 /* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+
+/* === KAORU LIGHT THEME + HAIR POLISH V3 === */
+:root{
+  --surface:var(--lab-surface);
+  --surface-2:var(--lab-surface-2);
+  --text:var(--lab-text);
+  --muted:var(--lab-muted);
+  --line:var(--lab-line);
+  --accent:var(--lab-accent);
+  --accent-soft:var(--lab-accent-soft);
+  --lab-control-bg:var(--lab-surface-2);
+  --lab-control-bg-hover:color-mix(in srgb,var(--lab-accent) 8%,var(--lab-surface-2));
+  --lab-control-text:var(--lab-text);
+  --lab-control-border:var(--lab-line);
+  --lab-control-focus:color-mix(in srgb,var(--lab-accent) 24%,transparent);
+}
+html[data-theme=night]{
+  color-scheme:dark;
+  --lab-control-bg-hover:color-mix(in srgb,var(--lab-accent) 12%,var(--lab-surface-2));
+}
+body,.panel,.palette-card,.canvas-card,.light-topbar,
+.light-atmosphere-editor,.lighting-creative-atmospheres,
+.hair-texture-panel,.architecture-card{
+  transition:background-color .18s ease,color .18s ease,border-color .18s ease;
+}
+:where(
+  .controls-panel,
+  .status-panel,
+  .preview-toolbar,
+  .palette-card,
+  .lighting-history-actions,
+  .hair-texture-panel
+) button:not(.primary-button):not(.generate-button){
+  color:var(--lab-control-text);
+  border-color:var(--lab-control-border);
+}
+:where(
+  .preset-library-save,
+  .preset-transfer-actions,
+  .preset-library-actions,
+  .preset-compare-actions,
+  .lighting-history-actions,
+  .hair-study-buttons
+) button{
+  min-height:32px;
+  padding:7px 10px;
+  border:1px solid var(--lab-control-border);
+  border-radius:9px;
+  background:var(--lab-control-bg);
+  color:var(--lab-control-text);
+  font:800 9px/1.2 Inter,"Segoe UI",system-ui,sans-serif;
+  cursor:pointer;
+}
+:where(
+  .preset-library-save,
+  .preset-transfer-actions,
+  .preset-library-actions,
+  .preset-compare-actions,
+  .lighting-history-actions,
+  .hair-study-buttons
+) button:hover:not(:disabled){
+  background:var(--lab-control-bg-hover);
+  border-color:var(--lab-accent);
+  color:var(--lab-accent);
+}
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible{
+  outline:2px solid var(--lab-accent);
+  outline-offset:2px;
+  box-shadow:0 0 0 3px var(--lab-control-focus);
+}
+button:disabled{
+  opacity:.42;
+  cursor:not-allowed;
+  filter:saturate(.55);
+}
+select,
+input[type="text"],
+input[type="search"],
+textarea{
+  background:var(--lab-surface-2);
+  color:var(--lab-text);
+  border-color:var(--lab-line);
+}
+select option{
+  background:var(--lab-surface);
+  color:var(--lab-text);
+}
+#saveCustomAtmosphere,
+#exportLightingPresets,
+#importLightingPresets,
+#applyCompareAtmosphereA,
+#applyCompareAtmosphereB,
+#resetAtmosphereBtn{
+  font-size:9px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+}
+#paletteViewTabs button,
+.view-tabs button,
+.atmosphere-filterbar button,
+.example-chips button,
+.active-hex button,
+.hair-study-buttons button{
+  font-family:Inter,"Segoe UI",system-ui,sans-serif;
+}
+#paletteViewTabs button,
+.view-tabs button{
+  color:var(--lab-muted);
+}
+#paletteViewTabs button.is-active,
+.view-tabs button.is-active,
+.hair-study-buttons button.is-active{
+  background:var(--lab-accent-soft)!important;
+  color:var(--lab-accent)!important;
+  border-color:color-mix(in srgb,var(--lab-accent) 55%,var(--lab-line))!important;
+}
+.hair-texture-panel{
+  border:1px solid var(--lab-line);
+  background:var(--lab-surface-2);
+  color:var(--lab-text);
+}
+.hair-texture-panel select{
+  background:var(--lab-surface);
+  color:var(--lab-text);
+  border:1px solid var(--lab-line);
+}
+.hair-study-controls{
+  border-top-color:var(--lab-line)!important;
+}
+.hair-study-buttons button{
+  background:var(--lab-surface);
+}
+.atmosphere-card,
+.atmosphere-card-creative,
+.lighting-preset-card{
+  color:var(--lab-text);
+}
+.atmosphere-card small,
+.atmosphere-card-creative small{
+  color:var(--lab-muted);
+}
+html[data-theme=night] .atmo-favorite-toggle,
+html[data-theme=night] .atmo-delete-user{
+  color:var(--lab-text);
+  background:color-mix(in srgb,var(--lab-surface-2) 88%,black);
+}
+html[data-theme=day] .atmo-favorite-toggle,
+html[data-theme=day] .atmo-delete-user{
+  color:var(--lab-text);
+  background:var(--lab-surface);
+}
+html[data-theme=night] .toast{
+  background:#f6f3fa;
+  color:#16131a;
+}
+html[data-theme=day] .toast{
+  background:#24212a;
+  color:#fff;
+}
+/* === /KAORU LIGHT THEME + HAIR POLISH V3 === */

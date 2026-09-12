@@ -1855,13 +1855,16 @@ function hairStudyLabel(ctx, x, y, target, text, color, align = 'left') {
   ctx.lineTo(align === 'right' ? boxX + boxW : boxX, y + boxH * .5);
   ctx.stroke();
 
-  ctx.fillStyle = 'rgba(17,14,20,.82)';
+  const night = document.documentElement.dataset.theme === 'night';
+  ctx.fillStyle = night
+    ? 'rgba(13,12,17,.90)'
+    : 'rgba(255,255,255,.94)';
   roundedRect(ctx, boxX, y, boxW, boxH, 10);
   ctx.fill();
   ctx.strokeStyle = rgba(color, .72);
   ctx.stroke();
 
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = night ? '#FFFFFF' : '#211D25';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, boxX + paddingX, y + boxH * .5 + .5);
   ctx.restore();
@@ -1915,6 +1918,70 @@ function renderHairStudyMap(ctx, width, height, colors, profile, geometry, light
   hairStudyLabel(ctx, width * .965, height * .58, rimTarget, 'RIM LIGHT', rimColor(colors), 'right');
 }
 
+function renderHairMassBase(ctx, profile, geometry, colors, lightVector, lighting) {
+  const lightSide = lightVector.x >= 0 ? 1 : -1;
+  const bands = profile.frequency >= 6 ? 22 : profile.frequency >= 3 ? 18 : 15;
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for (let i = 0; i < bands; i += 1) {
+    const unit = bands <= 1 ? 0 : i / (bands - 1);
+    const offset = unit * 1.78 - .89;
+    const lit = (offset * lightSide + 1) * .5;
+    const colorIndex =
+      lit < .22 ? 2 :
+      lit < .46 ? 5 :
+      lit < .72 ? 8 :
+      lit < .90 ? 10 : 12;
+
+    traceHairStrand(ctx, profile, geometry, offset, .31 + i * .29, .02, .985);
+    ctx.strokeStyle = rgba(
+      colorAt(colors, colorIndex, midColor(colors)),
+      .42 + (1 - Math.abs(offset)) * .16
+    );
+    ctx.lineWidth = Math.max(
+      4,
+      geometry.massWidth * (.072 - Math.abs(offset) * .020)
+    );
+    ctx.stroke();
+  }
+
+  const lights = lighting ? activeLights(lighting).slice(0, 4) : [];
+  ctx.globalCompositeOperation = 'screen';
+
+  lights.forEach((light, index) => {
+    const direction = Number(light.direction || 0) * Math.PI / 180;
+    const side = Math.sin(direction) >= 0 ? 1 : -1;
+    const intensity = Math.max(0, Math.min(1, Number(light.intensity || 0) / 100));
+    const softness = Math.max(0, Math.min(1, Number(light.softness || 0) / 100));
+    const offset = side * (.42 + Math.abs(Math.sin(direction)) * .30);
+
+    traceHairStrand(
+      ctx,
+      profile,
+      geometry,
+      offset,
+      8.1 + index * .83,
+      .10 + index * .035,
+      .88 - index * .025
+    );
+
+    ctx.strokeStyle = rgba(
+      light.color || '#FFFFFF',
+      .10 + intensity * .23
+    );
+    ctx.lineWidth = Math.max(
+      4,
+      geometry.massWidth * (.028 + softness * .025 + intensity * .018)
+    );
+    ctx.stroke();
+  });
+
+  ctx.restore();
+}
+
 function renderHairPreview(ctx, width, height, colors, lighting, textureId = '1b', studyMode = 'render') {
   const profile = hairVisualProfile(textureId);
   const lightVector = dominantLightVector(lighting);
@@ -1925,6 +1992,15 @@ function renderHairPreview(ctx, width, height, colors, lighting, textureId = '1b
     bottom: height * .83,
     massWidth: minSide * profile.width
   };
+
+  renderHairMassBase(
+    ctx,
+    profile,
+    geometry,
+    colors,
+    lightVector,
+    lighting
+  );
 
   renderGroundShadow(
     ctx,
@@ -2004,20 +2080,32 @@ function renderHairPreview(ctx, width, height, colors, lighting, textureId = '1b
   ctx.lineWidth = Math.max(1.3, minSide * .0033);
   ctx.stroke();
 
-  const lights = lighting ? activeLights(lighting).slice(0, 3) : [];
+  const lights = lighting ? activeLights(lighting).slice(0, 4) : [];
   lights.forEach((light, index) => {
-    const side = index % 2 ? -lightSide : lightSide;
+    const direction = Number(light.direction || 0) * Math.PI / 180;
+    const side = Math.sin(direction) >= 0 ? 1 : -1;
+    const intensity = Math.max(.08, Math.min(1, Number(light.intensity || 0) / 100));
+    const softness = Math.max(0, Math.min(1, Number(light.softness || 0) / 100));
+    const offset = side * (.50 + Math.abs(Math.sin(direction)) * .36);
+
     traceHairStrand(
       ctx,
       profile,
       geometry,
-      side * (.58 + index * .10),
-      7 + index,
-      .16 + index * .06,
-      .70 + index * .07
+      offset,
+      7 + index * .77,
+      .11 + index * .045,
+      .82 - index * .025
     );
-    ctx.strokeStyle = rgba(light.color || '#FFFFFF', .16);
-    ctx.lineWidth = Math.max(5, geometry.massWidth * .04);
+
+    ctx.strokeStyle = rgba(
+      light.color || '#FFFFFF',
+      .10 + intensity * .30
+    );
+    ctx.lineWidth = Math.max(
+      3,
+      geometry.massWidth * (.020 + intensity * .025 + softness * .012)
+    );
     ctx.stroke();
   });
 
