@@ -1,6 +1,7 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
 import { drawLightProjectorPattern, normalizeLightProjector } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
+import { renderCompleteHairAsset } from './hairAssetRenderer.js?cache=complete-hair-assets-v5-20260912';
 
 const MATERIAL_TINTS = {
   gold: '#D6A93D',
@@ -2232,7 +2233,7 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
   const safeColors = Array.isArray(colors) && colors.length ? colors : ['#777777'];
 
   if (options?.categoryId === 'hair-stylized') {
-    renderHairPreview(
+    renderCompleteHairAsset(
       ctx,
       width,
       height,
@@ -2241,7 +2242,6 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
       options.hairTexture || '1b',
       options.hairStudyMode || 'render'
     );
-    renderLightGuides(ctx, width, height, lighting);
     return;
   }
 
