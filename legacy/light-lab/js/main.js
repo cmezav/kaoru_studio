@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-reference-v7-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-png-mask-v8-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -135,6 +135,16 @@ const HAIR_TEXTURE_OPTIONS = [
 
 window.KAORU_HAIR_STUDY_MODE = window.KAORU_HAIR_STUDY_MODE || 'render';
 window.KAORU_HAIR_VIEW = window.KAORU_HAIR_VIEW || 'back';
+if (!window.__KAORU_HAIR_SHEET_READY_BOUND__) {
+  window.__KAORU_HAIR_SHEET_READY_BOUND__ = true;
+  window.addEventListener('kaoru-hair-sheet-ready', () => {
+    try {
+      render(store.getState());
+    } catch (error) {
+      console.warn('Kaoru Hair refresh skipped:', error);
+    }
+  });
+}
 const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a']);
 const KAORU_HAIR_REFERENCE_CACHE = new Map();
 

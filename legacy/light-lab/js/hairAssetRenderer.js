@@ -1,240 +1,375 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
 
-const PROFILES = {
-  '1a': { label:'1A', family:'Liso fino', wave:.018, freq:.55, width:.28, length:.80, density:20, shine:.94, frizz:1 },
-  '1b': { label:'1B', family:'Liso con cuerpo', wave:.035, freq:.72, width:.31, length:.80, density:22, shine:.86, frizz:2 },
-  '1c': { label:'1C', family:'Liso grueso', wave:.055, freq:.90, width:.34, length:.79, density:24, shine:.76, frizz:2 },
-  '2a': { label:'2A', family:'Ondulado suave', wave:.095, freq:1.25, width:.36, length:.78, density:24, shine:.82, frizz:3 },
-  '2b': { label:'2B', family:'Ondulado', wave:.135, freq:1.75, width:.39, length:.77, density:26, shine:.76, frizz:4 },
-  '2c': { label:'2C', family:'Ondulado profundo', wave:.170, freq:2.20, width:.42, length:.76, density:28, shine:.70, frizz:5 },
-  '3a': { label:'3A', family:'Rizo suelto', wave:.200, freq:2.80, width:.43, length:.74, density:30, shine:.68, frizz:5 },
-  '3b': { label:'3B', family:'Rizado', wave:.220, freq:3.60, width:.46, length:.72, density:32, shine:.62, frizz:6 },
-  '3c': { label:'3C', family:'Rizo apretado', wave:.235, freq:4.75, width:.49, length:.69, density:35, shine:.56, frizz:7 },
-  '4a': { label:'4A', family:'Coil definido', wave:.245, freq:5.90, width:.51, length:.66, density:38, shine:.52, frizz:8 },
-  '4b': { label:'4B', family:'Patron Z', wave:.235, freq:7.10, width:.53, length:.63, density:42, shine:.48, frizz:9, zigzag:true },
-  '4c': { label:'4C', family:'Zigzag denso', wave:.225, freq:8.60, width:.56, length:.60, density:46, shine:.44, frizz:10, zigzag:true }
-};
+const TYPE_IDS = ['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c'];
+const VIEW_IDS = ['front','side','back'];
+const VIEW_INDEX = { front:0, side:1, back:2 };
+const sheetCache = new Map();
+let rerenderQueued = false;
 
-const VIEWS = {
-  front: { label:'Frente', width:1.04, x:0, flow:.92 },
-  side: { label:'Costado', width:.82, x:.07, flow:.84 },
-  back: { label:'Atras', width:1, x:0, flow:1 }
-};
-
-const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
-const profileFor = (id) => PROFILES[String(id || '1b').toLowerCase()] || PROFILES['1b'];
-const viewFor = (id) => VIEWS[String(id || 'back').toLowerCase()] || VIEWS.back;
-
-function rgb(hex){
-  const raw=String(hex||'#777777').replace('#','');
-  const full=raw.length===3?raw.split('').map(c=>c+c).join(''):raw;
-  if(!/^[0-9a-fA-F]{6}$/.test(full)) return {r:119,g:119,b:119};
-  return {r:parseInt(full.slice(0,2),16),g:parseInt(full.slice(2,4),16),b:parseInt(full.slice(4,6),16)};
+function clamp(v, min = 0, max = 1){
+  return Math.max(min, Math.min(max, v));
 }
-function rgba(hex,a=1){const c=rgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
-function colorAt(colors,i,f='#777777'){return colors?.[i]||colors?.[colors.length-1]||f;}
-function triangle(v){const w=((v%1)+1)%1;return 1-4*Math.abs(w-.5);}
-
-function geom(width,height,p,view){
-  const min=Math.min(width,height);
-  const vc=viewFor(view);
+function lerp(a, b, t){
+  return a + (b - a) * t;
+}
+function normalizeType(id){
+  const key = String(id || '1b').toLowerCase();
+  return TYPE_IDS.includes(key) ? key : '1b';
+}
+function normalizeView(id){
+  const key = String(id || 'front').toLowerCase();
+  return VIEW_IDS.includes(key) ? key : 'front';
+}
+function rgb(hex){
+  const raw = String(hex || '#777777').replace('#','').trim();
+  const full = raw.length === 3 ? raw.split('').map((c)=>c+c).join('') : raw;
+  if(!/^[0-9a-fA-F]{6}$/.test(full)) return { r:119, g:119, b:119 };
   return {
-    cx:width*(.5+vc.x),
-    top:height*.105,
-    bottom:height*(.105+p.length),
-    w:min*p.width*vc.width,
-    min,
-    view:String(view||'back')
+    r: parseInt(full.slice(0,2), 16),
+    g: parseInt(full.slice(2,4), 16),
+    b: parseInt(full.slice(4,6), 16)
   };
 }
-
-function waveUnit(p,t,phase=0){
-  const arg=t*p.freq+phase;
-  return p.zigzag?triangle(arg):Math.sin(arg*Math.PI*2);
+function rgba(hex, alpha = 1){
+  const c = rgb(hex);
+  return `rgba(${c.r},${c.g},${c.b},${alpha})`;
 }
-function outerHalf(p,g,t){
-  const bell=Math.pow(Math.sin(Math.PI*clamp(t)),.58);
-  const root=.22+.78*bell;
-  const taper=1-clamp((t-.70)/.30)*.62;
-  return g.w*Math.max(.18,root*taper);
-}
-function center(p,g,t){
-  return g.cx+Math.sin((t*1.08+.09)*Math.PI)*g.w*p.wave*.20;
-}
-function backEdge(p,g,t,side){
-  const edgeRipple=waveUnit(p,t,.13)*g.w*p.wave*.18;
-  return {x:center(p,g,t)+side*(outerHalf(p,g,t)+edgeRipple),y:g.top+(g.bottom-g.top)*t};
-}
-
-function buildBackPath(ctx,p,g){
-  const steps=p.freq>5?110:84;
-  ctx.beginPath();
-  for(let i=0;i<=steps;i++){const t=i/steps;const q=backEdge(p,g,t,-1);if(!i)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y);}
-  for(let i=steps;i>=0;i--){const t=i/steps;const q=backEdge(p,g,t,1);ctx.lineTo(q.x,q.y);}
-  ctx.closePath();
-}
-
-function buildFrontPath(ctx,p,g){
-  const crownY=g.top+g.min*.035;
-  const faceTop=g.top+g.min*.095;
-  const faceBottom=g.top+g.min*.50;
-  const faceW=g.w*.56;
-  const outerW=g.w*1.04;
-  ctx.beginPath();
-  ctx.moveTo(g.cx,crownY);
-  ctx.bezierCurveTo(g.cx-outerW*.58,g.top,g.cx-outerW,g.top+g.min*.14,g.cx-outerW*.94,g.top+g.min*.34);
-  ctx.bezierCurveTo(g.cx-outerW*1.02,g.top+g.min*.54,g.cx-outerW*.82,g.bottom-g.min*.08,g.cx-outerW*.22,g.bottom);
-  ctx.bezierCurveTo(g.cx-outerW*.05,g.bottom-g.min*.20,g.cx-faceW*.72,faceBottom,g.cx-faceW*.65,faceTop);
-  ctx.bezierCurveTo(g.cx-faceW*.30,g.top+g.min*.10,g.cx-faceW*.13,g.top+g.min*.07,g.cx,crownY);
-  ctx.bezierCurveTo(g.cx+faceW*.13,g.top+g.min*.07,g.cx+faceW*.30,g.top+g.min*.10,g.cx+faceW*.65,faceTop);
-  ctx.bezierCurveTo(g.cx+faceW*.72,faceBottom,g.cx+outerW*.05,g.bottom-g.min*.20,g.cx+outerW*.22,g.bottom);
-  ctx.bezierCurveTo(g.cx+outerW*.82,g.bottom-g.min*.08,g.cx+outerW*1.02,g.top+g.min*.54,g.cx+outerW*.94,g.top+g.min*.34);
-  ctx.bezierCurveTo(g.cx+outerW,g.top+g.min*.14,g.cx+outerW*.58,g.top,g.cx,crownY);
-  ctx.closePath();
-}
-
-function buildSidePath(ctx,p,g){
-  const s=1;
-  const back=g.cx+g.w*.48;
-  const front=g.cx-g.w*.62;
-  ctx.beginPath();
-  ctx.moveTo(g.cx-g.w*.22,g.top+g.min*.025);
-  ctx.bezierCurveTo(g.cx-g.w*.70,g.top+g.min*.06,front,g.top+g.min*.22,g.cx-g.w*.38,g.top+g.min*.35);
-  ctx.bezierCurveTo(g.cx-g.w*.16,g.top+g.min*.44,g.cx-g.w*.17,g.top+g.min*.60,g.cx-g.w*.08,g.bottom);
-  ctx.bezierCurveTo(g.cx+g.w*.62,g.bottom-g.min*.04,g.cx+g.w*.92,g.top+g.min*.55,back,g.top+g.min*.28);
-  ctx.bezierCurveTo(g.cx+g.w*.40,g.top+g.min*.09,g.cx+g.w*.06,g.top,g.cx-g.w*.22,g.top+g.min*.025);
-  ctx.closePath();
-}
-function buildPath(ctx,p,g,view){
-  if(view==='front') return buildFrontPath(ctx,p,g);
-  if(view==='side') return buildSidePath(ctx,p,g);
-  return buildBackPath(ctx,p,g);
-}
-function clipHair(ctx,p,g,view){buildPath(ctx,p,g,view);ctx.clip();}
-
-function drawHeadGuide(ctx,g,view){
-  const night=document.documentElement.dataset.theme==='night';
-  const skin=night?'#7D6F72':'#D8B7A5';
-  const shadow=night?'#4C4247':'#B48775';
-  ctx.save();
-  if(view==='front'){
-    const cy=g.top+g.min*.31;
-    ctx.fillStyle=skin;ctx.beginPath();ctx.ellipse(g.cx,cy,g.w*.36,g.min*.25,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(g.cx,cy+g.min*.045,g.w*.24,g.min*.18,0,0,Math.PI*2);ctx.fill();
-  }else if(view==='side'){
-    const cy=g.top+g.min*.30;
-    ctx.fillStyle=skin;ctx.beginPath();ctx.ellipse(g.cx-g.w*.38,cy,g.w*.31,g.min*.24,-.08,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.moveTo(g.cx-g.w*.66,cy-g.min*.02);ctx.lineTo(g.cx-g.w*.82,cy+g.min*.03);ctx.lineTo(g.cx-g.w*.64,cy+g.min*.075);ctx.closePath();ctx.fill();
-  }
-  ctx.restore();
-}
-
-function drawBase(ctx,width,height,colors,p,g,view,light){
-  const shadow=colorAt(colors,2,'#241D22');
-  const mid=colorAt(colors,7,colorAt(colors,6,'#777777'));
-  const lightCol=colorAt(colors,11,mid);
-  const hi=colorAt(colors,14,'#FFFFFF');
-  const side=light?.x>=0?1:-1;
-  const grad=ctx.createLinearGradient(g.cx-side*g.w,g.top,g.cx+side*g.w,g.bottom);
-  grad.addColorStop(0,shadow);grad.addColorStop(.30,mixHex(shadow,mid,.52));grad.addColorStop(.56,mid);grad.addColorStop(.78,mixHex(mid,lightCol,.60));grad.addColorStop(.94,mixHex(lightCol,hi,.36));grad.addColorStop(1,lightCol);
-  ctx.fillStyle=grad;ctx.fillRect(0,0,width,height);
-}
-
-function flowPoint(p,g,view,t,offset,phase){
-  const y=g.top+(g.bottom-g.top)*t;
-  if(view==='front'){
-    const side=offset<0?-1:1;
-    const o=Math.abs(offset);
-    const rootX=g.cx+side*g.w*(.10+o*.12);
-    const spread=g.w*(.22+o*.60)*Math.pow(Math.sin(Math.PI*clamp(t)),.60);
-    const wave=waveUnit(p,t,phase)*g.w*p.wave*.62;
-    return {x:rootX+side*spread+wave,y};
-  }
-  if(view==='side'){
-    const spread=g.w*(.12+offset*.70)*Math.pow(Math.sin(Math.PI*clamp(t)),.60);
-    const wave=waveUnit(p,t,phase)*g.w*p.wave*.72;
-    return {x:g.cx+spread+wave,y};
-  }
-  const hw=outerHalf(p,g,t);
-  const wave=waveUnit(p,t,phase)*g.w*p.wave*.72;
-  return {x:center(p,g,t)+offset*hw*.82+wave,y};
-}
-function traceFlow(ctx,p,g,view,offset,phase,start=.02,end=.985){
-  const steps=Math.max(52,Math.round(62+p.freq*8));ctx.beginPath();
-  for(let i=0;i<=steps;i++){const t=start+(end-start)*(i/steps);const q=flowPoint(p,g,view,t,offset,phase);if(!i)ctx.moveTo(q.x,q.y);else ctx.lineTo(q.x,q.y);}
-}
-
-function drawTexture(ctx,colors,p,g,view,light){
-  const side=light?.x>=0?1:-1;
-  ctx.save();clipHair(ctx,p,g,view);ctx.lineCap='round';ctx.lineJoin='round';
-  const ribbons=Math.round(p.density*.62);
-  for(let i=0;i<ribbons;i++){
-    const u=i/Math.max(1,ribbons-1);const offset=-.92+u*1.84;const lit=(offset*side+1)*.5;
-    const idx=lit<.25?3:lit<.50?6:lit<.76?9:11;
-    traceFlow(ctx,p,g,view,offset,.11+i*.083);
-    ctx.strokeStyle=rgba(colorAt(colors,idx),.28+(1-Math.abs(offset))*.22);
-    ctx.lineWidth=Math.max(3.2,g.min*(.0068+(1-Math.abs(offset))*.004));ctx.stroke();
-  }
-  const fibers=p.density;
-  for(let i=0;i<fibers;i++){
-    const offset=-.94+(i/Math.max(1,fibers-1))*1.88;const lit=(offset*side+1)*.5;const idx=lit<.34?4:lit<.68?8:12;
-    traceFlow(ctx,p,g,view,offset,.31+i*.117,.035,.96);
-    ctx.strokeStyle=rgba(colorAt(colors,idx),.12+(i%4)*.028);ctx.lineWidth=Math.max(.7,g.min*.0015);ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawSpecular(ctx,colors,p,g,view,light){
-  const side=light?.x>=0?1:-1;const bands=p.freq<1?4:p.freq<3?5:p.freq<6?6:7;
-  ctx.save();clipHair(ctx,p,g,view);ctx.globalCompositeOperation='screen';ctx.lineCap='round';ctx.shadowColor=rgba(colorAt(colors,14,'#FFFFFF'),.30);ctx.shadowBlur=Math.max(5,g.min*.018);
-  for(let i=0;i<bands;i++){
-    const offset=view==='front'?(i%2?-1:1)*(.28+(i%3)*.15):side*(.20+i*(.55/Math.max(1,bands-1)));
-    const start=.13+(i%3)*.07;const seg=p.freq<1?.46:p.freq<3?.31:p.freq<6?.20:.12;
-    traceFlow(ctx,p,g,view,offset,1.7+i*.27,start,Math.min(.91,start+seg));
-    ctx.strokeStyle=rgba(i%2?colorAt(colors,12):colorAt(colors,14),p.shine*(.34+(i%3)*.09));ctx.lineWidth=Math.max(2.4,g.min*(.005+(i%2)*.0018));ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawLights(ctx,width,height,p,g,view,lighting){
-  const ls=activeLights(lighting||{}).slice(0,6);if(!ls.length)return;
-  ctx.save();clipHair(ctx,p,g,view);ctx.globalCompositeOperation='screen';
-  ls.forEach((l)=>{const d=Number(l.direction||0)*Math.PI/180;const e=Number(l.elevation||0)*Math.PI/180;const inten=clamp(Number(l.intensity||0)/100);const soft=clamp(Number(l.softness||0)/100);const x=g.cx+Math.sin(d)*g.w*.85;const y=g.top+(g.bottom-g.top)*(.36-Math.sin(e)*.22);const r=g.w*(.62+soft*.82+inten*.18);const gr=ctx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,rgba(l.color||'#FFFFFF',.10+inten*.36));gr.addColorStop(.36,rgba(l.color||'#FFFFFF',.05+inten*.18));gr.addColorStop(1,rgba(l.color||'#FFFFFF',0));ctx.fillStyle=gr;ctx.fillRect(0,0,width,height);});
-  ctx.restore();
-}
-
-function drawRim(ctx,colors,p,g,view,light,lighting){
-  const ls=activeLights(lighting||{});const rim=ls[0]?.color||colorAt(colors,15,'#FFFFFF');
-  ctx.save();ctx.globalCompositeOperation='screen';ctx.strokeStyle=rgba(mixHex(rim,colorAt(colors,15,'#FFFFFF'),.45),.50);ctx.lineWidth=Math.max(1.8,g.min*.0042);buildPath(ctx,p,g,view);ctx.stroke();ctx.restore();
-}
-
-function drawFlyaways(ctx,colors,p,g,view){
-  ctx.save();ctx.lineCap='round';const n=p.frizz;
-  for(let i=0;i<n;i++){const s=i%2?1:-1;const t=.15+((i*19)%64)/100;let q;if(view==='back')q=backEdge(p,g,t,s);else q=flowPoint(p,g,view,t,s*.88,i*.13);const len=g.w*(.12+(i%4)*.04);ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.quadraticCurveTo(q.x+s*len*.75,q.y-len*.25,q.x+s*len,q.y+len*.04);ctx.strokeStyle=rgba(colorAt(colors,10+(i%3)),.26);ctx.lineWidth=Math.max(.8,g.min*.0015);ctx.stroke();}
-  ctx.restore();
-}
-
-function drawStudy(ctx,width,height,colors,p,g,view,light){
-  const side=light?.x>=0?1:-1;const labels=[
-    ['SOMBRA / OCLUSION',-.58,.28,colorAt(colors,2)],['BASE / MEDIO TONO',0,.50,colorAt(colors,7)],['HIGHLIGHT',side*.46,.31,colorAt(colors,14)],['LUZ DE REBOTE',-side*.24,.76,colorAt(colors,10)],['RIM LIGHT',side*.88,.58,colorAt(colors,15)]
+function normalizeColors(colors){
+  const safe = Array.isArray(colors) ? colors.slice() : [];
+  return [
+    safe[0] || '#4B362B',
+    safe[1] || mixHex(safe[0] || '#4B362B', '#ffffff', 0.16),
+    safe[2] || mixHex(safe[0] || '#4B362B', '#0b0710', 0.48),
+    safe[3] || mixHex(safe[0] || '#4B362B', '#ffffff', 0.42),
+    safe[4] || mixHex(safe[0] || '#4B362B', '#7dd3fc', 0.12)
   ];
-  ctx.save();clipHair(ctx,p,g,view);ctx.globalCompositeOperation='screen';ctx.lineCap='round';
-  labels.forEach((it,i)=>{traceFlow(ctx,p,g,view,it[1],1.1+i*.63,Math.max(.06,it[2]-.13),Math.min(.94,it[2]+.16));ctx.strokeStyle=rgba(it[3],i===2||i===4?.62:.34);ctx.lineWidth=Math.max(5,g.w*(i===0?.085:i===2?.055:.045));ctx.stroke();});ctx.restore();
-  const night=document.documentElement.dataset.theme==='night';ctx.save();ctx.font=`700 ${Math.max(10,Math.round(width*.0105))}px Inter,system-ui,sans-serif`;ctx.textBaseline='middle';labels.forEach((it,i)=>{const q=flowPoint(p,g,view,it[2],it[1],1.1+i*.63);const right=i===2||i===4;const x=right?width*.965:width*.035;const text=it[0];const tw=ctx.measureText(text).width;const pad=8;const bx=right?x-tw-pad*2:x;const by=height*(.17+i*.13);ctx.strokeStyle=rgba(it[3],.72);ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(right?bx+tw+pad*2:bx,by+13);ctx.stroke();ctx.fillStyle=night?'rgba(13,12,17,.90)':'rgba(255,255,255,.94)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(bx,by,tw+pad*2,26,9);else ctx.rect(bx,by,tw+pad*2,26);ctx.fill();ctx.fillStyle=night?'#fff':'#211D25';ctx.fillText(text,bx+pad,by+13);});ctx.restore();
+}
+function createCanvas(width, height){
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width));
+  canvas.height = Math.max(1, Math.round(height));
+  return canvas;
+}
+function queueRefresh(){
+  if(rerenderQueued) return;
+  rerenderQueued = true;
+  requestAnimationFrame(() => {
+    rerenderQueued = false;
+    window.dispatchEvent(new CustomEvent('kaoru-hair-sheet-ready'));
+  });
+}
+function getSheetUrl(typeId){
+  return `../assets/hair/${typeId}/reference-sheet.png`;
+}
+function ensureSheet(typeId){
+  const id = normalizeType(typeId);
+  const hit = sheetCache.get(id);
+  if(hit) return hit;
+
+  const entry = { status:'loading', image:null, error:null };
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => {
+    entry.status = 'ready';
+    entry.image = img;
+    queueRefresh();
+  };
+  img.onerror = () => {
+    entry.status = 'error';
+    entry.error = new Error(`No se pudo cargar ${id}`);
+    queueRefresh();
+  };
+  img.src = `${getSheetUrl(id)}?v=hair-png-mask-v8-20260912`;
+  sheetCache.set(id, entry);
+  return entry;
+}
+function getCrop(image, viewId){
+  const view = normalizeView(viewId);
+  const index = VIEW_INDEX[view];
+  const third = image.width / 3;
+  return {
+    sx: Math.round(third * index),
+    sy: 0,
+    sw: Math.round(index === 2 ? image.width - third * 2 : third),
+    sh: image.height
+  };
+}
+function getTargetBox(width, height){
+  const topPad = height * 0.14;
+  const sidePad = width * 0.08;
+  const w = width - sidePad * 2;
+  const h = height - topPad - height * 0.12;
+  return {
+    x: sidePad,
+    y: topPad,
+    w,
+    h
+  };
+}
+function drawHeader(ctx, width, height, typeId, viewId){
+  const night = document.documentElement.dataset.theme === 'night';
+  ctx.save();
+  ctx.fillStyle = night ? 'rgba(255,255,255,.9)' : 'rgba(28,24,33,.86)';
+  ctx.font = `800 ${Math.max(13, Math.round(width * 0.016))}px Inter, system-ui, sans-serif`;
+  ctx.fillText(`CABELLO ${String(typeId).toUpperCase()} · ${viewId === 'front' ? 'FRENTE' : viewId === 'side' ? 'COSTADO' : 'ATRÁS'}`, width * 0.03, height * 0.055);
+  ctx.font = `500 ${Math.max(10, Math.round(width * 0.0105))}px Inter, system-ui, sans-serif`;
+  ctx.globalAlpha = .78;
+  ctx.fillText('Máscara PNG pintable + color editable + luz activa', width * 0.03, height * 0.085);
+  ctx.restore();
+}
+function drawLoadingState(ctx, width, height, message){
+  const night = document.documentElement.dataset.theme === 'night';
+  ctx.save();
+  ctx.fillStyle = night ? 'rgba(255,255,255,.05)' : 'rgba(20,20,26,.05)';
+  ctx.strokeStyle = night ? 'rgba(255,255,255,.12)' : 'rgba(20,20,26,.12)';
+  const box = getTargetBox(width, height);
+  ctx.beginPath();
+  ctx.roundRect(box.x, box.y, box.w, box.h, 24);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = night ? 'rgba(255,255,255,.74)' : 'rgba(36,33,41,.74)';
+  ctx.font = `600 ${Math.max(12, Math.round(width * 0.013))}px Inter, system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(message, box.x + box.w / 2, box.y + box.h / 2);
+  ctx.restore();
+}
+function placeReference(image, crop, width, height){
+  const box = getTargetBox(width, height);
+  const scale = Math.min(box.w / crop.sw, box.h / crop.sh);
+  const w = crop.sw * scale;
+  const h = crop.sh * scale;
+  return {
+    sx: crop.sx,
+    sy: crop.sy,
+    sw: crop.sw,
+    sh: crop.sh,
+    dx: box.x + (box.w - w) / 2,
+    dy: box.y + (box.h - h) / 2,
+    dw: w,
+    dh: h
+  };
+}
+function buildPlacedRef(image, crop, placement){
+  const refCanvas = createCanvas(placement.dw, placement.dh);
+  const refCtx = refCanvas.getContext('2d');
+  refCtx.imageSmoothingEnabled = true;
+  refCtx.drawImage(
+    image,
+    crop.sx, crop.sy, crop.sw, crop.sh,
+    0, 0, placement.dw, placement.dh
+  );
+  return refCanvas;
+}
+function buildMaskCanvas(refCanvas){
+  const w = refCanvas.width;
+  const h = refCanvas.height;
+
+  const sourceCtx = refCanvas.getContext('2d');
+  const sourceData = sourceCtx.getImageData(0, 0, w, h);
+
+  const lineCanvas = createCanvas(w, h);
+  const lineCtx = lineCanvas.getContext('2d');
+  const lineImage = lineCtx.createImageData(w, h);
+
+  for(let i = 0; i < sourceData.data.length; i += 4){
+    const r = sourceData.data[i];
+    const g = sourceData.data[i + 1];
+    const b = sourceData.data[i + 2];
+    const a = sourceData.data[i + 3];
+    const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
+    const ink = clamp(((248 - lum) / 130), 0, 1) * (a / 255);
+    lineImage.data[i] = 255;
+    lineImage.data[i + 1] = 255;
+    lineImage.data[i + 2] = 255;
+    lineImage.data[i + 3] = Math.round(ink * 255);
+  }
+  lineCtx.putImageData(lineImage, 0, 0);
+
+  const dilateCanvas = createCanvas(w, h);
+  const dilateCtx = dilateCanvas.getContext('2d');
+  const radius = Math.max(6, Math.round(Math.min(w, h) * 0.018));
+  dilateCtx.globalAlpha = 0.12;
+  for(let dy = -radius; dy <= radius; dy += Math.max(1, Math.round(radius / 4))){
+    for(let dx = -radius; dx <= radius; dx += Math.max(1, Math.round(radius / 4))){
+      const dist = Math.hypot(dx, dy);
+      if(dist > radius) continue;
+      dilateCtx.drawImage(lineCanvas, dx, dy);
+    }
+  }
+  dilateCtx.globalAlpha = 1;
+
+  const blurCanvas = createCanvas(w, h);
+  const blurCtx = blurCanvas.getContext('2d');
+  blurCtx.filter = `blur(${Math.max(10, Math.round(Math.min(w, h) * 0.022))}px)`;
+  blurCtx.drawImage(dilateCanvas, 0, 0);
+  blurCtx.filter = 'none';
+
+  const blurred = blurCtx.getImageData(0, 0, w, h);
+  const maskCanvas = createCanvas(w, h);
+  const maskCtx = maskCanvas.getContext('2d');
+  const maskImage = maskCtx.createImageData(w, h);
+
+  for(let i = 0; i < blurred.data.length; i += 4){
+    const a = blurred.data[i + 3] / 255;
+    const strong = clamp((a - 0.03) / 0.24, 0, 1);
+    maskImage.data[i] = 255;
+    maskImage.data[i + 1] = 255;
+    maskImage.data[i + 2] = 255;
+    maskImage.data[i + 3] = Math.round(Math.pow(strong, 0.75) * 255);
+  }
+  maskCtx.putImageData(maskImage, 0, 0);
+
+  return { maskCanvas, lineCanvas };
+}
+function drawTintedBase(ctx, w, h, colors, lightVector){
+  const [base, mid, shadow, highlight, accent] = normalizeColors(colors);
+  const grad = ctx.createLinearGradient(w * 0.1, h * 0.12, w * 0.85, h * 0.92);
+  grad.addColorStop(0, mid);
+  grad.addColorStop(0.36, base);
+  grad.addColorStop(0.72, shadow);
+  grad.addColorStop(1, mixHex(shadow, '#0c0a12', 0.32));
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  const dx = clamp((lightVector?.x ?? 0) * 0.5 + 0.5, 0.06, 0.94);
+  const dy = clamp((lightVector?.y ?? -0.6) * 0.5 + 0.5, 0.05, 0.95);
+  const glow = ctx.createRadialGradient(w * dx, h * dy, 0, w * dx, h * dy, Math.max(w, h) * 0.55);
+  glow.addColorStop(0, rgba(highlight, 0.88));
+  glow.addColorStop(0.28, rgba(accent, 0.18));
+  glow.addColorStop(1, rgba(accent, 0));
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.globalCompositeOperation = 'multiply';
+  const shadowGrad = ctx.createLinearGradient(w * (1 - dx), h * 0.1, w * dx, h * 0.9);
+  shadowGrad.addColorStop(0, rgba(shadow, 0.12));
+  shadowGrad.addColorStop(0.55, rgba(shadow, 0.26));
+  shadowGrad.addColorStop(1, rgba('#08060b', 0.34));
+  ctx.fillStyle = shadowGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = 0.22;
+  for(let i = 0; i < 18; i += 1){
+    const t = i / 17;
+    const x = lerp(w * 0.18, w * 0.78, t);
+    const y = lerp(h * 0.06, h * 0.86, t * 0.96);
+    const rx = w * (0.06 + (i % 4) * 0.006);
+    const ry = h * (0.018 + (i % 3) * 0.004);
+    ctx.fillStyle = rgba(highlight, 0.12 + (i % 5) * 0.02);
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, -0.66, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'source-over';
+}
+function applyMaskToPaint(maskCanvas, colors, lighting){
+  const w = maskCanvas.width;
+  const h = maskCanvas.height;
+  const paintCanvas = createCanvas(w, h);
+  const paintCtx = paintCanvas.getContext('2d');
+  const lightVector = dominantLightVector(lighting || {});
+  drawTintedBase(paintCtx, w, h, colors, lightVector);
+  paintCtx.globalCompositeOperation = 'destination-in';
+  paintCtx.drawImage(maskCanvas, 0, 0);
+  paintCtx.globalCompositeOperation = 'source-over';
+  return paintCanvas;
+}
+function drawLightPass(ctx, w, h, lighting){
+  const lights = activeLights(lighting || {});
+  if(!lights.length) return;
+  ctx.save();
+  lights.slice(0, 4).forEach((light, index) => {
+    const px = clamp((light.position?.x ?? 0) * 0.5 + 0.5, 0.05, 0.95);
+    const py = clamp((light.position?.y ?? -0.5) * 0.5 + 0.5, 0.04, 0.96);
+    const spread = Math.max(w, h) * (0.26 + (light.softness ?? 0.4) * 0.45 + index * 0.03);
+    const grad = ctx.createRadialGradient(w * px, h * py, 0, w * px, h * py, spread);
+    grad.addColorStop(0, rgba(light.color || '#ffffff', 0.34 * (light.intensity ?? 1)));
+    grad.addColorStop(0.28, rgba(light.color || '#ffffff', 0.14 * (light.intensity ?? 1)));
+    grad.addColorStop(1, rgba(light.color || '#ffffff', 0));
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+  });
+  ctx.restore();
+}
+function drawLineArtOverlay(ctx, refCanvas){
+  ctx.save();
+  ctx.globalAlpha = 0.75;
+  ctx.drawImage(refCanvas, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = 'rgba(35,24,36,.22)';
+  ctx.fillRect(0, 0, refCanvas.width, refCanvas.height);
+  ctx.restore();
+}
+function drawStudyMap(ctx, placement){
+  const night = document.documentElement.dataset.theme === 'night';
+  const labels = [
+    { text:'HIGHLIGHT', x:0.68, y:0.18 },
+    { text:'LUZ MEDIA', x:0.60, y:0.36 },
+    { text:'SOMBRA', x:0.23, y:0.50 },
+    { text:'OCLUSIÓN', x:0.36, y:0.77 },
+    { text:'RIM LIGHT', x:0.86, y:0.54 }
+  ];
+  ctx.save();
+  labels.forEach((label) => {
+    const x = placement.dx + placement.dw * label.x;
+    const y = placement.dy + placement.dh * label.y;
+    const pad = 7;
+    ctx.font = '700 10px Inter, system-ui, sans-serif';
+    const tw = ctx.measureText(label.text).width;
+    ctx.fillStyle = night ? 'rgba(17,16,24,.84)' : 'rgba(255,255,255,.84)';
+    ctx.strokeStyle = night ? 'rgba(255,255,255,.18)' : 'rgba(22,18,30,.12)';
+    ctx.beginPath();
+    ctx.roundRect(x - pad, y - 11, tw + pad * 2, 22, 11);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = night ? '#ffffff' : '#271d2b';
+    ctx.fillText(label.text, x, y + 4);
+  });
+  ctx.restore();
 }
 
-function drawHeader(ctx,width,height,p,view,study){
-  const night=document.documentElement.dataset.theme==='night';ctx.save();ctx.fillStyle=night?'rgba(255,255,255,.88)':'rgba(34,28,39,.82)';ctx.font=`800 ${Math.max(13,Math.round(width*.015))}px Inter,system-ui,sans-serif`;ctx.fillText(`CABELLO ${p.label} - ${p.family.toUpperCase()} - ${viewFor(view).label.toUpperCase()}`,width*.028,height*.055);ctx.font=`500 ${Math.max(10,Math.round(width*.0105))}px Inter,system-ui,sans-serif`;ctx.globalAlpha=.72;ctx.fillText(study==='map'?'Mapa de estudio de luz sobre el cabello':'Vista completa recoloreable + iluminacion activa',width*.028,height*.086);ctx.restore();
-}
+export function renderCompleteHairAsset(ctx, width, height, colors, lighting, textureId = '1b', studyMode = 'render', hairView = 'front'){
+  const typeId = normalizeType(textureId);
+  const viewId = normalizeView(hairView);
+  const entry = ensureSheet(typeId);
 
-export function renderCompleteHairAsset(ctx,width,height,colors,lighting,textureId='1b',studyMode='render',hairView='back'){
-  const p=profileFor(textureId);const view=['front','side','back'].includes(hairView)?hairView:'back';const g=geom(width,height,p,view);const light=dominantLightVector(lighting||{});
-  drawHeadGuide(ctx,g,view);
-  const layer=document.createElement('canvas');layer.width=width;layer.height=height;const l=layer.getContext('2d');
-  l.save();buildPath(l,p,g,view);l.clip();drawBase(l,width,height,colors,p,g,view,light);l.restore();
-  l.save();clipHair(l,p,g,view);const root=l.createRadialGradient(g.cx,g.top,0,g.cx,g.top+g.min*.12,g.w*1.15);root.addColorStop(0,rgba(colorAt(colors,1,'#171419'),.72));root.addColorStop(.62,rgba(colorAt(colors,3,'#302A32'),.20));root.addColorStop(1,rgba(colorAt(colors,3,'#302A32'),0));l.fillStyle=root;l.fillRect(0,0,width,height);l.restore();
-  drawTexture(l,colors,p,g,view,light);drawSpecular(l,colors,p,g,view,light);drawLights(l,width,height,p,g,view,lighting);drawRim(l,colors,p,g,view,light,lighting);
-  ctx.save();ctx.shadowColor=rgba(colorAt(colors,1,'#171419'),.30);ctx.shadowBlur=Math.max(12,g.min*.045);ctx.shadowOffsetY=g.min*.018;ctx.drawImage(layer,0,0);ctx.restore();
-  drawFlyaways(ctx,colors,p,g,view);if(studyMode==='map')drawStudy(ctx,width,height,colors,p,g,view,light);drawHeader(ctx,width,height,p,view,studyMode);
+  drawHeader(ctx, width, height, typeId, viewId);
+
+  if(entry.status === 'loading'){
+    drawLoadingState(ctx, width, height, 'Cargando referencia PNG del cabello...');
+    return;
+  }
+  if(entry.status === 'error' || !entry.image){
+    drawLoadingState(ctx, width, height, 'No se pudo cargar la referencia PNG.');
+    return;
+  }
+
+  const crop = getCrop(entry.image, viewId);
+  const placement = placeReference(entry.image, crop, width, height);
+  const refCanvas = buildPlacedRef(entry.image, crop, placement);
+  const { maskCanvas, lineCanvas } = buildMaskCanvas(refCanvas);
+  const paintCanvas = applyMaskToPaint(maskCanvas, colors, lighting);
+  const litCanvas = createCanvas(maskCanvas.width, maskCanvas.height);
+  const litCtx = litCanvas.getContext('2d');
+
+  litCtx.drawImage(paintCanvas, 0, 0);
+  drawLightPass(litCtx, litCanvas.width, litCanvas.height, lighting);
+  drawLineArtOverlay(litCtx, lineCanvas);
+
+  ctx.save();
+  ctx.shadowColor = rgba(normalizeColors(colors)[2], 0.22);
+  ctx.shadowBlur = Math.max(10, Math.round(Math.min(placement.dw, placement.dh) * 0.045));
+  ctx.shadowOffsetY = Math.max(3, Math.round(placement.dh * 0.015));
+  ctx.drawImage(litCanvas, placement.dx, placement.dy, placement.dw, placement.dh);
+  ctx.restore();
+
+  if(studyMode === 'map'){
+    drawStudyMap(ctx, placement);
+  }
 }
