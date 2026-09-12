@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-multiview-v6-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-reference-v7-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -135,6 +135,121 @@ const HAIR_TEXTURE_OPTIONS = [
 
 window.KAORU_HAIR_STUDY_MODE = window.KAORU_HAIR_STUDY_MODE || 'render';
 window.KAORU_HAIR_VIEW = window.KAORU_HAIR_VIEW || 'back';
+const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a']);
+const KAORU_HAIR_REFERENCE_CACHE = new Map();
+
+function hairReferenceUrl(type) {
+  return `./assets/hair/${type}/reference-sheet.png?cache=hair-reference-v7-20260912`;
+}
+
+function loadHairReferenceImage(type) {
+  if (!KAORU_HAIR_REFERENCE_AVAILABLE.has(type)) return Promise.resolve(null);
+  if (KAORU_HAIR_REFERENCE_CACHE.has(type)) return KAORU_HAIR_REFERENCE_CACHE.get(type);
+
+  const task = new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = 'async';
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = hairReferenceUrl(type);
+  });
+
+  KAORU_HAIR_REFERENCE_CACHE.set(type, task);
+  return task;
+}
+
+async function drawHairReferenceCrop(type, view = 'back') {
+  const canvas = document.getElementById('hairReferenceCanvas');
+  const status = document.getElementById('hairReferenceStatus');
+  const fullLink = document.getElementById('hairReferenceFullLink');
+  if (!canvas || !status) return;
+
+  const context = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cssWidth = Math.max(220, canvas.clientWidth || 300);
+  const cssHeight = Math.max(180, canvas.clientHeight || 230);
+  const width = Math.round(cssWidth * dpr);
+  const height = Math.round(cssHeight * dpr);
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  context.clearRect(0, 0, width, height);
+
+  const dark = document.documentElement.dataset.theme === 'night';
+  context.fillStyle = dark ? '#17151B' : '#F7F3F8';
+  context.fillRect(0, 0, width, height);
+
+  if (!KAORU_HAIR_REFERENCE_AVAILABLE.has(type)) {
+    context.fillStyle = dark ? '#EEE7F3' : '#403746';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.font = `${Math.max(13, Math.round(width * .035))}px Inter, system-ui, sans-serif`;
+    context.fillText(`Referencia ${String(type || '').toUpperCase()} pendiente`, width / 2, height / 2);
+    status.textContent = 'Todavia no tenemos la lamina de este tipo.';
+    if (fullLink) fullLink.hidden = true;
+    return;
+  }
+
+  status.textContent = 'Cargando referencia...';
+  const image = await loadHairReferenceImage(type);
+  if (!image) {
+    status.textContent = 'No se pudo cargar esta referencia.';
+    return;
+  }
+
+  const thirds = {
+    front: [0.015, 0.335],
+    side:  [0.335, 0.665],
+    back:  [0.665, 0.985]
+  };
+  const region = thirds[view] || thirds.back;
+
+  const sx = Math.round(image.naturalWidth * region[0]);
+  const sw = Math.round(image.naturalWidth * (region[1] - region[0]));
+  const sy = Math.round(image.naturalHeight * .105);
+  const sh = Math.round(image.naturalHeight * .455);
+
+  const sourceRatio = sw / sh;
+  const targetRatio = width / height;
+  let dw = width;
+  let dh = height;
+  let dx = 0;
+  let dy = 0;
+
+  if (sourceRatio > targetRatio) {
+    dh = width / sourceRatio;
+    dy = (height - dh) / 2;
+  } else {
+    dw = height * sourceRatio;
+    dx = (width - dw) / 2;
+  }
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
+
+  const label = view === 'front' ? 'FRENTE' : view === 'side' ? 'COSTADO' : 'ATRAS';
+  context.fillStyle = 'rgba(0,0,0,.64)';
+  const badgeW = Math.max(74, width * .18);
+  const badgeH = Math.max(26, height * .10);
+  context.beginPath();
+  if (typeof context.roundRect === 'function') context.roundRect(10, 10, badgeW, badgeH, 10);
+  else context.rect(10, 10, badgeW, badgeH);
+  context.fill();
+  context.fillStyle = '#FFFFFF';
+  context.font = `800 ${Math.max(10, Math.round(width * .025))}px Inter, system-ui, sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(label, 10 + badgeW / 2, 10 + badgeH / 2);
+
+  status.textContent = `Referencia ${String(type).toUpperCase()} Â· ${label.toLowerCase()}`;
+  if (fullLink) {
+    fullLink.hidden = false;
+    fullLink.href = hairReferenceUrl(type);
+  }
+}
 
 function hairTextureMeta(id){
   const found = HAIR_TEXTURE_OPTIONS.find((item) => item[0] === id);
@@ -310,6 +425,21 @@ function ensureHairTextureUI() {
   ].join('');
   panel.appendChild(viewControls);
 
+  const referencePanel = document.createElement('details');
+  referencePanel.id = 'hairReferencePanel';
+  referencePanel.className = 'hair-reference-panel';
+  referencePanel.open = true;
+  referencePanel.innerHTML = [
+    '<summary><span><strong>Referencia ilustrada</strong><small>Frente Â· Costado Â· Atras</small></span><b>GUIA</b></summary>',
+    '<div class="hair-reference-stage"><canvas id="hairReferenceCanvas"></canvas></div>',
+    '<div class="hair-reference-meta">',
+    '<span id="hairReferenceStatus">Cargando referencia...</span>',
+    '<a id="hairReferenceFullLink" href="#" target="_blank" rel="noopener">Ver lamina completa</a>',
+    '</div>',
+    '<p>Esta lamina sirve como guia de forma y textura. El preview principal sigue siendo el render recoloreable afectado por tus luces.</p>'
+  ].join('');
+  panel.appendChild(referencePanel);
+
   viewControls.addEventListener('click', (event) => {
     const button = event.target.closest('[data-hair-view]');
     if (!button) return;
@@ -317,7 +447,10 @@ function ensureHairTextureUI() {
       ? button.dataset.hairView
       : 'back';
     window.KAORU_HAIR_VIEW = nextView;
-    render(store.getState());
+    const current = store.getState();
+    const currentType = current.selection.hairTexture || current.selection.undertoneId || '1b';
+    drawHairReferenceCrop(currentType, nextView);
+    render(current);
   });
 
   studyControls.addEventListener('click', (event) => {
@@ -343,6 +476,18 @@ function ensureHairTextureUI() {
       '.hair-view-buttons button{min-height:34px;padding:6px 8px;border:1px solid var(--lab-line);border-radius:10px;background:var(--lab-surface);color:var(--lab-text);font:700 10px/1.15 Inter,system-ui,sans-serif;cursor:pointer}',
       '.hair-view-buttons button:hover{border-color:var(--lab-accent);color:var(--lab-accent)}',
       '.hair-view-buttons button.is-active{border-color:var(--lab-accent);background:var(--lab-accent-soft);color:var(--lab-accent);box-shadow:inset 0 0 0 1px var(--lab-accent)}',
+      '.hair-reference-panel{margin-top:11px;border:1px solid var(--lab-line);border-radius:12px;background:var(--lab-surface-2);overflow:hidden;color:var(--lab-text)}',
+      '.hair-reference-panel>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;list-style:none}',
+      '.hair-reference-panel>summary::-webkit-details-marker{display:none}',
+      '.hair-reference-panel>summary span{display:grid;gap:1px}',
+      '.hair-reference-panel>summary strong{font-size:11px}',
+      '.hair-reference-panel>summary small{font-size:9px;color:var(--lab-muted)}',
+      '.hair-reference-panel>summary b{font-size:8px;color:var(--lab-accent);background:var(--lab-accent-soft);padding:4px 6px;border-radius:999px}',
+      '.hair-reference-stage{margin:0 8px;border:1px solid var(--lab-line);border-radius:10px;overflow:hidden;background:var(--lab-surface)}',
+      '.hair-reference-stage canvas{display:block;width:100%;height:230px}',
+      '.hair-reference-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px 2px;font-size:8px;color:var(--lab-muted)}',
+      '.hair-reference-meta a{color:var(--lab-accent);font-weight:800;text-decoration:none;white-space:nowrap}',
+      '.hair-reference-panel>p{margin:0;padding:6px 9px 10px;font-size:8px;line-height:1.4;color:var(--lab-muted)}',
       '.hair-texture-panel.is-active-hair + *{}'
     ].join('');
     document.head.appendChild(style);
@@ -421,6 +566,7 @@ function syncHairTextureUI(state) {
 
   const meta = hairTextureMeta(value);
   hint.textContent = meta[2];
+  drawHairReferenceCrop(value, window.KAORU_HAIR_VIEW || 'back');
   const hairCategory = categoryById('hair-stylized');
   const baseHex = String(state.palette.baseHex || '').toUpperCase();
   const selectedHairColor = (hairCategory?.variants || []).find((variant) =>
