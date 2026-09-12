@@ -1,4 +1,4 @@
-import { adjustHex, clamp, mixHex, normalizeHex, normalizeWords, temperatureShift } from './colorUtils.js';
+﻿import { adjustHex, clamp, mixHex, normalizeHex, normalizeWords, temperatureShift } from './colorUtils.js';
 import { LIGHT_LAB_CATEGORIES, categoryById, undertoneById, variantById } from './presets.js';
 
 export const DEFAULT_PARAMS = { warmth: 0, saturation: 0, contrast: 0, shadowDepth: 0, lightStrength: 0, specular: 0, softness: 0 };
@@ -27,15 +27,15 @@ function organicPalette(categoryId, baseHex, params) {
   const circulation = fantasy ? adjustHex(base, { h: 42, s: 18, l: 3 }) : hair ? adjustHex(base, { h: -18, s: 13, l: 2 }) : mixHex(base, '#C85F68', .28);
   const ambient = fantasy ? adjustHex(base, { h: 72, s: 12, l: 8 }) : adjustHex(coolShadow, { h: 8, s: -3, l: 9 });
   const values = [
-    entry('Sombra de oclusión', mixHex(adjustHex(coolShadow,{l:-31-depth-contrast}), '#140F1B', .28), 'shadow'),
+    entry('Sombra de oclusiÃ³n', mixHex(adjustHex(coolShadow,{l:-31-depth-contrast}), '#140F1B', .28), 'shadow'),
     entry('Sombra profunda', adjustHex(coolShadow,{l:-23-depth-contrast,s:4}), 'shadow'),
     entry('Sombra media', adjustHex(coolShadow,{l:-15-depth*.7-contrast*.7,s:2}), 'shadow'),
     entry('Sombra suave', mixHex(adjustHex(base,{l:-10-depth*.35-contrast*.5}),coolShadow,.30), 'shadow'),
-    entry('Transición fría', mixHex(base,coolShadow,.32), 'transition'),
+    entry('TransiciÃ³n frÃ­a', mixHex(base,coolShadow,.32), 'transition'),
     entry('Base secundaria', adjustHex(base,{l:-4-soft,s:-2}), 'base'),
     entry('Base principal', base, 'base'),
-    entry('Transición cálida', mixHex(base,warmTone,.44), 'transition'),
-    entry(hair?'Reflejo secundario':'Tono de circulación', mixHex(base,circulation,hair?.40:.34), 'transition'),
+    entry('TransiciÃ³n cÃ¡lida', mixHex(base,warmTone,.44), 'transition'),
+    entry(hair?'Reflejo secundario':'Tono de circulaciÃ³n', mixHex(base,circulation,hair?.40:.34), 'transition'),
     entry('Medio tono claro', adjustHex(base,{l:7+light*.25+soft,s:-3}), 'light'),
     entry('Luz suave', temperatureShift(adjustHex(base,{l:13+light*.45+soft,s:-6}),params.warmth*.35), 'light'),
     entry('Luz media', temperatureShift(adjustHex(base,{l:20+light*.65,s:-10}),params.warmth*.42), 'light'),
@@ -56,10 +56,10 @@ function materialPalette(baseHex, params) {
     entry('Sombra profunda',adjustHex(cool,{l:-27-depth-contrast,s:4}),'shadow'),
     entry('Sombra suave',adjustHex(base,{l:-17-depth*.5-contrast*.5}),'shadow'),
     entry('Banda oscura',mixHex(adjustHex(base,{l:-12-contrast}),cool,.34),'shadow'),
-    entry('Transición metálica fría',mixHex(base,cool,.52),'transition'),
+    entry('TransiciÃ³n metÃ¡lica frÃ­a',mixHex(base,cool,.52),'transition'),
     entry('Base secundaria',adjustHex(base,{l:-5,s:-3}),'base'),
     entry('Base media',base,'base'),
-    entry('Transición metálica cálida',mixHex(base,warm,.52),'transition'),
+    entry('TransiciÃ³n metÃ¡lica cÃ¡lida',mixHex(base,warm,.52),'transition'),
     entry('Reflejo ambiente',adjustHex(cool,{l:15+light*.3,s:-7}),'bounce'),
     entry('Banda brillante',mixHex(adjustHex(base,{l:19+light,s:-10}),'#FFFFFF',spec*.33),'light'),
     entry('Luz media',adjustHex(warm,{l:24+light,s:-12}),'light'),
@@ -83,12 +83,30 @@ const PHRASE_RULES = {
   ],
   'fantasy-skin': [['bioluminiscente','bioluminescent'],['verde oliva oscuro','witch-green'],['verde oliva','witch-green'],['verde bruja','witch-green'],['verde menta','mint'],['azul hielo','ice-blue'],['azul grisacea','blue-grey'],['violeta grisacea','dark-purple'],['gris espectral','cold-grey'],['gris frio','cold-grey'],['rojo demoniaco','demon-red'],['morada oscura','dark-purple'],['morado oscuro','dark-purple'],['morado claro','lilac'],['rosa magica','magic-pink'],['rosa palido','magic-pink'],['piel muerta','dead-cold'],['turquesa','turquoise'],['lavanda','lavender'],['cian','cyan'],['lila','lilac']],
   materials: [['oro rosa','rose-gold'],['oro suave','soft-gold'],['acero oscuro','dark-steel'],['acero frio','cold-steel'],['cobre rojizo','red-copper'],['metal iridiscente','iridescent'],['metal fantastico','fantasy-metal'],['plata','silver'],['bronce','bronze'],['cobre','copper'],['acero','steel'],['oro','gold']],
-  'hair-stylized': [['castano calido','warm-brown'],['negro frio','cold-black'],['rubio dorado','golden-blonde'],['pelirrojo cobre','copper-red'],['violeta nocturno','night-violet'],['cian cyberpunk','cyber-cyan'],['rosa neon','neon-pink'],['azul magico','magic-blue'],['lila pastel','pastel-lilac'],['holografico','holographic']]
+  'hair-stylized': [
+    ['negro azabache','jet-black'],['negro tinta','ink-black'],['negro frio','cold-black'],['negro cuervo','raven-black'],['negro azulado','blue-black'],
+    ['carbon','charcoal'],['grafito','graphite'],['gris humo','smoke-grey'],['plata humo','silver-smoke'],['plata lunar','moon-silver'],
+    ['blanco perla','pearl-white'],['blanco nieve','snow-white'],['platino hielo','platinum-ice'],
+    ['espresso','espresso'],['chocolate oscuro','dark-chocolate'],['nogal','walnut'],['castano calido','warm-brown'],['castano neutro','neutral-brown'],
+    ['castano ceniza','ash-brown'],['castano hongo','mushroom-brown'],['castano rojizo','chestnut'],['caoba','mahogany'],['auburn','auburn-brown'],
+    ['cacao','cocoa'],['caramelo','caramel-brown'],
+    ['rubio miel','honey-blonde'],['rubio dorado','golden-blonde'],['rubio ambar','amber-blonde'],['rubio beige','beige-blonde'],['rubio ceniza','ash-blonde'],
+    ['rubio arena','sand-blonde'],['rubio crema','cream-blonde'],['rubio perlado','pearl-blonde'],['rubio fresa','strawberry-blonde'],['dorado amanecer','sunrise-gold'],
+    ['pelirrojo cobre','copper-red'],['jengibre','ginger'],['naranja tostado','burnt-orange'],['rojo brasa','ember-red'],['rojo cereza','cherry-red'],
+    ['carmesi','crimson'],['vino','wine-red'],['coral','coral-red'],['rosa cobre','rose-gold-hair'],['atardecer naranja','sunset-orange'],
+    ['violeta nocturno','night-violet'],['purpura real','royal-purple'],['orquidea','orchid-purple'],['ciruela','plum-violet'],['amatista','amethyst'],
+    ['lavanda','lavender'],['lila pastel','pastel-lilac'],['malva','mauve'],['rosa chicle','bubblegum-pink'],['rosa neon','neon-pink'],['magenta brillo','magenta-glow'],
+    ['azul magico','magic-blue'],['azul cobalto','cobalt-blue'],['azul zafiro','sapphire-blue'],['celeste','sky-blue'],['azul hielo','icy-blue'],
+    ['cian cyberpunk','cyber-cyan'],['aqua cian','aqua-cyan'],['teal submarino','undersea-teal'],['esmeralda','emerald-green'],['verde hojas','leaf-green'],
+    ['verde salvia','sage-green'],['menta aqua','mint-aqua'],['oliva','olive-green'],['lima neon','neon-lime'],['bioluminiscente','biolum-green'],
+    ['holografico','holographic'],['opalino','opal-shift'],['plata violeta','violet-silver'],['prisma arcoiris','prism-rainbow'],
+    ['blacklight fucsia','blacklight-fuchsia'],['blacklight cian','blacklight-cyan'],['ventana dorada','window-gold']
+  ]
 };
 
 function categoryFromWords(words, fallback) {
   if (/oro|plata|acero|cobre|bronce|metal/.test(words)) return 'materials';
-  if (/cabello|pelo|rubio|castano|pelirrojo|cyberpunk|holografico/.test(words)) return 'hair-stylized';
+  if (/cabello|pelo|mechon|rubio|castano|pelirrojo|rojo|cobre|violeta|morado|purpura|lila|rosa|magenta|azul|cian|teal|turquesa|verde|esmeralda|salvia|plata|platino|holografico|blacklight|underwater|submarino|prisma|arcoiris|cyberpunk/.test(words)) return 'hair-stylized';
   if (/fantast|alien|demon|espectral|biolumin|piel (verde|esmeralda|menta|azul|celeste|cian|turquesa|morad|violeta|lila|lavanda|rosa|fucsia|gris|roja|coral)/.test(words)) return 'fantasy-skin';
   if (/piel|cutis|humana|morena|oscura|clara|oliva|rosada/.test(words)) return 'natural-skin';
   return fallback;
@@ -118,7 +136,8 @@ export function interpretDescription(description, current) {
   const namedBase = !matchedVariant && categoryId !== 'natural-skin' ? namedColors.find(([name])=>words.includes(name))?.[1] : null;
   const baseHex = writtenHex || namedBase || baseForSelection(categoryId,variantId,undertoneId);
   const variant = variantById(category,variantId); const undertone = undertoneById(category,undertoneId);
-  return { categoryId, variantId: variant.id, undertoneId: undertone?.id || 'neutral', baseHex, params, summary: `${category.label} · ${variant.name}${undertone ? ` · ${undertone.name}` : ''}${writtenHex ? ` · ${writtenHex}` : namedBase ? ` · Color libre ${namedBase}` : ''}` };
+  return { categoryId, variantId: variant.id, undertoneId: undertone?.id || 'neutral', baseHex, params, summary: `${category.label} Â· ${variant.name}${undertone ? ` Â· ${undertone.name}` : ''}${writtenHex ? ` Â· ${writtenHex}` : namedBase ? ` Â· Color libre ${namedBase}` : ''}` };
 }
 
 export function categoryOptions() { return LIGHT_LAB_CATEGORIES; }
+

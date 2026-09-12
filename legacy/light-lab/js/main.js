@@ -1,4 +1,4 @@
-import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
+﻿import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
@@ -22,7 +22,7 @@ import {
   createStudioHistory
 } from '../../shared/studioHistory.js?cache=history-transient-v11-20260907';
 
-const VIEW_LABELS = { sphere: 'Estudio de volumen · esfera', band: 'Estudio de reflejo · banda', plane: 'Estudio tonal · plano', reference: 'Cuentagotas · imagen de referencia' };
+const VIEW_LABELS = { sphere: 'Estudio de volumen Â· esfera', band: 'Estudio de reflejo Â· banda', plane: 'Estudio tonal Â· plano', reference: 'Cuentagotas Â· imagen de referencia' };
 const store = createStore();
 const studioHistoryLight =
   createStudioHistory(
@@ -37,16 +37,13 @@ window.LightLabHistory = studioHistoryLight;
 const ADVANCED_PREVIEW_MODES = [
   ['sphere', 'Esfera'],
   ['cylinder', 'Cilindro'],
-  ['plane', 'Plano'],
   ['skin', 'Piel'],
   ['metal', 'Metal'],
   ['gold', 'Oro'],
   ['silver', 'Plata'],
   ['steel', 'Acero'],
   ['head', 'Cabeza'],
-  ['planes', 'Planos'],
-  ['asaro', 'Cabeza de estudio'],
-  ['reference', 'Imagen / Cuentagotas']
+  ['asaro', 'Cabeza de estudio']
 ];
 
 function setupAdvancedPreviewUI() {
@@ -58,7 +55,6 @@ function setupAdvancedPreviewUI() {
     silver: 'Material - plata',
     steel: 'Material - acero',
     head: 'Cabeza simplificada',
-    planes: 'Cabeza por planos',
     asaro: 'Cabeza para estudiar luz y sombra'
   });
 
@@ -375,17 +371,17 @@ function kaoruAtmosphereEffectLabel(type){
     leaves:'Follaje',
     blinds:'Persianas',
     grid:'Rejilla',
-    neon:'Neón',
+    neon:'NeÃ³n',
     rim:'Rim',
     iridescent:'Iridescente',
     rainbow:'Prisma',
     bokeh:'Bokeh',
-    circles:'Círculos',
+    circles:'CÃ­rculos',
     sparkles:'Brillos',
     blacklight:'Blacklight',
     flash:'Flash',
-    caustics:'Caústicas',
-    underwater:'Acuático'
+    caustics:'CaÃºsticas',
+    underwater:'AcuÃ¡tico'
   };
 
   return labels[type]||type||'';
@@ -1185,7 +1181,7 @@ function renderParameters(params) {
 
 function directionLabel(value) {
   const angle = Number(value) || 0;
-  if (angle <= -135 || angle >= 135) return 'Desde atrás';
+  if (angle <= -135 || angle >= 135) return 'Desde atrÃ¡s';
   if (angle < -45) return 'Desde la izquierda';
   if (angle > 45) return 'Desde la derecha';
   return 'Desde el frente';
@@ -1378,7 +1374,7 @@ function syncAtmosphereEditor(
 
   elements.atmoEffectAngleOut
     .textContent =
-      `${Math.round(angle)}°`;
+      `${Math.round(angle)}Â°`;
 
   if(
     document.activeElement !==
@@ -1764,7 +1760,7 @@ function renderLightingControls(state) {
               preset.id;
 
             button.title=
-              `${preset.name} — ${preset.description}`;
+              `${preset.name} â€” ${preset.description}`;
 
             button.style.setProperty(
               '--atmo-top',
@@ -1822,7 +1818,7 @@ function renderLightingControls(state) {
                     tabindex="0"
                     title="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
                     aria-label="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
-                  >${favorite?'★':'☆'}</span>
+                  >${favorite?'â˜…':'â˜†'}</span>
                   ${
                     preset.userPreset
                       ?`<span
@@ -1832,7 +1828,7 @@ function renderLightingControls(state) {
                           tabindex="0"
                           title="Eliminar preset personal"
                           aria-label="Eliminar preset personal"
-                        >×</span>`
+                        >Ã—</span>`
                       :''
                   }
                 </span>
@@ -2002,7 +1998,7 @@ if (!elements.lightingScenes.childElementCount) {
               <i style="--light-color:${light.color}"></i>
               <span>
                 <strong>${escapeHtml(light.name)}</strong>
-                <small>${light.color} · ${Math.round(light.intensity)}%</small>
+                <small>${light.color} Â· ${Math.round(light.intensity)}%</small>
               </span>
             </button>
 
@@ -2011,7 +2007,7 @@ if (!elements.lightingScenes.childElementCount) {
               data-light-action="duplicate"
               title="Duplicar esta luz"
               aria-label="Duplicar ${escapeHtml(light.name)}"
-            >⧉</button>
+            >â§‰</button>
 
             <button
               type="button"
@@ -2019,7 +2015,7 @@ if (!elements.lightingScenes.childElementCount) {
               title="Eliminar esta luz"
               aria-label="Eliminar ${escapeHtml(light.name)}"
               ${lighting.lights.length === 1 ? 'disabled' : ''}
-            >×</button>
+            >Ã—</button>
           </div>
 
           ${
@@ -2071,7 +2067,7 @@ if (!elements.lightingScenes.childElementCount) {
 
                   <label>
                     <span>
-                      ¿Desde qué lado?
+                      Â¿Desde quÃ© lado?
                       <output>${formatLightControlValue('direction', light.direction)}</output>
                     </span>
                     <input
@@ -2134,7 +2130,7 @@ if (!elements.lightingScenes.childElementCount) {
 
     if (summary) {
       summary.textContent =
-        `${light.color} · ${Math.round(light.intensity)}%`;
+        `${light.color} Â· ${Math.round(light.intensity)}%`;
     }
 
     item
@@ -2222,7 +2218,7 @@ function renderSwatches(entries,{editable=false,kind='illuminated'}={}) {
   elements.swatchGrid.replaceChildren(...entries.map((color,index) => {
     const item=document.createElement('article'); item.className='swatch'; item.dataset.index=String(index); item.dataset.paletteKind=kind; item.tabIndex=0; item.setAttribute('role','button');
     item.setAttribute('aria-label',`${color.role} ${color.hex}. Clic para copiar.`); item.style.setProperty('--swatch',color.hex); item.style.setProperty('--swatch-text',readableTextColor(color.hex));
-    item.innerHTML=`<div class="swatch-color"><span>Copiar</span></div><div class="swatch-meta"><div><strong>${color.role}</strong><span>${color.hex}</span></div>${editable?`<button class="edit-swatch" type="button" title="Editar ${color.role}" aria-label="Editar ${color.role}">✎</button>`:''}</div>`;
+    item.innerHTML=`<div class="swatch-color"><span>Copiar</span></div><div class="swatch-meta"><div><strong>${color.role}</strong><span>${color.hex}</span></div>${editable?`<button class="edit-swatch" type="button" title="Editar ${color.role}" aria-label="Editar ${color.role}">âœŽ</button>`:''}</div>`;
     return item;
   }));
 }
@@ -2230,7 +2226,7 @@ function renderSwatches(entries,{editable=false,kind='illuminated'}={}) {
 function renderComparison(original,illuminated) {
   elements.comparisonGrid.replaceChildren(...original.map((entry,index)=>{
     const changed=illuminated[index];const item=document.createElement('article');item.className='comparison-item';
-    item.innerHTML=`<strong>${escapeHtml(entry.role)}</strong><div><button type="button" data-copy-hex="${entry.hex}" style="--compare:${entry.hex}" title="Copiar original ${entry.hex}"><i></i><span>${entry.hex}</span></button><b>→</b><button type="button" data-copy-hex="${changed.hex}" style="--compare:${changed.hex}" title="Copiar iluminado ${changed.hex}"><i></i><span>${changed.hex}</span></button></div>`;
+    item.innerHTML=`<strong>${escapeHtml(entry.role)}</strong><div><button type="button" data-copy-hex="${entry.hex}" style="--compare:${entry.hex}" title="Copiar original ${entry.hex}"><i></i><span>${entry.hex}</span></button><b>â†’</b><button type="button" data-copy-hex="${changed.hex}" style="--compare:${changed.hex}" title="Copiar iluminado ${changed.hex}"><i></i><span>${changed.hex}</span></button></div>`;
     return item;
   }));
 }
@@ -2241,7 +2237,7 @@ function renderExtractedColors(samples) {
   elements.extractedColors.replaceChildren(...samples.map((sample)=>{
     const item=document.createElement('article'); item.className='extracted-item'; item.dataset.sampleId=sample.id;
     const roleOptions=SAMPLE_ROLES.map((role)=>`<option value="${role.id}"${role.id===sample.role?' selected':''}>${role.name}</option>`).join('');
-    item.innerHTML=`<button class="extracted-swatch" data-sample-action="copy" type="button" style="--sample:${sample.hex};--sample-text:${readableTextColor(sample.hex)}" title="Copiar ${sample.hex}"><span>${sample.hex}</span></button><div class="extracted-data"><select data-sample-action="role" aria-label="Rol de ${sample.hex}">${roleOptions}</select><div><button data-sample-action="base" type="button">Usar como base</button><button data-sample-action="delete" type="button" aria-label="Eliminar ${sample.hex}">×</button></div></div>`;
+    item.innerHTML=`<button class="extracted-swatch" data-sample-action="copy" type="button" style="--sample:${sample.hex};--sample-text:${readableTextColor(sample.hex)}" title="Copiar ${sample.hex}"><span>${sample.hex}</span></button><div class="extracted-data"><select data-sample-action="role" aria-label="Rol de ${sample.hex}">${roleOptions}</select><div><button data-sample-action="base" type="button">Usar como base</button><button data-sample-action="delete" type="button" aria-label="Eliminar ${sample.hex}">Ã—</button></div></div>`;
     return item;
   }));
 }
@@ -2250,7 +2246,7 @@ function renderRecentColors(colors) {
   elements.recentEmpty.hidden=colors.length>0;
   elements.recentColors.replaceChildren(...colors.map((color)=>{
     const item=document.createElement('div'); item.className='recent-item'; item.dataset.recentHex=color.hex;
-    item.innerHTML=`<button data-recent-action="copy" type="button" style="--recent:${color.hex}" title="Copiar ${color.hex}"><span></span><b>${color.hex}</b></button><button data-recent-action="base" type="button" title="Usar ${color.hex} como base">＋</button>`;
+    item.innerHTML=`<button data-recent-action="copy" type="button" style="--recent:${color.hex}" title="Copiar ${color.hex}"><span></span><b>${color.hex}</b></button><button data-recent-action="base" type="button" title="Usar ${color.hex} como base">ï¼‹</button>`;
     return item;
   }));
 }
@@ -2263,7 +2259,7 @@ function render(state) {
   if(comparing)renderComparison(original,illuminated);else renderSwatches(paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated,{editable:paletteView==='original',kind:paletteView});
   renderExtractedColors(state.reference.extractedColors); renderRecentColors(state.reference.recentColors);
   elements.previewTitle.textContent=category.label;
-  elements.paletteName.textContent=paletteView==='original'?`Original · ${state.palette.baseHex}`:paletteView==='compare'?`Original vs. iluminada`:paletteView==='selected'?`Aporte · ${selectedLight?.name || 'Luz elegida'}`:`Iluminada · ${state.palette.baseHex}`;
+  elements.paletteName.textContent=paletteView==='original'?`Original Â· ${state.palette.baseHex}`:paletteView==='compare'?`Original vs. iluminada`:paletteView==='selected'?`Aporte Â· ${selectedLight?.name || 'Luz elegida'}`:`Iluminada Â· ${state.palette.baseHex}`;
   elements.stateCategory.textContent=category.label;
   elements.stateBase.textContent=state.palette.baseHex;elements.stateLighting.textContent=lightingSummary(state.lighting);elements.stateColors.textContent=`${state.palette.entries.length} colores`;
   elements.clearImage.hidden=!state.reference.image;
@@ -2271,7 +2267,7 @@ function render(state) {
   elements.modeLabel.textContent=VIEW_LABELS[state.selection.previewMode];
   const referenceActive=state.selection.previewMode==='reference'; elements.canvas.hidden=referenceActive; elements.referenceStage.hidden=!referenceActive;
   elements.referenceEmpty.hidden=Boolean(state.reference.image); elements.referenceCanvas.hidden=!state.reference.image;
-  elements.canvasHint.textContent=referenceActive?(state.reference.image?'Haz clic sobre la imagen para capturar el color':'Sube, pega o arrastra una imagen'):(paletteView==='original'?'Paleta sin iluminación':paletteView==='selected'?`Solo ${selectedLight?.name || 'luz elegida'}`:lightingSummary(state.lighting));
+  elements.canvasHint.textContent=referenceActive?(state.reference.image?'Haz clic sobre la imagen para capturar el color':'Sube, pega o arrastra una imagen'):(paletteView==='original'?'Paleta sin iluminaciÃ³n':paletteView==='selected'?`Solo ${selectedLight?.name || 'luz elegida'}`:lightingSummary(state.lighting));
   elements.previewTabs.querySelectorAll('[data-view]').forEach((button)=>{const active=button.dataset.view===state.selection.previewMode;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
   elements.paletteViewTabs.querySelectorAll('[data-palette-view]').forEach((button)=>{const active=button.dataset.paletteView===paletteView;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
   if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting));}
@@ -2295,12 +2291,12 @@ function applyEditedColor() {
   elements.editor.hidden=true; editingIndex=null; showToast(`Color actualizado: ${hex}`);
 }
 
-function useExtractedAsBase(hex, label='color extraído') {
+function useExtractedAsBase(hex, label='color extraÃ­do') {
   store.setState((state)=>{
-    const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraído ${hex}`};
+    const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraÃ­do ${hex}`};
     return {...next,palette:paletteFrom(next,hex),reference:{...state.reference,extractedColors:state.reference.extractedColors.map((sample)=>sample.hex===hex?{...sample,role:'base'}:sample),recentColors:addRecentColor(state.reference.recentColors,hex,label)}};
   });
-  showToast(`${hex} usado como base · paleta regenerada`);
+  showToast(`${hex} usado como base Â· paleta regenerada`);
 }
 
 function updateDirectLight(lightId, changes) {
@@ -2366,7 +2362,7 @@ function applySampleRole(sample, role) {
   store.setState((state)=>{
     const reference={...state.reference,extractedColors:state.reference.extractedColors.map((item)=>item.id===sample.id?{...item,role}:item)};
     if(role==='base'){
-      const next={...state,reference,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraído ${sample.hex}`};
+      const next={...state,reference,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraÃ­do ${sample.hex}`};
       return {...next,palette:paletteFrom(next,sample.hex)};
     }
     if(role==='light'){
@@ -2381,12 +2377,12 @@ function applySampleRole(sample, role) {
 
 async function loadReferenceBlob(blob,name='imagen-pegada') {
   try {
-    elements.imageStatus.textContent='Cargando imagen…';
+    elements.imageStatus.textContent='Cargando imagenâ€¦';
     const metadata=await renderImageBlob(blob,elements.referenceCanvas,name);
     elements.marker.hidden=true;
     store.setState((state)=>({...state,selection:{...state.selection,previewMode:'reference'},reference:{...state.reference,image:metadata,extractedColors:[]},ui:{...state.ui,lastSamplePosition:null}}));
-    elements.imageStatus.textContent=`${metadata.name} · ${metadata.originalWidth}×${metadata.originalHeight}px`;
-    showToast('Imagen lista · haz clic para extraer colores');
+    elements.imageStatus.textContent=`${metadata.name} Â· ${metadata.originalWidth}Ã—${metadata.originalHeight}px`;
+    showToast('Imagen lista Â· haz clic para extraer colores');
   } catch (error) {
     elements.imageStatus.textContent=error.message || 'No se pudo cargar la imagen.'; showToast(elements.imageStatus.textContent);
   }
@@ -2395,7 +2391,7 @@ async function loadReferenceBlob(blob,name='imagen-pegada') {
 function clearReferenceImage() {
   elements.referenceCanvas.width=1; elements.referenceCanvas.height=1; elements.marker.hidden=true;
   store.setState((state)=>({...state,reference:{...state.reference,image:null},ui:{...state.ui,lastSamplePosition:null}}));
-  elements.imageStatus.textContent='Imagen retirada. Las muestras extraídas se conservaron.';
+  elements.imageStatus.textContent='Imagen retirada. Las muestras extraÃ­das se conservaron.';
 }
 
 function captureReferenceColor(event) {
@@ -2410,8 +2406,8 @@ function captureReferenceColor(event) {
       const extractedColors=exists?state.reference.extractedColors:[sample,...state.reference.extractedColors].slice(0,60);
       return {...state,reference:{...state.reference,extractedColors,recentColors:addRecentColor(state.reference.recentColors,sample.hex,'eyedropper')},ui:{...state.ui,lastSamplePosition:{x:captured.x,y:captured.y}}};
     });
-    showToast(captured.transparent?`${captured.hex} capturado · píxel transparente`:`${captured.hex} capturado`);
-  } catch(error) { showToast(error.message || 'No se pudo leer ese píxel.'); }
+    showToast(captured.transparent?`${captured.hex} capturado Â· pÃ­xel transparente`:`${captured.hex} capturado`);
+  } catch(error) { showToast(error.message || 'No se pudo leer ese pÃ­xel.'); }
 }
 
 elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const next={...state,selection:{...state.selection,categoryId:button.dataset.category,presetId:'custom'}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
@@ -2420,7 +2416,7 @@ elements.baseHex.addEventListener('keydown',(event)=>{if(event.key==='Enter')app
 elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=elements.basePicker.value.toUpperCase();applyManualHex();});
 document.querySelector('.parameter-list').addEventListener('input',(event)=>{const input=event.target.closest('[data-param]');if(!input)return;store.setState((state)=>{const params={...state.params,[input.dataset.param]:Number(input.value)};const next={...state,selection:{...state.selection,presetId:'custom'},params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});});
 elements.resetParams.addEventListener('click',()=>{store.setState((state)=>{const params={...DEFAULT_PARAMS};const next={...state,params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});showToast('Ajustes restablecidos');});
-elements.lightingEnabled.addEventListener('change',()=>{store.setState((state)=>({...state,lighting:{...state.lighting,enabled:elements.lightingEnabled.checked}}));showToast(elements.lightingEnabled.checked?'Iluminación activada':'Iluminación apagada');});
+elements.lightingEnabled.addEventListener('change',()=>{store.setState((state)=>({...state,lighting:{...state.lighting,enabled:elements.lightingEnabled.checked}}));showToast(elements.lightingEnabled.checked?'IluminaciÃ³n activada':'IluminaciÃ³n apagada');});
 elements.atmosphereScenes?.addEventListener(
   'click',
   (event)=>{
@@ -2529,7 +2525,7 @@ elements.creativeAtmosphereScenes?.addEventListener(
 
       if(
         confirm(
-          '¿Eliminar este preset personal?'
+          'Â¿Eliminar este preset personal?'
         )
       ){
         deleteCustomLightingPreset(
@@ -2696,7 +2692,7 @@ elements.atmoEffectAngle
 
       elements.atmoEffectAngleOut
         .textContent =
-          `${value}°`;
+          `${value}Â°`;
 
       patchAtmosphereEffect({
         angle:value
@@ -2787,13 +2783,13 @@ elements.saveCustomAtmosphere
         atmosphereById(
           currentId
         )?.name||
-        'Iluminación';
+        'IluminaciÃ³n';
 
       const name=
         elements.customAtmosphereName
           ?.value
           .trim()||
-        `${currentName} · variante`;
+        `${currentName} Â· variante`;
 
       const record=
         saveCustomLightingPreset({
@@ -2902,10 +2898,10 @@ elements.lightingScenes.addEventListener('click',(event)=>{
   }));
 
   showToast(
-    `${scene?.name || 'Iluminación'} aplicada`
+    `${scene?.name || 'IluminaciÃ³n'} aplicada`
   );
 });
-elements.addLight.addEventListener('click',()=>{store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const light=createDirectLight({},state.lighting.lights.length);return {...state,lighting:{...state.lighting,enabled:true,lights:[...state.lighting.lights,light],selectedLightId:light.id},ui:{...state.ui,paletteView:'illuminated'}};});showToast('Nueva luz añadida');});
+elements.addLight.addEventListener('click',()=>{store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const light=createDirectLight({},state.lighting.lights.length);return {...state,lighting:{...state.lighting,enabled:true,lights:[...state.lighting.lights,light],selectedLightId:light.id},ui:{...state.ui,paletteView:'illuminated'}};});showToast('Nueva luz aÃ±adida');});
 elements.lightsList.addEventListener('click',(event)=>{const item=event.target.closest('[data-light-id]');const action=event.target.closest('[data-light-action]')?.dataset.lightAction;if(!item||!action)return;const id=item.dataset.lightId;
   if(action==='select'){store.setState((state)=>({...state,lighting:{...state.lighting,selectedLightId:id}}));return;}
   if(action==='duplicate'){store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const source=state.lighting.lights.find((light)=>light.id===id);if(!source)return state;const duplicate=createDirectLight({...source,id:null,name:`${source.name} copia`},state.lighting.lights.length);const index=state.lighting.lights.findIndex((light)=>light.id===id);const lights=[...state.lighting.lights];lights.splice(index+1,0,duplicate);return {...state,lighting:{...state.lighting,lights,selectedLightId:duplicate.id}};});showToast('Luz duplicada');return;}
@@ -2959,7 +2955,7 @@ document.addEventListener('paste',(event)=>{try{const blob=imageBlobFromPasteEve
 ['dragleave','drop'].forEach((type)=>elements.referenceStage.addEventListener(type,(event)=>{event.preventDefault();elements.dropOverlay.hidden=true;}));
 elements.referenceStage.addEventListener('drop',(event)=>{const file=[...(event.dataTransfer?.files||[])].find((item)=>item.type.startsWith('image/'));if(!file){showToast('Suelta un archivo de imagen compatible.');return;}try{loadReferenceBlob(imageBlobFromFile(file),file.name);}catch(error){elements.imageStatus.textContent=error.message;showToast(error.message);}});
 elements.referenceCanvas.addEventListener('click',captureReferenceColor);
-elements.swatchGrid.addEventListener('click',async(event)=>{const swatch=event.target.closest('.swatch');if(!swatch)return;const index=Number(swatch.dataset.index);if(event.target.closest('.edit-swatch')){event.stopPropagation();openEditor(index);return;}const state=store.getState();const kind=swatch.dataset.paletteKind;const entries=kind==='original'?state.palette.entries:applyLightingToPalette(state.palette.entries,state.lighting,kind==='selected'?{onlyLightId:state.lighting.selectedLightId}:{});const color=entries[index];await copyText(color.hex);swatch.classList.add('is-copied');setTimeout(()=>swatch.classList.remove('is-copied'),650);showToast(`${color.hex} copiado · ${color.role}`);});
+elements.swatchGrid.addEventListener('click',async(event)=>{const swatch=event.target.closest('.swatch');if(!swatch)return;const index=Number(swatch.dataset.index);if(event.target.closest('.edit-swatch')){event.stopPropagation();openEditor(index);return;}const state=store.getState();const kind=swatch.dataset.paletteKind;const entries=kind==='original'?state.palette.entries:applyLightingToPalette(state.palette.entries,state.lighting,kind==='selected'?{onlyLightId:state.lighting.selectedLightId}:{});const color=entries[index];await copyText(color.hex);swatch.classList.add('is-copied');setTimeout(()=>swatch.classList.remove('is-copied'),650);showToast(`${color.hex} copiado Â· ${color.role}`);});
 elements.swatchGrid.addEventListener('keydown',async(event)=>{const swatch=event.target.closest('.swatch');if(!swatch||!['Enter',' '].includes(event.key))return;event.preventDefault();const state=store.getState();const kind=swatch.dataset.paletteKind;const entries=kind==='original'?state.palette.entries:applyLightingToPalette(state.palette.entries,state.lighting,kind==='selected'?{onlyLightId:state.lighting.selectedLightId}:{});const color=entries[Number(swatch.dataset.index)];await copyText(color.hex);showToast(`${color.hex} copiado`);});
 elements.editHex.addEventListener('input',()=>{const valid=Boolean(normalizeHex(elements.editHex.value));elements.editError.hidden=valid;if(valid)elements.editPicker.value=normalizeHex(elements.editHex.value);});
 elements.editPicker.addEventListener('input',()=>{elements.editHex.value=elements.editPicker.value.toUpperCase();}); elements.applyEdit.addEventListener('click',applyEditedColor);
@@ -2968,7 +2964,7 @@ elements.extractedColors.addEventListener('click',async(event)=>{const item=even
 elements.extractedColors.addEventListener('change',(event)=>{const select=event.target.closest('[data-sample-action="role"]');if(!select)return;const id=event.target.closest('[data-sample-id]')?.dataset.sampleId;const sample=store.getState().reference.extractedColors.find((item)=>item.id===id);if(!sample)return;const result=applySampleRole(sample,select.value);showToast(`${select.options[select.selectedIndex].text}: ${result}`);});
 elements.clearSamples.addEventListener('click',()=>{store.setState((state)=>({...state,reference:{...state.reference,extractedColors:[]}}));elements.marker.hidden=true;showToast('Muestras eliminadas');});
 elements.recentColors.addEventListener('click',async(event)=>{const item=event.target.closest('[data-recent-hex]');if(!item)return;const hex=item.dataset.recentHex;const action=event.target.closest('[data-recent-action]')?.dataset.recentAction;if(action==='copy'){await copyText(hex);showToast(`${hex} copiado`);}else if(action==='base')useExtractedAsBase(hex,'recent-base');});
-elements.copyAll.addEventListener('click',async()=>{const state=store.getState();const illuminated=applyLightingToPalette(state.palette.entries,state.lighting);const selected=applyLightingToPalette(state.palette.entries,state.lighting,{onlyLightId:state.lighting.selectedLightId});const view=state.ui.paletteView||'illuminated';const text=view==='compare'?[`ORIGINAL`,...state.palette.entries.map((item)=>`${item.role}: ${item.hex}`),``,`ILUMINADA`,...illuminated.map((item)=>`${item.role}: ${item.hex}`)].join('\n'):(view==='original'?state.palette.entries:view==='selected'?selected:illuminated).map((item)=>`${item.role}: ${item.hex}`).join('\n');await copyText(text);showToast(view==='compare'?'Comparación completa copiada':'Los 16 códigos HEX fueron copiados');});
+elements.copyAll.addEventListener('click',async()=>{const state=store.getState();const illuminated=applyLightingToPalette(state.palette.entries,state.lighting);const selected=applyLightingToPalette(state.palette.entries,state.lighting,{onlyLightId:state.lighting.selectedLightId});const view=state.ui.paletteView||'illuminated';const text=view==='compare'?[`ORIGINAL`,...state.palette.entries.map((item)=>`${item.role}: ${item.hex}`),``,`ILUMINADA`,...illuminated.map((item)=>`${item.role}: ${item.hex}`)].join('\n'):(view==='original'?state.palette.entries:view==='selected'?selected:illuminated).map((item)=>`${item.role}: ${item.hex}`).join('\n');await copyText(text);showToast(view==='compare'?'ComparaciÃ³n completa copiada':'Los 16 cÃ³digos HEX fueron copiados');});
 elements.download.addEventListener('click',()=>{downloadProjectStructure(store.getState());showToast('Proyecto Light Lab descargado');});
 document.addEventListener('studio-theme-change',()=>render(store.getState())); window.addEventListener('resize',()=>{const state=store.getState();if(state.selection.previewMode!=='reference'){const original=state.palette.entries;const selected=state.lighting.lights.find((light)=>light.id===state.lighting.selectedLightId);const entries=state.ui.paletteView==='original'?original:applyLightingToPalette(original,state.lighting,state.ui.paletteView==='selected'?{onlyLightId:selected?.id}:{});const previewLighting=state.ui.paletteView==='selected'?{...state.lighting,lights:selected?[selected]:[]}:state.lighting;renderBasicPreview(elements.canvas,entries.map((entry)=>entry.hex),state.selection.previewMode,state.ui.paletteView==='original'?null:previewLighting);}},{passive:true});
 store.subscribe(render); render(store.getState()); window.LightLab={getState:store.getState,reset:store.reset,useExtractedAsBase,applyLightingToPalette,phase:4};
@@ -3103,7 +3099,7 @@ studioHistoryLight.subscribe(
 
       undoHistoryButtonLight.title=
         canUndo
-          ?`Deshacer (Ctrl+Z) · ${undoCount}`
+          ?`Deshacer (Ctrl+Z) Â· ${undoCount}`
           :'Nada que deshacer';
     }
 
@@ -3113,7 +3109,7 @@ studioHistoryLight.subscribe(
 
       redoHistoryButtonLight.title=
         canRedo
-          ?`Rehacer (Ctrl+Shift+Z) · ${redoCount}`
+          ?`Rehacer (Ctrl+Shift+Z) Â· ${redoCount}`
           :'Nada que rehacer';
     }
   }
@@ -3310,7 +3306,7 @@ function kaoruSyncVisualLight(
 
   if(kaoruLightReadout){
     kaoruLightReadout.textContent=
-      `${Math.round(direction)}° · ${Math.round(elevation)}°`;
+      `${Math.round(direction)}Â° Â· ${Math.round(elevation)}Â°`;
   }
 
   if(kaoruLightPad){
@@ -3624,7 +3620,7 @@ function kaoruEnterBeforeLight(){
 
   if(kaoruBeforeButtonLight){
     kaoruBeforeButtonLight.textContent=
-      'ANTES · sin iluminación';
+      'ANTES Â· sin iluminaciÃ³n';
   }
 }
 
@@ -3656,7 +3652,7 @@ function kaoruExitBeforeLight(){
 
   if(kaoruBeforeButtonLight){
     kaoruBeforeButtonLight.textContent=
-      '◐ Mantén para ver Antes';
+      'â— MantÃ©n para ver Antes';
   }
 }
 
@@ -3870,3 +3866,5 @@ kaoruImportPresetsFileLight
 
 kaoruBindBeforeHoldLight();
 /* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+
+
