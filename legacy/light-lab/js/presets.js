@@ -1,4 +1,4 @@
-﻿const preset = (id, name, baseHex, description, variantId, undertoneId = 'neutral', params = {}) => ({ id, name, baseHex, description, variantId, undertoneId, params });
+const preset = (id, name, baseHex, description, variantId, undertoneId = 'neutral', params = {}) => ({ id, name, baseHex, description, variantId, undertoneId, params });
 
 export const NATURAL_SKIN_VARIANTS = [
   { id: 'very-light', name: 'Muy clara', baseHex: '#F1C9B6' }, { id: 'light', name: 'Clara', baseHex: '#E1AD94' },
@@ -121,6 +121,20 @@ export const HAIR_VARIANTS = [
   { id: 'blacklight-cyan', name: 'Blacklight cian', baseHex: '#39C8D7' },
   { id: 'window-gold', name: 'Ventana dorada', baseHex: '#B69762' }
 ];
+export const HAIR_TEXTURE_TYPES = [
+  { id: '1a', name: 'Tipo 1A - liso fino', mix: '#000000', strength: 0, note: 'Brillo largo, limpio y continuo. Poco volumen.' },
+  { id: '1b', name: 'Tipo 1B - liso con cuerpo', mix: '#000000', strength: 0, note: 'Liso con mas cuerpo y movimiento suave.' },
+  { id: '1c', name: 'Tipo 1C - liso grueso', mix: '#000000', strength: 0, note: 'Liso pesado, grueso y con volumen notable.' },
+  { id: '2a', name: 'Tipo 2A - onda suave', mix: '#000000', strength: 0, note: 'Ondas muy suaves en S y brillo corrido.' },
+  { id: '2b', name: 'Tipo 2B - beach waves', mix: '#000000', strength: 0, note: 'Ondas mas marcadas, algo de frizz y brillo por bandas.' },
+  { id: '2c', name: 'Tipo 2C - onda profunda', mix: '#000000', strength: 0, note: 'Ondas gruesas desde la raiz, mucho volumen.' },
+  { id: '3a', name: 'Tipo 3A - rizo suelto', mix: '#000000', strength: 0, note: 'Bucles amplios y luces por grupos de rizos.' },
+  { id: '3b', name: 'Tipo 3B - tirabuzon', mix: '#000000', strength: 0, note: 'Rizo elastico y definido, brillo fragmentado.' },
+  { id: '3c', name: 'Tipo 3C - rizo apretado', mix: '#000000', strength: 0, note: 'Rizos densos y compactos, sombras internas fuertes.' },
+  { id: '4a', name: 'Tipo 4A - coil definido', mix: '#000000', strength: 0, note: 'Coils pequenos bien definidos.' },
+  { id: '4b', name: 'Tipo 4B - patron Z', mix: '#000000', strength: 0, note: 'Textura en Z con encogimiento visible.' },
+  { id: '4c', name: 'Tipo 4C - zigzag denso', mix: '#000000', strength: 0, note: 'Muy denso, maxima compacidad y brillo puntual.' }
+];
 
 export const LIGHT_LAB_CATEGORIES = [
   { id: 'natural-skin', label: 'Piel natural', short: 'Natural', icon: 'â—’', description: 'Ocho profundidades y siete subtonos combinables.', variants: NATURAL_SKIN_VARIANTS, undertones: NATURAL_UNDERTONES, presets: [
@@ -151,7 +165,7 @@ export const LIGHT_LAB_CATEGORIES = [
     preset('red-copper','Cobre rojizo','#A84F38','Cobre cÃ¡lido con destello melocotÃ³n.','red-copper','neutral',{ warmth: 32, saturation: 16, specular: 28 }),
     preset('iridescent','Metal iridiscente','#638C91','Metal frÃ­o con reflejos magenta y cian.','iridescent','neutral',{ saturation: 18, specular: 38 })
   ]},
-    { id: 'hair-stylized', label: 'Cabello / estilo', short: 'Cabello', icon: '~', description: 'Biblioteca ampliada de cabello: naturales, fantasia, neon, pastel, underwater, prisma y blacklight. Usa raiz/sombra para la masa inferior, medios para la zona central y highlights para mechones, puntas y rim light.', variants: HAIR_VARIANTS, undertones: [], presets: [
+    { id: 'hair-stylized', label: 'Cabello / estilo', short: 'Cabello', icon: '~', description: 'Biblioteca ampliada de cabello: naturales, fantasia, neon, pastel, underwater, prisma y blacklight. Usa raiz/sombra para la masa inferior, medios para la zona central y highlights para mechones, puntas y rim light.', variants: HAIR_VARIANTS, undertones: HAIR_TEXTURE_TYPES, presets: [
     preset('jet-black-gloss','Negro brillante','#17161B','Raiz y sombra profunda en la masa principal; brillo fino en curva superior y puntas.','jet-black','neutral',{ contrast: 28, shadowDepth: 28, specular: 26 }),
     preset('blue-black-rim','Negro azulado','#1F2636','Base casi negra con recorte frio azul; util para luces laterales.','blue-black','neutral',{ warmth: -16, contrast: 24, specular: 18 }),
     preset('silver-moon','Plata lunar','#A8ADBA','Sombras lavanda-gris en la base y brillos anchos en la superficie superior.','moon-silver','neutral',{ saturation: -8, lightStrength: 18, softness: 16, specular: 24 }),

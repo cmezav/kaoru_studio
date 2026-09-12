@@ -1,4 +1,4 @@
-﻿import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
+import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
@@ -118,6 +118,101 @@ let creativeAtmosphereFilter = 'all';
 let creativeAtmosphereSearch = '';
 let creativeAtmosphereSort = 'original';
 setupAdvancedPreviewUI();
+const HAIR_TEXTURE_OPTIONS = [
+  ['1a','Tipo 1A - liso fino','Brillo muy largo, limpio y continuo.'],
+  ['1b','Tipo 1B - liso con cuerpo','Liso con un poco mas de cuerpo y movimiento.'],
+  ['1c','Tipo 1C - liso grueso','Liso pesado y voluminoso.'],
+  ['2a','Tipo 2A - onda suave','Ondas suaves en S.'],
+  ['2b','Tipo 2B - beach waves','Ondas marcadas y brillo por bandas.'],
+  ['2c','Tipo 2C - onda profunda','Ondas gruesas desde la raiz.'],
+  ['3a','Tipo 3A - rizo suelto','Bucles amplios y definidos.'],
+  ['3b','Tipo 3B - tirabuzon','Rizo elastico y con volumen.'],
+  ['3c','Tipo 3C - rizo apretado','Rizo pequeno, denso y compacto.'],
+  ['4a','Tipo 4A - coil definido','Coils pequenos bien definidos.'],
+  ['4b','Tipo 4B - patron Z','Textura angulosa y encogida.'],
+  ['4c','Tipo 4C - zigzag denso','Maxima densidad y brillo puntual.']
+];
+
+function hairTextureMeta(id){
+  const found = HAIR_TEXTURE_OPTIONS.find((item) => item[0] === id);
+  return found || HAIR_TEXTURE_OPTIONS[1];
+}
+
+function ensureHairTextureUI() {
+  if (document.getElementById('hairTexturePanel')) return;
+  const panel = document.createElement('section');
+  panel.id = 'hairTexturePanel';
+  panel.className = 'glass-card hair-texture-panel';
+  panel.hidden = true;
+  panel.innerHTML = 
+    <div class="panel-head">
+      <strong>Textura de cabello</strong>
+      <span>1A a 4C</span>
+    </div>
+    <label class="field-stack" for="hairTextureSelect">
+      <span>Tipo de cabello</span>
+      <select id="hairTextureSelect"></select>
+    </label>
+    <p id="hairTextureHint" class="hair-texture-hint"></p>
+  ;
+
+  const container = elements.categoryGrid?.parentElement || elements.categoryGrid;
+  if (!container) return;
+  container.insertAdjacentElement('afterend', panel);
+
+  const select = document.getElementById('hairTextureSelect');
+  select.innerHTML = HAIR_TEXTURE_OPTIONS.map(([id, label]) => <option value=""></option>).join('');
+  select.addEventListener('change', () => {
+    const value = select.value || '1b';
+    store.setState((state) => {
+      const next = {
+        ...state,
+        selection: {
+          ...state.selection,
+          hairTexture: value,
+          undertoneId: value,
+          presetId: 'custom'
+        }
+      };
+      return { ...next, palette: paletteFrom(next, state.palette.baseHex) };
+    });
+    const meta = hairTextureMeta(value);
+    const hint = document.getElementById('hairTextureHint');
+    if (hint) hint.textContent = meta[2];
+    showToast(Cabello );
+  });
+
+  if (!document.getElementById('hairTexturePanelStyles')) {
+    const style = document.createElement('style');
+    style.id = 'hairTexturePanelStyles';
+    style.textContent = 
+      .hair-texture-panel{margin:14px 0 0;padding:14px;border-radius:18px}
+      .hair-texture-panel .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+      .hair-texture-panel .panel-head span{font-size:12px;opacity:.72}
+      .hair-texture-panel .field-stack{display:grid;gap:6px}
+      .hair-texture-panel select{width:100%;padding:10px 12px;border-radius:12px}
+      .hair-texture-hint{margin:8px 0 0;font-size:12px;line-height:1.45;opacity:.82}
+    ;
+    document.head.appendChild(style);
+  }
+}
+
+function syncHairTextureUI(state) {
+  ensureHairTextureUI();
+  const panel = document.getElementById('hairTexturePanel');
+  const select = document.getElementById('hairTextureSelect');
+  const hint = document.getElementById('hairTextureHint');
+  if (!panel || !select || !hint) return;
+
+  const active = state.selection.categoryId === 'hair-stylized';
+  panel.hidden = !active;
+  if (!active) return;
+
+  const value = state.selection.hairTexture || state.selection.undertoneId || '1b';
+  if (document.activeElement !== select) select.value = value;
+  const meta = hairTextureMeta(value);
+  hint.textContent = meta[2];
+}
 
 
 const KAORU_CREATIVE_ATMO_FILTERS = {
@@ -1161,7 +1256,7 @@ async function copyText(text) {
 }
 
 function paletteFrom(state, baseHex = state.palette.baseHex, params = state.params) {
-  const entries = generateDetailedPalette({ categoryId: state.selection.categoryId, baseHex, params });
+  const entries = generateDetailedPalette({ categoryId: state.selection.categoryId, baseHex, params, hairTexture: state.selection.hairTexture || state.selection.undertoneId || '1b' });
   return { source: 'base-color', baseHex, entries, colors: entries.map((item) => item.hex), roles: entries.map((item) => item.role) };
 }
 
@@ -2255,6 +2350,7 @@ function render(state) {
   const category=categoryById(state.selection.categoryId);
   const original=state.palette.entries;const illuminated=applyLightingToPalette(original,state.lighting);const paletteView=state.ui.paletteView || 'illuminated';const selectedLight=state.lighting.lights.find((light)=>light.id===state.lighting.selectedLightId) || state.lighting.lights[0];const selectedEntries=applyLightingToPalette(original,state.lighting,{onlyLightId:selectedLight?.id});
   renderCategories(state); renderParameters(state.params); renderLightingControls(state);
+  syncHairTextureUI(state);
   const comparing=paletteView==='compare';elements.swatchGrid.hidden=comparing;elements.comparisonGrid.hidden=!comparing;
   if(comparing)renderComparison(original,illuminated);else renderSwatches(paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated,{editable:paletteView==='original',kind:paletteView});
   renderExtractedColors(state.reference.extractedColors); renderRecentColors(state.reference.recentColors);
@@ -2410,7 +2506,7 @@ function captureReferenceColor(event) {
   } catch(error) { showToast(error.message || 'No se pudo leer ese pÃ­xel.'); }
 }
 
-elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const next={...state,selection:{...state.selection,categoryId:button.dataset.category,presetId:'custom'}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
+elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const enteringHair=button.dataset.category==='hair-stylized';const next={...state,selection:{...state.selection,categoryId:button.dataset.category,presetId:'custom',hairTexture:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.hairTexture,undertoneId:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.undertoneId}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
 elements.baseHex.addEventListener('input',()=>{const valid=Boolean(normalizeHex(elements.baseHex.value));elements.hexError.hidden=valid;elements.baseHex.setAttribute('aria-invalid',String(!valid));if(valid)elements.basePicker.value=normalizeHex(elements.baseHex.value);});
 elements.baseHex.addEventListener('keydown',(event)=>{if(event.key==='Enter')applyManualHex();}); elements.applyHex.addEventListener('click',applyManualHex);
 elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=elements.basePicker.value.toUpperCase();applyManualHex();});

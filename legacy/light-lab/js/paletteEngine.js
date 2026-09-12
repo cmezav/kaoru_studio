@@ -1,4 +1,4 @@
-﻿import { adjustHex, clamp, mixHex, normalizeHex, normalizeWords, temperatureShift } from './colorUtils.js';
+import { adjustHex, clamp, mixHex, normalizeHex, normalizeWords, temperatureShift } from './colorUtils.js';
 import { LIGHT_LAB_CATEGORIES, categoryById, undertoneById, variantById } from './presets.js';
 
 export const DEFAULT_PARAMS = { warmth: 0, saturation: 0, contrast: 0, shadowDepth: 0, lightStrength: 0, specular: 0, softness: 0 };
@@ -9,19 +9,87 @@ const amount = (value, scale) => (Number(value) || 0) / 100 * scale;
 export function baseForSelection(categoryId, variantId, undertoneId) {
   const category = categoryById(categoryId); const variant = variantById(category, variantId);
   const undertone = undertoneById(category, undertoneId);
+  if (categoryId === 'hair-stylized') return variant.baseHex;
   return undertone ? mixHex(variant.baseHex, undertone.mix, undertone.strength) : variant.baseHex;
 }
 
+const HAIR_TEXTURE_DEFAULT = '1b';
+
+function hairTextureProfile(id) {
+  const key = String(id || HAIR_TEXTURE_DEFAULT).toLowerCase();
+  const profiles = {
+    '1a': { family:'straight', gloss:'ribbon', softness: 34, specular: 20, light: 16, depth: -10, contrast: -8, saturation: 0 },
+    '1b': { family:'straight', gloss:'sheet', softness: 22, specular: 12, light: 10, depth: -4, contrast: -2, saturation: 0 },
+    '1c': { family:'straight', gloss:'broad', softness: 12, specular: 4, light: 8, depth: 6, contrast: 5, saturation: -2 },
+    '2a': { family:'wavy', gloss:'soft-wave', softness: 18, specular: 10, light: 10, depth: 2, contrast: 4, saturation: 0 },
+    '2b': { family:'wavy', gloss:'wave-band', softness: 14, specular: 8, light: 8, depth: 10, contrast: 10, saturation: 2 },
+    '2c': { family:'wavy', gloss:'deep-wave', softness: 10, specular: 6, light: 9, depth: 14, contrast: 14, saturation: 2 },
+    '3a': { family:'curly', gloss:'curl-cluster', softness: 10, specular: 8, light: 10, depth: 12, contrast: 12, saturation: 3 },
+    '3b': { family:'curly', gloss:'ringlet', softness: 8, specular: 6, light: 10, depth: 16, contrast: 16, saturation: 3 },
+    '3c': { family:'curly', gloss:'tight-ringlet', softness: 6, specular: 5, light: 11, depth: 20, contrast: 18, saturation: 4 },
+    '4a': { family:'coily', gloss:'coil', softness: 8, specular: 5, light: 8, depth: 18, contrast: 18, saturation: 3 },
+    '4b': { family:'coily', gloss:'zigzag', softness: 6, specular: 4, light: 8, depth: 20, contrast: 20, saturation: 2 },
+    '4c': { family:'coily', gloss:'dense-z', softness: 5, specular: 4, light: 7, depth: 24, contrast: 22, saturation: 1 }
+  };
+  return profiles[key] || profiles[HAIR_TEXTURE_DEFAULT];
+}
+
+function hairRoleNames(id) {
+  const family = hairTextureProfile(id).family;
+  if (family === 'straight') {
+    return {
+      secondary: 'Reflejo secundario',
+      mid: 'Banda de luz',
+      soft: 'Brillo suave',
+      medium: 'Brillo corrido',
+      strong: 'Brillo principal',
+      rim: 'Rim light largo'
+    };
+  }
+  if (family === 'wavy') {
+    return {
+      secondary: 'Reflejo por ondas',
+      mid: 'Cresta iluminada',
+      soft: 'Luz entre ondas',
+      medium: 'Brillo por bandas',
+      strong: 'Brillo de onda',
+      rim: 'Rim light ondulado'
+    };
+  }
+  if (family === 'curly') {
+    return {
+      secondary: 'Reflejo por bucles',
+      mid: 'Luz en bucles',
+      soft: 'Curva iluminada',
+      medium: 'Brillo fragmentado',
+      strong: 'Brillo de rizo',
+      rim: 'Rim light por rizos'
+    };
+  }
+  return {
+    secondary: 'Reflejo por coils',
+    mid: 'Luz puntual',
+    soft: 'Superficie iluminada',
+    medium: 'Brillo compacto',
+    strong: 'Brillo puntual',
+    rim: 'Rim light compacto'
+  };
+}
 function preparedBase(baseHex, params) {
   const saturated = adjustHex(baseHex, { s: amount(params.saturation, 28) });
   return temperatureShift(saturated, params.warmth * .55);
 }
 
 function organicPalette(categoryId, baseHex, params) {
-  const base = preparedBase(baseHex, params); const contrast = amount(params.contrast, 9);
-  const depth = amount(params.shadowDepth, 9); const light = amount(params.lightStrength, 8);
-  const soft = amount(params.softness, 4); const spec = clamp(.48 + amount(params.specular, .34), .12, .9);
+  const base = preparedBase(baseHex, params);
   const fantasy = categoryId === 'fantasy-skin'; const hair = categoryId === 'hair-stylized';
+  const texture = hair ? hairTextureProfile(params.hairTexture || params.hairTextureId) : null;
+  const names = hair ? hairRoleNames(params.hairTexture || params.hairTextureId) : null;
+  const contrast = amount((params.contrast || 0) + (texture?.contrast || 0), 9);
+  const depth = amount((params.shadowDepth || 0) + (texture?.depth || 0), 9);
+  const light = amount((params.lightStrength || 0) + (texture?.light || 0), 8);
+  const soft = amount((params.softness || 0) + (texture?.softness || 0), 4);
+  const spec = clamp(.48 + amount((params.specular || 0) + (texture?.specular || 0), .34), .12, .9);
   const coolShadow = temperatureShift(adjustHex(base, { h: fantasy ? 18 : hair ? 10 : -8, s: 7 }), -42);
   const warmTone = temperatureShift(adjustHex(base, { h: -3, s: 7 }), 38);
   const circulation = fantasy ? adjustHex(base, { h: 42, s: 18, l: 3 }) : hair ? adjustHex(base, { h: -18, s: 13, l: 2 }) : mixHex(base, '#C85F68', .28);
@@ -36,13 +104,13 @@ function organicPalette(categoryId, baseHex, params) {
     entry('Base principal', base, 'base'),
     entry('TransiciÃ³n cÃ¡lida', mixHex(base,warmTone,.44), 'transition'),
     entry(hair?'Reflejo secundario':'Tono de circulaciÃ³n', mixHex(base,circulation,hair?.40:.34), 'transition'),
-    entry('Medio tono claro', adjustHex(base,{l:7+light*.25+soft,s:-3}), 'light'),
-    entry('Luz suave', temperatureShift(adjustHex(base,{l:13+light*.45+soft,s:-6}),params.warmth*.35), 'light'),
-    entry('Luz media', temperatureShift(adjustHex(base,{l:20+light*.65,s:-10}),params.warmth*.42), 'light'),
-    entry('Luz fuerte', adjustHex(base,{l:28+light-contrast*.2,s:-15}), 'light'),
+    entry(hair?(names?.mid || 'Medio tono claro'):'Medio tono claro', adjustHex(base,{l:7+light*.25+soft,s:-3}), 'light'),
+    entry(hair?(names?.soft || 'Luz suave'):'Luz suave', temperatureShift(adjustHex(base,{l:13+light*.45+soft,s:-6}),params.warmth*.35), 'light'),
+    entry(hair?(names?.medium || 'Luz media'):'Luz media', temperatureShift(adjustHex(base,{l:20+light*.65,s:-10}),params.warmth*.42), 'light'),
+    entry(hair?(names?.strong || 'Luz fuerte'):'Luz fuerte', adjustHex(base,{l:28+light-contrast*.2,s:-15}), 'light'),
     entry('Highlight', mixHex(adjustHex(base,{l:35+light,s:-22}),'#FFF8F2',spec), 'highlight'),
     entry('Luz de rebote', mixHex(adjustHex(base,{l:10,s:2}),ambient,.42), 'bounce'),
-    entry(hair?'Brillo / Rim light':'Brillo especular', mixHex(adjustHex(ambient,{l:24,s:-8}),'#FFFFFF',spec*.7), 'highlight')
+    entry(hair?(names?.rim || 'Brillo / Rim light'):'Brillo especular', mixHex(adjustHex(ambient,{l:24,s:-8}),'#FFFFFF',spec*.7), 'highlight')
   ];
   return values;
 }
@@ -71,8 +139,8 @@ function materialPalette(baseHex, params) {
   ];
 }
 
-export function generateDetailedPalette({ categoryId, baseHex, params = {} }) {
-  const safeBase = normalizeHex(baseHex) || '#B7775E'; const settings = { ...DEFAULT_PARAMS, ...params };
+export function generateDetailedPalette({ categoryId, baseHex, params = {}, hairTexture = null }) {
+  const safeBase = normalizeHex(baseHex) || '#B7775E'; const settings = { ...DEFAULT_PARAMS, ...params, hairTexture: hairTexture || params.hairTexture || params.hairTextureId || null };
   return categoryId === 'materials' ? materialPalette(safeBase, settings) : organicPalette(categoryId, safeBase, settings);
 }
 
