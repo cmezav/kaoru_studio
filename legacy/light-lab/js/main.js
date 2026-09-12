@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-final-polish-v3-1-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-density-colors-v4-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -167,6 +167,98 @@ function ensureHairTextureUI() {
   select.innerHTML = HAIR_TEXTURE_OPTIONS
     .map(([id, label]) => `<option value="${id}">${label}</option>`)
     .join('');
+  const hairColorLibrary = document.createElement('details');
+  hairColorLibrary.className = 'hair-color-library';
+  hairColorLibrary.open = true;
+  hairColorLibrary.innerHTML = `
+    <summary>
+      <span>
+        <strong>Colores de cabello</strong>
+        <small id="hairColorName">Elige una variante</small>
+      </span>
+      <b id="hairColorCount"></b>
+    </summary>
+    <div class="hair-color-tools">
+      <input id="hairColorSearch" type="search" autocomplete="off" placeholder="Buscar negro, rubio, violeta, cian..." aria-label="Buscar color de cabello">
+    </div>
+    <div id="hairColorSwatches" class="hair-color-swatches" aria-label="Biblioteca de colores de cabello"></div>
+    <p class="hair-color-help">Elige una base y luego puedes editarla libremente con el selector HEX de arriba. La iluminación seguirá afectando sombras, luces, rebote y rim light.</p>
+  `;
+  panel.appendChild(hairColorLibrary);
+
+  const hairColorSearch = hairColorLibrary.querySelector('#hairColorSearch');
+  const hairColorSwatches = hairColorLibrary.querySelector('#hairColorSwatches');
+  const hairColorCount = hairColorLibrary.querySelector('#hairColorCount');
+
+  const renderHairColorLibrary = (filter = '') => {
+    const hairCategory = categoryById('hair-stylized');
+    const query = String(filter || '').trim().toLowerCase();
+    const variants = (hairCategory?.variants || []).filter((variant) => {
+      if (!query) return true;
+      return `${variant.name} ${variant.id}`.toLowerCase().includes(query);
+    });
+
+    hairColorCount.textContent = `${variants.length}/${hairCategory?.variants?.length || 0}`;
+    hairColorSwatches.innerHTML = variants.map((variant) => `
+      <button type="button" class="hair-color-swatch" data-hair-color="${variant.id}" title="${variant.name} · ${variant.baseHex}">
+        <i style="--hair-swatch:${variant.baseHex}"></i>
+        <span>${variant.name}</span>
+        <small>${variant.baseHex}</small>
+      </button>
+    `).join('');
+  };
+
+  renderHairColorLibrary();
+  hairColorSearch.addEventListener('input', () => renderHairColorLibrary(hairColorSearch.value));
+  hairColorSwatches.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-hair-color]');
+    if (!button) return;
+    const hairCategory = categoryById('hair-stylized');
+    const variant = hairCategory?.variants?.find((item) => item.id === button.dataset.hairColor);
+    if (!variant) return;
+
+    store.setState((state) => {
+      const next = {
+        ...state,
+        selection: {
+          ...state.selection,
+          variantId: variant.id,
+          presetId: 'custom'
+        }
+      };
+      return {
+        ...next,
+        palette: paletteFrom(next, variant.baseHex)
+      };
+    });
+    showToast(`${variant.name} · ${variant.baseHex}`);
+  });
+
+  if (!document.getElementById('hairColorLibraryStyles')) {
+    const style = document.createElement('style');
+    style.id = 'hairColorLibraryStyles';
+    style.textContent = `
+      .hair-color-library{margin-top:12px;border:1px solid var(--lab-line);border-radius:12px;background:var(--lab-surface-2);overflow:hidden;color:var(--lab-text)}
+      .hair-color-library>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;cursor:pointer;list-style:none}
+      .hair-color-library>summary::-webkit-details-marker{display:none}
+      .hair-color-library>summary span{display:grid;gap:2px;min-width:0}
+      .hair-color-library>summary strong{font-size:12px}
+      .hair-color-library>summary small{color:var(--lab-muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .hair-color-library>summary b{font-size:9px;color:var(--lab-accent);background:var(--lab-accent-soft);padding:4px 6px;border-radius:999px}
+      .hair-color-tools{padding:0 9px 8px}
+      .hair-color-tools input{width:100%;height:34px;border:1px solid var(--lab-line);border-radius:9px;background:var(--lab-surface);color:var(--lab-text);padding:0 9px;font-size:11px;outline:none}
+      .hair-color-tools input:focus{border-color:var(--lab-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--lab-accent) 16%,transparent)}
+      .hair-color-swatches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:245px;overflow:auto;padding:0 9px 9px;scrollbar-width:thin}
+      .hair-color-swatch{min-width:0;display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;column-gap:7px;align-items:center;padding:6px;border:1px solid var(--lab-line);border-radius:9px;background:var(--lab-surface);color:var(--lab-text);text-align:left;cursor:pointer}
+      .hair-color-swatch:hover{border-color:var(--lab-accent);transform:translateY(-1px)}
+      .hair-color-swatch.is-active{border-color:var(--lab-accent);background:var(--lab-accent-soft);box-shadow:inset 0 0 0 1px var(--lab-accent)}
+      .hair-color-swatch i{grid-row:1/3;width:28px;height:28px;border-radius:8px;background:var(--hair-swatch);border:1px solid color-mix(in srgb,var(--lab-text) 18%,transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+      .hair-color-swatch span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:800}
+      .hair-color-swatch small{color:var(--lab-muted);font:700 8px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace}
+      .hair-color-help{margin:0;padding:0 10px 10px;color:var(--lab-muted);font-size:9px;line-height:1.4}
+    `;
+    document.head.appendChild(style);
+  }
 
   select.addEventListener('change', () => {
     const value = select.value || '1b';
@@ -299,6 +391,24 @@ function syncHairTextureUI(state) {
 
   const meta = hairTextureMeta(value);
   hint.textContent = meta[2];
+  const hairCategory = categoryById('hair-stylized');
+  const baseHex = String(state.palette.baseHex || '').toUpperCase();
+  const selectedHairColor = (hairCategory?.variants || []).find((variant) =>
+    String(variant.baseHex || '').toUpperCase() === baseHex
+  );
+  const colorName = panel.querySelector('#hairColorName');
+  if (colorName) {
+    colorName.textContent = selectedHairColor
+      ? `${selectedHairColor.name} · ${selectedHairColor.baseHex}`
+      : `Personalizado · ${state.palette.baseHex}`;
+  }
+  panel.querySelectorAll('[data-hair-color]').forEach((button) => {
+    const variant = (hairCategory?.variants || []).find((item) => item.id === button.dataset.hairColor);
+    const selected = Boolean(variant) && String(variant.baseHex).toUpperCase() === baseHex;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+
 
   const studyMode = window.KAORU_HAIR_STUDY_MODE || 'render';
   panel.querySelectorAll('[data-hair-study]').forEach((button) => {
