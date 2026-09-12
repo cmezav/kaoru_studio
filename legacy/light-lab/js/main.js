@@ -140,11 +140,12 @@ function hairTextureMeta(id){
 
 function ensureHairTextureUI() {
   if (document.getElementById('hairTexturePanel')) return;
+
   const panel = document.createElement('section');
   panel.id = 'hairTexturePanel';
   panel.className = 'glass-card hair-texture-panel';
   panel.hidden = true;
-  panel.innerHTML = 
+  panel.innerHTML = `
     <div class="panel-head">
       <strong>Textura de cabello</strong>
       <span>1A a 4C</span>
@@ -154,16 +155,20 @@ function ensureHairTextureUI() {
       <select id="hairTextureSelect"></select>
     </label>
     <p id="hairTextureHint" class="hair-texture-hint"></p>
-  ;
+  `;
 
   const container = elements.categoryGrid?.parentElement || elements.categoryGrid;
   if (!container) return;
   container.insertAdjacentElement('afterend', panel);
 
   const select = document.getElementById('hairTextureSelect');
-  select.innerHTML = HAIR_TEXTURE_OPTIONS.map(([id, label]) => <option value=""></option>).join('');
+  select.innerHTML = HAIR_TEXTURE_OPTIONS
+    .map(([id, label]) => `<option value="${id}">${label}</option>`)
+    .join('');
+
   select.addEventListener('change', () => {
     const value = select.value || '1b';
+
     store.setState((state) => {
       const next = {
         ...state,
@@ -174,42 +179,90 @@ function ensureHairTextureUI() {
           presetId: 'custom'
         }
       };
-      return { ...next, palette: paletteFrom(next, state.palette.baseHex) };
+
+      return {
+        ...next,
+        palette: paletteFrom(next, state.palette.baseHex)
+      };
     });
+
     const meta = hairTextureMeta(value);
     const hint = document.getElementById('hairTextureHint');
     if (hint) hint.textContent = meta[2];
-    showToast(Cabello );
+    showToast(`Cabello ${meta[1]}`);
   });
 
   if (!document.getElementById('hairTexturePanelStyles')) {
     const style = document.createElement('style');
     style.id = 'hairTexturePanelStyles';
-    style.textContent = 
-      .hair-texture-panel{margin:14px 0 0;padding:14px;border-radius:18px}
-      .hair-texture-panel .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
-      .hair-texture-panel .panel-head span{font-size:12px;opacity:.72}
-      .hair-texture-panel .field-stack{display:grid;gap:6px}
-      .hair-texture-panel select{width:100%;padding:10px 12px;border-radius:12px}
-      .hair-texture-hint{margin:8px 0 0;font-size:12px;line-height:1.45;opacity:.82}
-    ;
+    style.textContent = `
+      .hair-texture-panel{
+        margin:14px 0 0;
+        padding:14px;
+        border-radius:18px;
+      }
+      .hair-texture-panel .panel-head{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        margin-bottom:10px;
+      }
+      .hair-texture-panel .panel-head strong{
+        font-size:14px;
+      }
+      .hair-texture-panel .panel-head span{
+        font-size:12px;
+        opacity:.72;
+      }
+      .hair-texture-panel .field-stack{
+        display:grid;
+        gap:6px;
+      }
+      .hair-texture-panel .field-stack > span{
+        font-size:12px;
+      }
+      .hair-texture-panel select{
+        width:100%;
+        min-height:40px;
+        padding:8px 10px;
+        border-radius:12px;
+        font:inherit;
+        font-size:13px;
+      }
+      .hair-texture-hint{
+        margin:8px 0 0;
+        font-size:12px;
+        line-height:1.45;
+        opacity:.82;
+      }
+    `;
     document.head.appendChild(style);
   }
 }
 
 function syncHairTextureUI(state) {
   ensureHairTextureUI();
+
   const panel = document.getElementById('hairTexturePanel');
   const select = document.getElementById('hairTextureSelect');
   const hint = document.getElementById('hairTextureHint');
+
   if (!panel || !select || !hint) return;
 
   const active = state.selection.categoryId === 'hair-stylized';
   panel.hidden = !active;
   if (!active) return;
 
-  const value = state.selection.hairTexture || state.selection.undertoneId || '1b';
-  if (document.activeElement !== select) select.value = value;
+  const value =
+    state.selection.hairTexture ||
+    state.selection.undertoneId ||
+    '1b';
+
+  if (document.activeElement !== select) {
+    select.value = value;
+  }
+
   const meta = hairTextureMeta(value);
   hint.textContent = meta[2];
 }
