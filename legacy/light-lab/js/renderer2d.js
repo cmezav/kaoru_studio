@@ -1783,6 +1783,289 @@ function renderFacetedHead(ctx, width, height, colors, lightVector, asaro = fals
   ctx.restore();
 }
 
+const HAIR_VISUAL_PROFILES = {
+  '1a': { label:'1A', family:'LISO FINO', wave:.025, frequency:.55, width:.20, strands:58, frizz:.006, weight:.70, highlight:.92 },
+  '1b': { label:'1B', family:'LISO CON CUERPO', wave:.055, frequency:.70, width:.24, strands:62, frizz:.010, weight:.82, highlight:.82 },
+  '1c': { label:'1C', family:'LISO GRUESO', wave:.080, frequency:.82, width:.29, strands:66, frizz:.014, weight:1.02, highlight:.70 },
+  '2a': { label:'2A', family:'ONDULADO SUAVE', wave:.16, frequency:1.35, width:.26, strands:64, frizz:.018, weight:.82, highlight:.80 },
+  '2b': { label:'2B', family:'ONDULADO', wave:.23, frequency:1.75, width:.30, strands:68, frizz:.028, weight:.88, highlight:.74 },
+  '2c': { label:'2C', family:'ONDULADO PROFUNDO', wave:.29, frequency:2.15, width:.34, strands:72, frizz:.036, weight:.96, highlight:.68 },
+  '3a': { label:'3A', family:'RIZO SUELTO', wave:.31, frequency:2.75, width:.34, strands:74, frizz:.040, weight:.94, highlight:.68 },
+  '3b': { label:'3B', family:'RIZADO', wave:.34, frequency:3.55, width:.37, strands:78, frizz:.050, weight:1.00, highlight:.62 },
+  '3c': { label:'3C', family:'RIZO APRETADO', wave:.36, frequency:4.75, width:.40, strands:84, frizz:.060, weight:1.05, highlight:.56 },
+  '4a': { label:'4A', family:'COIL DEFINIDO', wave:.34, frequency:6.00, width:.42, strands:90, frizz:.070, weight:1.08, highlight:.52 },
+  '4b': { label:'4B', family:'PATRON Z', wave:.31, frequency:7.20, width:.44, strands:96, frizz:.080, weight:1.12, highlight:.47, zigzag:true },
+  '4c': { label:'4C', family:'ZIGZAG DENSO', wave:.28, frequency:8.60, width:.47, strands:106, frizz:.090, weight:1.16, highlight:.42, zigzag:true }
+};
+
+function hairVisualProfile(id) {
+  return HAIR_VISUAL_PROFILES[String(id || '1b').toLowerCase()] || HAIR_VISUAL_PROFILES['1b'];
+}
+
+function triangleWave(value) {
+  const wrapped = ((value % 1) + 1) % 1;
+  return 1 - 4 * Math.abs(wrapped - .5);
+}
+
+function hairPoint(profile, geometry, t, offset = 0, seed = 0) {
+  const { cx, top, bottom, massWidth } = geometry;
+  const y = top + (bottom - top) * t;
+  const phase = seed * .47 + offset * .22;
+  const waveArg = t * profile.frequency + phase;
+  const waveUnit = profile.zigzag
+    ? triangleWave(waveArg)
+    : Math.sin(waveArg * Math.PI * 2);
+  const wave = waveUnit * massWidth * profile.wave;
+  const body = .58 + .42 * Math.sin(Math.PI * Math.max(0, Math.min(1, t)));
+  const offsetX = offset * massWidth * body;
+  const taper = 1 - Math.pow(Math.max(0, t - .74) / .26, 1.35) * .70;
+  const micro = Math.sin((t * 17 + seed * 2.1) * Math.PI) *
+    massWidth * profile.frizz * (Math.abs(offset) * .55 + .18);
+  return {
+    x: cx + (wave + offsetX + micro) * taper,
+    y
+  };
+}
+
+function traceHairStrand(ctx, profile, geometry, offset, seed, start = 0, end = 1) {
+  const steps = Math.max(46, Math.round(58 + profile.frequency * 6));
+  ctx.beginPath();
+  for (let i = 0; i <= steps; i += 1) {
+    const t = start + (end - start) * (i / steps);
+    const point = hairPoint(profile, geometry, t, offset, seed);
+    if (!i) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
+  }
+}
+
+function hairStudyLabel(ctx, x, y, target, text, color, align = 'left') {
+  const fontSize = Math.max(11, Math.min(15, ctx.canvas.width * .012));
+  ctx.save();
+  ctx.font = `700 ${fontSize}px Inter, system-ui, sans-serif`;
+  const paddingX = 9;
+  const boxH = fontSize + 12;
+  const textW = ctx.measureText(text).width;
+  const boxW = textW + paddingX * 2;
+  const boxX = align === 'right' ? x - boxW : x;
+
+  ctx.strokeStyle = rgba(color, .78);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(target.x, target.y);
+  ctx.lineTo(align === 'right' ? boxX + boxW : boxX, y + boxH * .5);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(17,14,20,.82)';
+  roundedRect(ctx, boxX, y, boxW, boxH, 10);
+  ctx.fill();
+  ctx.strokeStyle = rgba(color, .72);
+  ctx.stroke();
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, boxX + paddingX, y + boxH * .5 + .5);
+  ctx.restore();
+}
+
+function renderHairStudyMap(ctx, width, height, colors, profile, geometry, lightVector) {
+  const lightSide = lightVector.x >= 0 ? 1 : -1;
+  const shadowSide = -lightSide;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  traceHairStrand(ctx, profile, geometry, shadowSide * .48, 1.2, .08, .82);
+  ctx.strokeStyle = rgba(shadowColor(colors), .72);
+  ctx.lineWidth = Math.max(9, geometry.massWidth * .13);
+  ctx.stroke();
+
+  traceHairStrand(ctx, profile, geometry, 0, .7, .18, .90);
+  ctx.strokeStyle = rgba(midColor(colors), .48);
+  ctx.lineWidth = Math.max(8, geometry.massWidth * .10);
+  ctx.stroke();
+
+  traceHairStrand(ctx, profile, geometry, lightSide * .48, 1.8, .16, .76);
+  ctx.strokeStyle = rgba(highlightColor(colors), .78);
+  ctx.lineWidth = Math.max(6, geometry.massWidth * .065);
+  ctx.stroke();
+
+  traceHairStrand(ctx, profile, geometry, shadowSide * .28, 2.6, .56, .94);
+  ctx.strokeStyle = rgba(bounceColor(colors), .62);
+  ctx.lineWidth = Math.max(5, geometry.massWidth * .050);
+  ctx.stroke();
+
+  traceHairStrand(ctx, profile, geometry, lightSide * .86, 3.4, .10, .88);
+  ctx.strokeStyle = rgba(rimColor(colors), .82);
+  ctx.lineWidth = Math.max(4, geometry.massWidth * .035);
+  ctx.stroke();
+  ctx.restore();
+
+  const shadowTarget = hairPoint(profile, geometry, .27, shadowSide * .50, 1.2);
+  const baseTarget = hairPoint(profile, geometry, .50, 0, .7);
+  const highlightTarget = hairPoint(profile, geometry, .34, lightSide * .48, 1.8);
+  const bounceTarget = hairPoint(profile, geometry, .75, shadowSide * .28, 2.6);
+  const rimTarget = hairPoint(profile, geometry, .62, lightSide * .86, 3.4);
+
+  hairStudyLabel(ctx, width * .035, height * .18, shadowTarget, 'SOMBRA / OCLUSION', shadowColor(colors), 'left');
+  hairStudyLabel(ctx, width * .035, height * .42, baseTarget, 'BASE / MEDIO TONO', midColor(colors), 'left');
+  hairStudyLabel(ctx, width * .965, height * .21, highlightTarget, 'HIGHLIGHT', highlightColor(colors), 'right');
+  hairStudyLabel(ctx, width * .035, height * .69, bounceTarget, 'LUZ DE REBOTE', bounceColor(colors), 'left');
+  hairStudyLabel(ctx, width * .965, height * .58, rimTarget, 'RIM LIGHT', rimColor(colors), 'right');
+}
+
+function renderHairPreview(ctx, width, height, colors, lighting, textureId = '1b', studyMode = 'render') {
+  const profile = hairVisualProfile(textureId);
+  const lightVector = dominantLightVector(lighting);
+  const minSide = Math.min(width, height);
+  const geometry = {
+    cx: width * .50,
+    top: height * .115,
+    bottom: height * .83,
+    massWidth: minSide * profile.width
+  };
+
+  renderGroundShadow(
+    ctx,
+    width * .50,
+    height * .86,
+    geometry.massWidth * .72,
+    Math.max(18, height * .038),
+    shadowColor(colors)
+  );
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const root = hairPoint(profile, geometry, .02, 0, 0);
+  const rootGlow = ctx.createRadialGradient(
+    root.x, root.y, 0,
+    root.x, root.y,
+    geometry.massWidth * .72
+  );
+  rootGlow.addColorStop(0, rgba(colorAt(colors, 4, shadowColor(colors)), .82));
+  rootGlow.addColorStop(.66, rgba(shadowColor(colors), .34));
+  rootGlow.addColorStop(1, rgba(shadowColor(colors), 0));
+  ctx.fillStyle = rootGlow;
+  ctx.fillRect(
+    root.x - geometry.massWidth,
+    root.y - geometry.massWidth * .55,
+    geometry.massWidth * 2,
+    geometry.massWidth * 1.15
+  );
+
+  const lightSide = lightVector.x >= 0 ? 1 : -1;
+  for (let i = 0; i < profile.strands; i += 1) {
+    const unit = profile.strands <= 1 ? 0 : i / (profile.strands - 1);
+    const offset = unit * 2 - 1;
+    const lightness = (offset * lightSide + 1) * .5;
+    let colorIndex = 5;
+    if (lightness < .18) colorIndex = 1 + (i % 3);
+    else if (lightness < .42) colorIndex = 4 + (i % 3);
+    else if (lightness < .68) colorIndex = 7 + (i % 3);
+    else if (lightness < .88) colorIndex = 10 + (i % 2);
+    else colorIndex = 12 + (i % 2);
+
+    traceHairStrand(ctx, profile, geometry, offset * .92, i * .173);
+    ctx.strokeStyle = rgba(colorAt(colors, colorIndex, midColor(colors)), .70 + (i % 5) * .045);
+    ctx.lineWidth = Math.max(
+      .75,
+      profile.weight * (1.1 + (1 - Math.abs(offset)) * 1.45) * (minSide / 560)
+    );
+    ctx.stroke();
+  }
+
+  const highlightCount = profile.family === 'LISO FINO'
+    ? 10
+    : profile.frequency < 2.5
+      ? 9
+      : profile.frequency < 5
+        ? 7
+        : 5;
+
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < highlightCount; i += 1) {
+    const offset = lightSide * (.28 + i / Math.max(1, highlightCount - 1) * .52);
+    const start = .14 + (i % 3) * .07;
+    const end = Math.min(.90, start + (.54 - Math.min(.24, profile.frequency * .025)));
+    traceHairStrand(ctx, profile, geometry, offset, 2.2 + i * .37, start, end);
+    ctx.strokeStyle = rgba(
+      i % 3 === 0 ? highlightColor(colors) : lightColor(colors),
+      profile.highlight * (.48 + (i % 4) * .09)
+    );
+    ctx.lineWidth = Math.max(1.2, minSide * (.0028 + (i % 2) * .0012));
+    ctx.stroke();
+  }
+
+  traceHairStrand(ctx, profile, geometry, lightSide * .94, 4.7, .08, .92);
+  ctx.strokeStyle = rgba(rimColor(colors), .64);
+  ctx.lineWidth = Math.max(1.3, minSide * .0033);
+  ctx.stroke();
+
+  const lights = lighting ? activeLights(lighting).slice(0, 3) : [];
+  lights.forEach((light, index) => {
+    const side = index % 2 ? -lightSide : lightSide;
+    traceHairStrand(
+      ctx,
+      profile,
+      geometry,
+      side * (.58 + index * .10),
+      7 + index,
+      .16 + index * .06,
+      .70 + index * .07
+    );
+    ctx.strokeStyle = rgba(light.color || '#FFFFFF', .16);
+    ctx.lineWidth = Math.max(5, geometry.massWidth * .04);
+    ctx.stroke();
+  });
+
+  ctx.globalCompositeOperation = 'source-over';
+
+  const flyawayCount = Math.round(5 + profile.frizz * 70);
+  for (let i = 0; i < flyawayCount; i += 1) {
+    const side = i % 2 ? 1 : -1;
+    const startT = .14 + ((i * 31) % 62) / 100;
+    const start = hairPoint(profile, geometry, startT, side * .84, i);
+    const length = geometry.massWidth * (.18 + (i % 4) * .08);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.quadraticCurveTo(
+      start.x + side * length * .75,
+      start.y - length * .35,
+      start.x + side * length,
+      start.y + length * .10
+    );
+    ctx.strokeStyle = rgba(colorAt(colors, 9 + (i % 4), lightColor(colors)), .42);
+    ctx.lineWidth = Math.max(.7, minSide * .0015);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  if (studyMode === 'map') {
+    renderHairStudyMap(ctx, width, height, colors, profile, geometry, lightVector);
+  }
+
+  ctx.save();
+  ctx.fillStyle = document.documentElement.dataset.theme === 'night'
+    ? 'rgba(255,255,255,.86)'
+    : 'rgba(34,28,39,.78)';
+  ctx.font = `800 ${Math.max(13, Math.round(width * .015))}px Inter, system-ui, sans-serif`;
+  ctx.fillText(`CABELLO ${profile.label} - ${profile.family}`, width * .028, height * .055);
+  ctx.font = `500 ${Math.max(10, Math.round(width * .0105))}px Inter, system-ui, sans-serif`;
+  ctx.globalAlpha = .72;
+  ctx.fillText(
+    studyMode === 'map'
+      ? 'Mapa de estudio: sombra, base, highlight, rebote y rim light'
+      : 'Textura procedural + respuesta a la iluminacion activa',
+    width * .028,
+    height * .086
+  );
+  ctx.restore();
+}
+
 function renderModeLabel(ctx, width, height, mode) {
   const labels = {
     sphere: 'ESFERA',
@@ -1807,7 +2090,7 @@ function renderModeLabel(ctx, width, height, mode) {
   ctx.restore();
 }
 
-export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = null) {
+export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = null, options = {}) {
   if (!canvas) return;
   const bounds = canvas.getBoundingClientRect();
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -1824,6 +2107,20 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
 
   const lightVector = dominantLightVector(lighting);
   const safeColors = Array.isArray(colors) && colors.length ? colors : ['#777777'];
+
+  if (options?.categoryId === 'hair-stylized') {
+    renderHairPreview(
+      ctx,
+      width,
+      height,
+      safeColors,
+      lighting || lightVector,
+      options.hairTexture || '1b',
+      options.hairStudyMode || 'render'
+    );
+    renderLightGuides(ctx, width, height, lighting);
+    return;
+  }
 
   switch (mode) {
     case 'cylinder':

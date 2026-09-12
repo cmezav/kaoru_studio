@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=shared-light-v2';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-visual-map-v2-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -133,6 +133,8 @@ const HAIR_TEXTURE_OPTIONS = [
   ['4c','Tipo 4C - zigzag denso','Maxima densidad y brillo puntual.']
 ];
 
+window.KAORU_HAIR_STUDY_MODE = window.KAORU_HAIR_STUDY_MODE || 'render';
+
 function hairTextureMeta(id){
   const found = HAIR_TEXTURE_OPTIONS.find((item) => item[0] === id);
   return found || HAIR_TEXTURE_OPTIONS[1];
@@ -191,6 +193,38 @@ function ensureHairTextureUI() {
     if (hint) hint.textContent = meta[2];
     showToast(`Cabello ${meta[1]}`);
   });
+
+  const studyControls = document.createElement('div');
+  studyControls.className = 'hair-study-controls';
+  studyControls.innerHTML = [
+    '<span>Visualizacion</span>',
+    '<div class="hair-study-buttons">',
+    '<button type="button" data-hair-study="render">Cabello</button>',
+    '<button type="button" data-hair-study="map">Mapa de estudio</button>',
+    '</div>'
+  ].join('');
+  panel.appendChild(studyControls);
+
+  studyControls.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-hair-study]');
+    if (!button) return;
+    window.KAORU_HAIR_STUDY_MODE = button.dataset.hairStudy === 'map' ? 'map' : 'render';
+    render(store.getState());
+  });
+
+  if (!document.getElementById('hairStudyModeStyles')) {
+    const style = document.createElement('style');
+    style.id = 'hairStudyModeStyles';
+    style.textContent = [
+      '.hair-study-controls{display:grid;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(127,116,132,.18)}',
+      '.hair-study-controls>span{font-size:12px;font-weight:700}',
+      '.hair-study-buttons{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
+      '.hair-study-buttons button{min-height:36px;padding:7px 9px;border-radius:10px;font:600 12px/1.2 Inter,system-ui,sans-serif}',
+      '.hair-study-buttons button.is-active{box-shadow:inset 0 0 0 1px currentColor}',
+      '.hair-texture-panel.is-active-hair + *{}'
+    ].join('');
+    document.head.appendChild(style);
+  }
 
   if (!document.getElementById('hairTexturePanelStyles')) {
     const style = document.createElement('style');
@@ -265,6 +299,18 @@ function syncHairTextureUI(state) {
 
   const meta = hairTextureMeta(value);
   hint.textContent = meta[2];
+
+  const studyMode = window.KAORU_HAIR_STUDY_MODE || 'render';
+  panel.querySelectorAll('[data-hair-study]').forEach((button) => {
+    const selected = button.dataset.hairStudy === studyMode;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+
+  if (elements.previewTabs) {
+    elements.previewTabs.style.opacity = active ? '.44' : '';
+    elements.previewTabs.style.pointerEvents = active ? 'none' : '';
+  }
 }
 
 
@@ -2419,7 +2465,7 @@ function render(state) {
   elements.canvasHint.textContent=referenceActive?(state.reference.image?'Haz clic sobre la imagen para capturar el color':'Sube, pega o arrastra una imagen'):(paletteView==='original'?'Paleta sin iluminaciÃ³n':paletteView==='selected'?`Solo ${selectedLight?.name || 'luz elegida'}`:lightingSummary(state.lighting));
   elements.previewTabs.querySelectorAll('[data-view]').forEach((button)=>{const active=button.dataset.view===state.selection.previewMode;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
   elements.paletteViewTabs.querySelectorAll('[data-palette-view]').forEach((button)=>{const active=button.dataset.paletteView===paletteView;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
-  if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting));}
+  if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting,{categoryId:state.selection.categoryId,hairTexture:state.selection.hairTexture||state.selection.undertoneId||'1b',hairStudyMode:window.KAORU_HAIR_STUDY_MODE||'render'}));}
 }
 
 function applyManualHex() {
