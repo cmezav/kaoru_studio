@@ -7,50 +7,43 @@ const VIEW_INDEX = { front:0, side:1, back:2 };
 const sheetCache = new Map();
 let rerenderQueued = false;
 
-function clamp(v, min = 0, max = 1){
-  return Math.max(min, Math.min(max, v));
+function clamp(value, min = 0, max = 1){
+  return Math.max(min, Math.min(max, value));
 }
-function lerp(a, b, t){
-  return a + (b - a) * t;
-}
+
 function normalizeType(id){
   const key = String(id || '1b').toLowerCase();
   return TYPE_IDS.includes(key) ? key : '1b';
 }
+
 function normalizeView(id){
   const key = String(id || 'front').toLowerCase();
   return VIEW_IDS.includes(key) ? key : 'front';
 }
-function rgb(hex){
+
+function hexToRgb(hex){
   const raw = String(hex || '#777777').replace('#','').trim();
-  const full = raw.length === 3 ? raw.split('').map((c)=>c+c).join('') : raw;
+  const full = raw.length === 3 ? raw.split('').map((part) => part + part).join('') : raw;
   if(!/^[0-9a-fA-F]{6}$/.test(full)) return { r:119, g:119, b:119 };
   return {
-    r: parseInt(full.slice(0,2), 16),
-    g: parseInt(full.slice(2,4), 16),
-    b: parseInt(full.slice(4,6), 16)
+    r:parseInt(full.slice(0,2), 16),
+    g:parseInt(full.slice(2,4), 16),
+    b:parseInt(full.slice(4,6), 16)
   };
 }
+
 function rgba(hex, alpha = 1){
-  const c = rgb(hex);
-  return `rgba(${c.r},${c.g},${c.b},${alpha})`;
+  const color = hexToRgb(hex);
+  return `rgba(${color.r},${color.g},${color.b},${alpha})`;
 }
-function normalizeColors(colors){
-  const safe = Array.isArray(colors) ? colors.slice() : [];
-  return [
-    safe[0] || '#4B362B',
-    safe[1] || mixHex(safe[0] || '#4B362B', '#ffffff', 0.16),
-    safe[2] || mixHex(safe[0] || '#4B362B', '#0b0710', 0.48),
-    safe[3] || mixHex(safe[0] || '#4B362B', '#ffffff', 0.42),
-    safe[4] || mixHex(safe[0] || '#4B362B', '#7dd3fc', 0.12)
-  ];
-}
+
 function createCanvas(width, height){
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.round(width));
   canvas.height = Math.max(1, Math.round(height));
   return canvas;
 }
+
 function queueRefresh(){
   if(rerenderQueued) return;
   rerenderQueued = true;
@@ -59,80 +52,180 @@ function queueRefresh(){
     window.dispatchEvent(new CustomEvent('kaoru-hair-sheet-ready'));
   });
 }
+
 function getSheetUrl(typeId){
-  return `./assets/hair/${typeId}/reference-sheet.png`;
+  return `./assets/hair/${typeId}/mask-sheet-v2.png`;
 }
+
 function ensureSheet(typeId){
   const id = normalizeType(typeId);
-  const hit = sheetCache.get(id);
-  if(hit) return hit;
+  const cached = sheetCache.get(id);
+  if(cached) return cached;
 
-  const entry = { status:'loading', image:null, error:null };
-  const img = new Image();
-  img.decoding = 'async';
-  img.onload = () => {
+  const entry = { status:'loading', image:null };
+  const image = new Image();
+  image.decoding = 'async';
+  image.onload = () => {
     entry.status = 'ready';
-    entry.image = img;
+    entry.image = image;
     queueRefresh();
   };
-  img.onerror = () => {
+  image.onerror = () => {
     entry.status = 'error';
-    entry.error = new Error(`No se pudo cargar ${id}`);
     queueRefresh();
   };
-  img.src = `${getSheetUrl(id)}?v=hair-visual-clean-v8-5-1-20260912`;
+  image.src = `${getSheetUrl(id)}?v=hair-masks-v9-20260913`;
   sheetCache.set(id, entry);
   return entry;
 }
-function getCrop(image, viewId, typeId){
-  const view = normalizeView(viewId);
-  const type = normalizeType(typeId);
-  const regions = {
-    front:[0.015, 0.335],
-    side: [0.335, 0.665],
-    back: [0.665, 0.985]
-  };
-  const region = regions[view] || regions.front;
-  const startY = type === '4a' ? 0.145 : 0.13;
-  const endY = 0.545;
-  return {
-    sx:Math.round(image.width * region[0]),
-    sy:Math.round(image.height * startY),
-    sw:Math.round(image.width * (region[1] - region[0])),
-    sh:Math.round(image.height * (endY - startY))
-  };
+
+function getCrop(image, viewId){
+  const index = VIEW_INDEX[normalizeView(viewId)];
+  const third = image.width / 3;
+  return { sx:third * index, sy:0, sw:third, sh:image.height };
 }
+
 function getTargetBox(width, height){
-  const topPad = height * 0.14;
-  const sidePad = width * 0.08;
-  const w = width - sidePad * 2;
-  const h = height - topPad - height * 0.12;
+  return { x:width * 0.055, y:height * 0.12, w:width * 0.89, h:height * 0.79 };
+}
+
+function placeCrop(crop, width, height){
+  const box = getTargetBox(width, height);
+  const scale = Math.min(box.w / crop.sw, box.h / crop.sh);
+  const w = crop.sw * scale;
+  const h = crop.sh * scale;
   return {
-    x: sidePad,
-    y: topPad,
-    w,
-    h
+    dx:box.x + (box.w - w) / 2,
+    dy:box.y + (box.h - h) / 2,
+    dw:w,
+    dh:h
   };
 }
+
+function buildViewCanvas(image, crop, placement){
+  const canvas = createCanvas(placement.dw, placement.dh);
+  const context = canvas.getContext('2d', { willReadFrequently:true });
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function getBaseColor(colors){
+  const safe = Array.isArray(colors) ? colors : [];
+  // The detailed Light Lab palette stores "Base principal" at index 6.
+  return safe[6] || safe[0] || '#4B362B';
+}
+
+function tintGrayscaleMask(maskCanvas, colors){
+  const width = maskCanvas.width;
+  const height = maskCanvas.height;
+  const source = maskCanvas.getContext('2d', { willReadFrequently:true }).getImageData(0, 0, width, height);
+  const outputCanvas = createCanvas(width, height);
+  const outputContext = outputCanvas.getContext('2d');
+  const output = outputContext.createImageData(width, height);
+  const base = hexToRgb(getBaseColor(colors));
+
+  for(let index = 0; index < source.data.length; index += 4){
+    const alpha = source.data[index + 3];
+    if(alpha === 0) continue;
+
+    const luminance = (
+      source.data[index] * 0.2126 +
+      source.data[index + 1] * 0.7152 +
+      source.data[index + 2] * 0.0722
+    ) / 255;
+
+    let red;
+    let green;
+    let blue;
+    if(luminance < 0.5){
+      const factor = 0.24 + luminance * 1.52;
+      red = base.r * factor;
+      green = base.g * factor;
+      blue = base.b * factor;
+    }else{
+      const highlight = clamp((luminance - 0.5) * 1.35, 0, 0.68);
+      red = base.r + (255 - base.r) * highlight;
+      green = base.g + (255 - base.g) * highlight;
+      blue = base.b + (255 - base.b) * highlight;
+    }
+
+    output.data[index] = Math.round(clamp(red, 0, 255));
+    output.data[index + 1] = Math.round(clamp(green, 0, 255));
+    output.data[index + 2] = Math.round(clamp(blue, 0, 255));
+    output.data[index + 3] = alpha;
+  }
+
+  outputContext.putImageData(output, 0, 0);
+  return outputCanvas;
+}
+
+function applyLighting(tintedCanvas, maskCanvas, colors, lighting){
+  const width = tintedCanvas.width;
+  const height = tintedCanvas.height;
+  const canvas = createCanvas(width, height);
+  const context = canvas.getContext('2d');
+  const base = getBaseColor(colors);
+  const vector = dominantLightVector(lighting || {});
+  const lights = activeLights(lighting || {});
+
+  context.drawImage(tintedCanvas, 0, 0);
+
+  const keyX = clamp((vector?.x ?? 0) * 0.5 + 0.5, 0.05, 0.95);
+  const keyY = clamp((vector?.y ?? -0.5) * 0.5 + 0.5, 0.04, 0.96);
+  const key = context.createRadialGradient(
+    width * keyX, height * keyY, 0,
+    width * keyX, height * keyY, Math.max(width, height) * 0.68
+  );
+  key.addColorStop(0, rgba(mixHex(base, '#ffffff', 0.72), 0.28));
+  key.addColorStop(0.42, rgba(base, 0.05));
+  key.addColorStop(1, rgba(base, 0));
+  context.globalCompositeOperation = 'screen';
+  context.fillStyle = key;
+  context.fillRect(0, 0, width, height);
+
+  lights.slice(0, 4).forEach((light) => {
+    const x = clamp((light.position?.x ?? 0) * 0.5 + 0.5, 0.04, 0.96);
+    const y = clamp((light.position?.y ?? -0.5) * 0.5 + 0.5, 0.03, 0.97);
+    const intensity = clamp(Number(light.intensity ?? 1), 0, 3);
+    const radius = Math.max(width, height) * (0.32 + clamp(light.softness ?? 0.45) * 0.42);
+    const glow = context.createRadialGradient(width * x, height * y, 0, width * x, height * y, radius);
+    glow.addColorStop(0, rgba(light.color || '#ffffff', 0.22 * intensity));
+    glow.addColorStop(0.35, rgba(light.color || '#ffffff', 0.08 * intensity));
+    glow.addColorStop(1, rgba(light.color || '#ffffff', 0));
+    context.fillStyle = glow;
+    context.fillRect(0, 0, width, height);
+  });
+
+  context.globalCompositeOperation = 'destination-in';
+  context.drawImage(maskCanvas, 0, 0);
+  context.globalCompositeOperation = 'source-over';
+  return canvas;
+}
+
 function drawHeader(ctx, width, height, typeId, viewId){
   const night = document.documentElement.dataset.theme === 'night';
+  const viewLabel = viewId === 'front' ? 'FRENTE' : viewId === 'side' ? 'COSTADO' : 'ATRAS';
   ctx.save();
-  ctx.fillStyle = night ? 'rgba(255,255,255,.9)' : 'rgba(28,24,33,.86)';
+  ctx.fillStyle = night ? 'rgba(255,255,255,.92)' : 'rgba(28,24,33,.88)';
   ctx.font = `800 ${Math.max(13, Math.round(width * 0.016))}px Inter, system-ui, sans-serif`;
-  ctx.fillText(`CABELLO ${String(typeId).toUpperCase()} · ${viewId === 'front' ? 'FRENTE' : viewId === 'side' ? 'COSTADO' : 'ATRÁS'}`, width * 0.03, height * 0.055);
+  ctx.fillText(`CABELLO ${typeId.toUpperCase()} - ${viewLabel}`, width * 0.03, height * 0.055);
+  ctx.globalAlpha = 0.76;
   ctx.font = `500 ${Math.max(10, Math.round(width * 0.0105))}px Inter, system-ui, sans-serif`;
-  ctx.globalAlpha = .78;
-  ctx.fillText('Máscara PNG pintable + color editable + luz activa', width * 0.03, height * 0.085);
+  ctx.fillText('Mascara gris transparente + color editable + luz activa', width * 0.03, height * 0.085);
   ctx.restore();
 }
+
 function drawLoadingState(ctx, width, height, message){
   const night = document.documentElement.dataset.theme === 'night';
+  const box = getTargetBox(width, height);
   ctx.save();
   ctx.fillStyle = night ? 'rgba(255,255,255,.05)' : 'rgba(20,20,26,.05)';
   ctx.strokeStyle = night ? 'rgba(255,255,255,.12)' : 'rgba(20,20,26,.12)';
-  const box = getTargetBox(width, height);
   ctx.beginPath();
-  ctx.roundRect(box.x, box.y, box.w, box.h, 24);
+  if(typeof ctx.roundRect === 'function') ctx.roundRect(box.x, box.y, box.w, box.h, 24);
+  else ctx.rect(box.x, box.y, box.w, box.h);
   ctx.fill();
   ctx.stroke();
   ctx.fillStyle = night ? 'rgba(255,255,255,.74)' : 'rgba(36,33,41,.74)';
@@ -141,198 +234,15 @@ function drawLoadingState(ctx, width, height, message){
   ctx.fillText(message, box.x + box.w / 2, box.y + box.h / 2);
   ctx.restore();
 }
-function placeReference(image, crop, width, height){
-  const box = getTargetBox(width, height);
-  const scale = Math.min(box.w / crop.sw, box.h / crop.sh);
-  const w = crop.sw * scale;
-  const h = crop.sh * scale;
-  return {
-    sx: crop.sx,
-    sy: crop.sy,
-    sw: crop.sw,
-    sh: crop.sh,
-    dx: box.x + (box.w - w) / 2,
-    dy: box.y + (box.h - h) / 2,
-    dw: w,
-    dh: h
-  };
-}
-function buildPlacedRef(image, crop, placement){
-  const refCanvas = createCanvas(placement.dw, placement.dh);
-  const refCtx = refCanvas.getContext('2d');
-  refCtx.imageSmoothingEnabled = true;
-  refCtx.drawImage(
-    image,
-    crop.sx, crop.sy, crop.sw, crop.sh,
-    0, 0, placement.dw, placement.dh
-  );
-  return refCanvas;
-}
-function buildMaskCanvas(refCanvas){
-  const w = refCanvas.width;
-  const h = refCanvas.height;
-  const sourceCtx = refCanvas.getContext('2d');
-  const sourceData = sourceCtx.getImageData(0, 0, w, h);
 
-  const rawCanvas = createCanvas(w, h);
-  const rawCtx = rawCanvas.getContext('2d');
-  const rawImage = rawCtx.createImageData(w, h);
-
-  for(let i = 0; i < sourceData.data.length; i += 4){
-    const r = sourceData.data[i];
-    const g = sourceData.data[i + 1];
-    const b = sourceData.data[i + 2];
-    const sourceAlpha = sourceData.data[i + 3] / 255;
-    const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
-    const darkness = clamp((226 - lum) / 142, 0, 1);
-    const redExcess = Math.max(0, r - g - 10);
-    const neutralBrown = clamp(1 - redExcess / 72, 0.12, 1);
-    const chromaWeight = clamp(1 - chroma / 175, 0.34, 1);
-    const looksLikeSkin = r > g + 18 && g > b + 5 && lum > 82;
-
-    let hair = darkness * neutralBrown * chromaWeight * sourceAlpha;
-    if(looksLikeSkin) hair *= 0.055;
-    if(lum > 222) hair = 0;
-    hair = Math.pow(clamp((hair - 0.045) / 0.72, 0, 1), 0.72);
-
-    rawImage.data[i] = 255;
-    rawImage.data[i + 1] = 255;
-    rawImage.data[i + 2] = 255;
-    rawImage.data[i + 3] = Math.round(hair * 255);
-  }
-  rawCtx.putImageData(rawImage, 0, 0);
-
-  const softenedCanvas = createCanvas(w, h);
-  const softenedCtx = softenedCanvas.getContext('2d');
-  const blur = Math.max(3, Math.round(Math.min(w, h) * 0.009));
-  softenedCtx.filter = `blur(${blur}px)`;
-  softenedCtx.globalAlpha = 0.82;
-  softenedCtx.drawImage(rawCanvas, 0, 0);
-  softenedCtx.filter = 'none';
-  softenedCtx.globalAlpha = 0.72;
-  softenedCtx.drawImage(rawCanvas, 0, 0);
-  softenedCtx.globalAlpha = 1;
-
-  const softened = softenedCtx.getImageData(0, 0, w, h);
-  const maskCanvas = createCanvas(w, h);
-  const maskCtx = maskCanvas.getContext('2d');
-  const maskImage = maskCtx.createImageData(w, h);
-  const lineCanvas = createCanvas(w, h);
-  const lineCtx = lineCanvas.getContext('2d');
-  const lineImage = lineCtx.createImageData(w, h);
-
-  for(let i = 0; i < softened.data.length; i += 4){
-    const maskAlpha = clamp((softened.data[i + 3] / 255 - 0.018) / 0.82, 0, 1);
-    const r = sourceData.data[i];
-    const g = sourceData.data[i + 1];
-    const b = sourceData.data[i + 2];
-    const lum = r * 0.2126 + g * 0.7152 + b * 0.0722;
-    const strand = clamp((178 - lum) / 118, 0, 1) * maskAlpha;
-
-    maskImage.data[i] = 255;
-    maskImage.data[i + 1] = 255;
-    maskImage.data[i + 2] = 255;
-    maskImage.data[i + 3] = Math.round(Math.pow(maskAlpha, 0.78) * 255);
-
-    lineImage.data[i] = 28;
-    lineImage.data[i + 1] = 20;
-    lineImage.data[i + 2] = 31;
-    lineImage.data[i + 3] = Math.round(strand * 150);
-  }
-  maskCtx.putImageData(maskImage, 0, 0);
-  lineCtx.putImageData(lineImage, 0, 0);
-  return { maskCanvas, lineCanvas };
-}
-function drawTintedBase(ctx, w, h, colors, lightVector){
-  const [base, mid, shadow, highlight, accent] = normalizeColors(colors);
-  const grad = ctx.createLinearGradient(w * 0.1, h * 0.12, w * 0.85, h * 0.92);
-  grad.addColorStop(0, mid);
-  grad.addColorStop(0.36, base);
-  grad.addColorStop(0.72, shadow);
-  grad.addColorStop(1, mixHex(shadow, '#0c0a12', 0.32));
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, w, h);
-
-  const dx = clamp((lightVector?.x ?? 0) * 0.5 + 0.5, 0.06, 0.94);
-  const dy = clamp((lightVector?.y ?? -0.6) * 0.5 + 0.5, 0.05, 0.95);
-  const glow = ctx.createRadialGradient(w * dx, h * dy, 0, w * dx, h * dy, Math.max(w, h) * 0.55);
-  glow.addColorStop(0, rgba(highlight, 0.88));
-  glow.addColorStop(0.28, rgba(accent, 0.18));
-  glow.addColorStop(1, rgba(accent, 0));
-  ctx.globalCompositeOperation = 'screen';
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.globalCompositeOperation = 'multiply';
-  const shadowGrad = ctx.createLinearGradient(w * (1 - dx), h * 0.1, w * dx, h * 0.9);
-  shadowGrad.addColorStop(0, rgba(shadow, 0.12));
-  shadowGrad.addColorStop(0.55, rgba(shadow, 0.26));
-  shadowGrad.addColorStop(1, rgba('#08060b', 0.34));
-  ctx.fillStyle = shadowGrad;
-  ctx.fillRect(0, 0, w, h);
-
-  ctx.globalCompositeOperation = 'screen';
-  ctx.globalAlpha = 0.22;
-  for(let i = 0; i < 18; i += 1){
-    const t = i / 17;
-    const x = lerp(w * 0.18, w * 0.78, t);
-    const y = lerp(h * 0.06, h * 0.86, t * 0.96);
-    const rx = w * (0.06 + (i % 4) * 0.006);
-    const ry = h * (0.018 + (i % 3) * 0.004);
-    ctx.fillStyle = rgba(highlight, 0.12 + (i % 5) * 0.02);
-    ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, -0.66, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'source-over';
-}
-function applyMaskToPaint(maskCanvas, colors, lighting){
-  const w = maskCanvas.width;
-  const h = maskCanvas.height;
-  const paintCanvas = createCanvas(w, h);
-  const paintCtx = paintCanvas.getContext('2d');
-  const lightVector = dominantLightVector(lighting || {});
-  drawTintedBase(paintCtx, w, h, colors, lightVector);
-  paintCtx.globalCompositeOperation = 'destination-in';
-  paintCtx.drawImage(maskCanvas, 0, 0);
-  paintCtx.globalCompositeOperation = 'source-over';
-  return paintCanvas;
-}
-function drawLightPass(ctx, w, h, lighting){
-  const lights = activeLights(lighting || {});
-  if(!lights.length) return;
-  ctx.save();
-  lights.slice(0, 4).forEach((light, index) => {
-    const px = clamp((light.position?.x ?? 0) * 0.5 + 0.5, 0.05, 0.95);
-    const py = clamp((light.position?.y ?? -0.5) * 0.5 + 0.5, 0.04, 0.96);
-    const spread = Math.max(w, h) * (0.26 + (light.softness ?? 0.4) * 0.45 + index * 0.03);
-    const grad = ctx.createRadialGradient(w * px, h * py, 0, w * px, h * py, spread);
-    grad.addColorStop(0, rgba(light.color || '#ffffff', 0.34 * (light.intensity ?? 1)));
-    grad.addColorStop(0.28, rgba(light.color || '#ffffff', 0.14 * (light.intensity ?? 1)));
-    grad.addColorStop(1, rgba(light.color || '#ffffff', 0));
-    ctx.globalCompositeOperation = 'screen';
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-  });
-  ctx.restore();
-}
-function drawLineArtOverlay(ctx, lineCanvas){
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 0.72;
-  ctx.drawImage(lineCanvas, 0, 0);
-  ctx.restore();
-}
 function drawStudyMap(ctx, placement){
   const night = document.documentElement.dataset.theme === 'night';
   const labels = [
-    { text:'HIGHLIGHT', x:0.68, y:0.18 },
-    { text:'LUZ MEDIA', x:0.60, y:0.36 },
-    { text:'SOMBRA', x:0.23, y:0.50 },
-    { text:'OCLUSIÓN', x:0.36, y:0.77 },
-    { text:'RIM LIGHT', x:0.86, y:0.54 }
+    { text:'HIGHLIGHT', x:0.67, y:0.19 },
+    { text:'LUZ MEDIA', x:0.61, y:0.37 },
+    { text:'SOMBRA', x:0.23, y:0.51 },
+    { text:'OCLUSION', x:0.36, y:0.77 },
+    { text:'RIM LIGHT', x:0.84, y:0.55 }
   ];
   ctx.save();
   labels.forEach((label) => {
@@ -340,11 +250,12 @@ function drawStudyMap(ctx, placement){
     const y = placement.dy + placement.dh * label.y;
     const pad = 7;
     ctx.font = '700 10px Inter, system-ui, sans-serif';
-    const tw = ctx.measureText(label.text).width;
+    const width = ctx.measureText(label.text).width;
     ctx.fillStyle = night ? 'rgba(17,16,24,.84)' : 'rgba(255,255,255,.84)';
     ctx.strokeStyle = night ? 'rgba(255,255,255,.18)' : 'rgba(22,18,30,.12)';
     ctx.beginPath();
-    ctx.roundRect(x - pad, y - 11, tw + pad * 2, 22, 11);
+    if(typeof ctx.roundRect === 'function') ctx.roundRect(x - pad, y - 11, width + pad * 2, 22, 11);
+    else ctx.rect(x - pad, y - 11, width + pad * 2, 22);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = night ? '#ffffff' : '#271d2b';
@@ -361,74 +272,26 @@ export function renderCompleteHairAsset(ctx, width, height, colors, lighting, te
   drawHeader(ctx, width, height, typeId, viewId);
 
   if(entry.status === 'loading'){
-    drawLoadingState(ctx, width, height, 'Cargando referencia PNG del cabello...');
+    drawLoadingState(ctx, width, height, 'Cargando mascara de cabello...');
     return;
   }
   if(entry.status === 'error' || !entry.image){
-    drawLoadingState(ctx, width, height, 'No se pudo cargar la referencia PNG.');
+    drawLoadingState(ctx, width, height, 'No se pudo cargar la mascara PNG.');
     return;
   }
 
-  const crop = getCrop(entry.image, viewId, typeId);
-  const placement = placeReference(entry.image, crop, width, height);
-  const refCanvas = buildPlacedRef(entry.image, crop, placement);
-  const { maskCanvas, lineCanvas } = buildMaskCanvas(refCanvas);
-  const paintCanvas = applyMaskToPaint(maskCanvas, colors, lighting);
-
-  const hairLayer = createCanvas(maskCanvas.width, maskCanvas.height);
-  const hairCtx = hairLayer.getContext('2d');
-  hairCtx.drawImage(paintCanvas, 0, 0);
-  drawLightPass(hairCtx, hairLayer.width, hairLayer.height, lighting);
-  hairCtx.globalCompositeOperation = 'destination-in';
-  hairCtx.drawImage(maskCanvas, 0, 0);
-  hairCtx.globalCompositeOperation = 'source-over';
-  hairCtx.globalAlpha = 0.34;
-  drawLineArtOverlay(hairCtx, lineCanvas);
-  hairCtx.globalAlpha = 1;
-
-  const portraitCanvas = createCanvas(refCanvas.width, refCanvas.height);
-  const portraitCtx = portraitCanvas.getContext('2d');
-  portraitCtx.drawImage(refCanvas, 0, 0);
-  portraitCtx.save();
-  portraitCtx.globalCompositeOperation = 'color';
-  portraitCtx.globalAlpha = 0.9;
-  portraitCtx.drawImage(hairLayer, 0, 0);
-  portraitCtx.restore();
-  portraitCtx.save();
-  portraitCtx.globalCompositeOperation = 'source-over';
-  portraitCtx.globalAlpha = 0.16;
-  portraitCtx.drawImage(hairLayer, 0, 0);
-  portraitCtx.restore();
+  const crop = getCrop(entry.image, viewId);
+  const placement = placeCrop(crop, width, height);
+  const maskCanvas = buildViewCanvas(entry.image, crop, placement);
+  const tintedCanvas = tintGrayscaleMask(maskCanvas, colors);
+  const litCanvas = applyLighting(tintedCanvas, maskCanvas, colors, lighting);
 
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,.28)';
-  ctx.shadowBlur = Math.max(12, Math.round(Math.min(placement.dw, placement.dh) * 0.06));
-  ctx.shadowOffsetY = Math.max(4, Math.round(placement.dh * 0.018));
-  ctx.beginPath();
-  const radius = Math.max(12, Math.round(Math.min(placement.dw, placement.dh) * 0.045));
-  if(typeof ctx.roundRect === 'function'){
-    ctx.roundRect(placement.dx, placement.dy, placement.dw, placement.dh, radius);
-  }else{
-    ctx.rect(placement.dx, placement.dy, placement.dw, placement.dh);
-  }
-  ctx.clip();
-  ctx.drawImage(portraitCanvas, placement.dx, placement.dy, placement.dw, placement.dh);
+  ctx.shadowColor = rgba(mixHex(getBaseColor(colors), '#000000', 0.72), 0.28);
+  ctx.shadowBlur = Math.max(8, Math.round(Math.min(placement.dw, placement.dh) * 0.035));
+  ctx.shadowOffsetY = Math.max(2, Math.round(placement.dh * 0.012));
+  ctx.drawImage(litCanvas, placement.dx, placement.dy, placement.dw, placement.dh);
   ctx.restore();
 
-  ctx.save();
-  ctx.strokeStyle = document.documentElement.dataset.theme === 'night'
-    ? 'rgba(255,255,255,.16)'
-    : 'rgba(35,28,42,.16)';
-  ctx.lineWidth = Math.max(1, Math.round(width * 0.0014));
-  ctx.beginPath();
-  if(typeof ctx.roundRect === 'function'){
-    ctx.roundRect(placement.dx, placement.dy, placement.dw, placement.dh, radius);
-  }else{
-    ctx.rect(placement.dx, placement.dy, placement.dw, placement.dh);
-  }
-  ctx.stroke();
-  ctx.restore();
-  if(studyMode === 'map'){
-    drawStudyMap(ctx, placement);
-  }
+  if(studyMode === 'map') drawStudyMap(ctx, placement);
 }

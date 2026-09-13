@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-visual-clean-v8-5-1-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-masks-v9-20260913';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -80,10 +80,11 @@ function setupAdvancedPreviewUI() {
     style.id = 'lightLabPhase5Styles';
     style.textContent = `
       .preview-column{grid-template-rows:auto minmax(280px,1fr) auto}
-      .preview-toolbar{min-height:58px;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr);align-items:center;gap:14px}
-      .view-tabs{width:100%;max-width:100%;display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
-      .view-tabs button{flex:0 0 auto;white-space:nowrap;padding-inline:7px}
-      @media(max-width:1180px){.preview-toolbar{grid-template-columns:1fr}.view-tabs{justify-content:flex-start}}
+      .preview-toolbar{min-height:48px;align-items:flex-start;gap:12px}
+      .view-tabs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:4px;max-width:min(720px,72%)}
+      .view-tabs button{white-space:nowrap}
+      @media(max-width:1500px){.view-tabs{max-width:66%}.view-tabs button{padding-inline:8px}}
+      @media(max-width:1180px){.preview-toolbar{flex-direction:column}.view-tabs{max-width:100%;justify-content:flex-start}}
     `;
     document.head.appendChild(style);
   }
@@ -147,11 +148,11 @@ if (!window.__KAORU_HAIR_SHEET_READY_BOUND__) {
     }
   });
 }
-const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a']);
+const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c']);
 const KAORU_HAIR_REFERENCE_CACHE = new Map();
 
 function hairReferenceUrl(type) {
-  return `./assets/hair/${type}/reference-sheet.png?cache=hair-reference-v7-20260912`;
+  return `./assets/hair/${type}/mask-sheet-v2.png?cache=hair-masks-v9-20260913`;
 }
 
 function loadHairReferenceImage(type) {
@@ -212,16 +213,16 @@ async function drawHairReferenceCrop(type, view = 'back') {
   }
 
   const thirds = {
-    front: [0.015, 0.335],
-    side:  [0.335, 0.665],
-    back:  [0.665, 0.985]
+    front: [0, 1 / 3],
+    side:  [1 / 3, 2 / 3],
+    back:  [2 / 3, 1]
   };
   const region = thirds[view] || thirds.back;
 
   const sx = Math.round(image.naturalWidth * region[0]);
   const sw = Math.round(image.naturalWidth * (region[1] - region[0]));
-  const sy = Math.round(image.naturalHeight * .105);
-  const sh = Math.round(image.naturalHeight * .455);
+  const sy = 0;
+  const sh = image.naturalHeight;
 
   const sourceRatio = sw / sh;
   const targetRatio = width / height;
@@ -256,7 +257,7 @@ async function drawHairReferenceCrop(type, view = 'back') {
   context.textBaseline = 'middle';
   context.fillText(label, 10 + badgeW / 2, 10 + badgeH / 2);
 
-  status.textContent = `Referencia ${String(type).toUpperCase()} Â· ${label.toLowerCase()}`;
+  status.textContent = `Mascara ${String(type).toUpperCase()} - ${label.toLowerCase()}`;
   if (fullLink) {
     fullLink.hidden = false;
     fullLink.href = hairReferenceUrl(type);
@@ -442,13 +443,13 @@ function ensureHairTextureUI() {
   referencePanel.className = 'hair-reference-panel';
   referencePanel.open = true;
   referencePanel.innerHTML = [
-    '<summary><span><strong>Referencia ilustrada</strong><small>Frente Â· Costado Â· Atras</small></span><b>GUIA</b></summary>',
+    '<summary><span><strong>Mascara tecnica</strong><small>Frente - Costado - Atras</small></span><b>ALFA</b></summary>',
     '<div class="hair-reference-stage"><canvas id="hairReferenceCanvas"></canvas></div>',
     '<div class="hair-reference-meta">',
     '<span id="hairReferenceStatus">Cargando referencia...</span>',
     '<a id="hairReferenceFullLink" href="#" target="_blank" rel="noopener">Ver lamina completa</a>',
     '</div>',
-    '<p>Esta lamina sirve como guia de forma y textura. El preview principal sigue siendo el render recoloreable afectado por tus luces.</p>'
+    '<p>PNG gris con transparencia real. El preview aplica tu color base y despues calcula sombras, luces y reflejos.</p>'
   ].join('');
   panel.appendChild(referencePanel);
 
@@ -4365,5 +4366,3 @@ kaoruImportPresetsFileLight
 
 kaoruBindBeforeHoldLight();
 /* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
-
-
