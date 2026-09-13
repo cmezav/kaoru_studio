@@ -6,7 +6,7 @@ import { renderBasicPreview } from './renderer2d.js?cache=hair-light-boost-v11-1
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
-import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=face-catalog-v12-3-1-20260913';
+import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=face-direct-v12-4-20260913';
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
 import {
   customLightingPresetById,

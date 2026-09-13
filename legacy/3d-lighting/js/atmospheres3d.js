@@ -1,8 +1,15 @@
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
 import { EXTRA_LIGHTING_ATMOSPHERES } from '../../shared/extraLightingAtmospheres.js?cache=face-catalog-v12-3-1-20260913';
 
+import { FACE_LIGHTING_ATMOSPHERES } from '../../shared/faceLightingAtmospheres.js?cache=face-direct-v12-4-20260913';
+const KAORU_FACE_LIGHTING_IDS = new Set(
+  FACE_LIGHTING_ATMOSPHERES.map((preset) => preset.id)
+);
 export const THREE_ATMOSPHERES = [
-  ...EXTRA_LIGHTING_ATMOSPHERES,
+  ...FACE_LIGHTING_ATMOSPHERES,
+  ...EXTRA_LIGHTING_ATMOSPHERES.filter(
+    (preset) => !KAORU_FACE_LIGHTING_IDS.has(preset.id)
+  ),
   {
     id:'day',
     name:'D\u00eda',
