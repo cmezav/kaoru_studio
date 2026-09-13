@@ -17,6 +17,9 @@
   window.ImageStudioLensBridge={
     getState:()=>state,
     getCanvas:()=>$('#previewCanvas'),
+    getSource:()=>source,
+    getSourceName:()=>sourceName,
+    getExportConfig:()=>getExportConfig(),
     getLiveLensPreview:()=>liveLensPreview,
     getFocusMode:()=>focusMode,
     setFocusMode(value){focusMode=!!value;syncAll()},
