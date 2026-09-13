@@ -80,23 +80,26 @@ function ensureSheet(typeId){
     entry.error = new Error(`No se pudo cargar ${id}`);
     queueRefresh();
   };
-  img.src = `${getSheetUrl(id)}?v=hair-preview-v8-4-20260912`;
+  img.src = `${getSheetUrl(id)}?v=hair-visual-clean-v8-5-1-20260912`;
   sheetCache.set(id, entry);
   return entry;
 }
-function getCrop(image, viewId){
+function getCrop(image, viewId, typeId){
   const view = normalizeView(viewId);
+  const type = normalizeType(typeId);
   const regions = {
     front:[0.015, 0.335],
     side: [0.335, 0.665],
     back: [0.665, 0.985]
   };
   const region = regions[view] || regions.front;
+  const startY = type === '4a' ? 0.145 : 0.13;
+  const endY = 0.545;
   return {
     sx:Math.round(image.width * region[0]),
-    sy:Math.round(image.height * 0.105),
+    sy:Math.round(image.height * startY),
     sw:Math.round(image.width * (region[1] - region[0])),
-    sh:Math.round(image.height * 0.455)
+    sh:Math.round(image.height * (endY - startY))
   };
 }
 function getTargetBox(width, height){
@@ -366,28 +369,65 @@ export function renderCompleteHairAsset(ctx, width, height, colors, lighting, te
     return;
   }
 
-  const crop = getCrop(entry.image, viewId);
+  const crop = getCrop(entry.image, viewId, typeId);
   const placement = placeReference(entry.image, crop, width, height);
   const refCanvas = buildPlacedRef(entry.image, crop, placement);
   const { maskCanvas, lineCanvas } = buildMaskCanvas(refCanvas);
   const paintCanvas = applyMaskToPaint(maskCanvas, colors, lighting);
-  const litCanvas = createCanvas(maskCanvas.width, maskCanvas.height);
-  const litCtx = litCanvas.getContext('2d');
 
-  litCtx.drawImage(paintCanvas, 0, 0);
-  drawLightPass(litCtx, litCanvas.width, litCanvas.height, lighting);
-  litCtx.globalCompositeOperation = 'destination-in';
-  litCtx.drawImage(maskCanvas, 0, 0);
-  litCtx.globalCompositeOperation = 'source-over';
-  drawLineArtOverlay(litCtx, lineCanvas);
+  const hairLayer = createCanvas(maskCanvas.width, maskCanvas.height);
+  const hairCtx = hairLayer.getContext('2d');
+  hairCtx.drawImage(paintCanvas, 0, 0);
+  drawLightPass(hairCtx, hairLayer.width, hairLayer.height, lighting);
+  hairCtx.globalCompositeOperation = 'destination-in';
+  hairCtx.drawImage(maskCanvas, 0, 0);
+  hairCtx.globalCompositeOperation = 'source-over';
+  hairCtx.globalAlpha = 0.34;
+  drawLineArtOverlay(hairCtx, lineCanvas);
+  hairCtx.globalAlpha = 1;
+
+  const portraitCanvas = createCanvas(refCanvas.width, refCanvas.height);
+  const portraitCtx = portraitCanvas.getContext('2d');
+  portraitCtx.drawImage(refCanvas, 0, 0);
+  portraitCtx.save();
+  portraitCtx.globalCompositeOperation = 'color';
+  portraitCtx.globalAlpha = 0.9;
+  portraitCtx.drawImage(hairLayer, 0, 0);
+  portraitCtx.restore();
+  portraitCtx.save();
+  portraitCtx.globalCompositeOperation = 'source-over';
+  portraitCtx.globalAlpha = 0.16;
+  portraitCtx.drawImage(hairLayer, 0, 0);
+  portraitCtx.restore();
 
   ctx.save();
-  ctx.shadowColor = rgba(normalizeColors(colors)[2], 0.22);
-  ctx.shadowBlur = Math.max(10, Math.round(Math.min(placement.dw, placement.dh) * 0.045));
-  ctx.shadowOffsetY = Math.max(3, Math.round(placement.dh * 0.015));
-  ctx.drawImage(litCanvas, placement.dx, placement.dy, placement.dw, placement.dh);
+  ctx.shadowColor = 'rgba(0,0,0,.28)';
+  ctx.shadowBlur = Math.max(12, Math.round(Math.min(placement.dw, placement.dh) * 0.06));
+  ctx.shadowOffsetY = Math.max(4, Math.round(placement.dh * 0.018));
+  ctx.beginPath();
+  const radius = Math.max(12, Math.round(Math.min(placement.dw, placement.dh) * 0.045));
+  if(typeof ctx.roundRect === 'function'){
+    ctx.roundRect(placement.dx, placement.dy, placement.dw, placement.dh, radius);
+  }else{
+    ctx.rect(placement.dx, placement.dy, placement.dw, placement.dh);
+  }
+  ctx.clip();
+  ctx.drawImage(portraitCanvas, placement.dx, placement.dy, placement.dw, placement.dh);
   ctx.restore();
 
+  ctx.save();
+  ctx.strokeStyle = document.documentElement.dataset.theme === 'night'
+    ? 'rgba(255,255,255,.16)'
+    : 'rgba(35,28,42,.16)';
+  ctx.lineWidth = Math.max(1, Math.round(width * 0.0014));
+  ctx.beginPath();
+  if(typeof ctx.roundRect === 'function'){
+    ctx.roundRect(placement.dx, placement.dy, placement.dw, placement.dh, radius);
+  }else{
+    ctx.rect(placement.dx, placement.dy, placement.dw, placement.dh);
+  }
+  ctx.stroke();
+  ctx.restore();
   if(studyMode === 'map'){
     drawStudyMap(ctx, placement);
   }

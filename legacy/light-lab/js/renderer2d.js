@@ -1,7 +1,7 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
 import { drawLightProjectorPattern, normalizeLightProjector } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
-import { renderCompleteHairAsset } from './hairAssetRenderer.js?cache=hair-preview-v8-4-20260912';
+import { renderCompleteHairAsset } from './hairAssetRenderer.js?cache=hair-visual-clean-v8-5-1-20260912';
 
 const MATERIAL_TINTS = {
   gold: '#D6A93D',

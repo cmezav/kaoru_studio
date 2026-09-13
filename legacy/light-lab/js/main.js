@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-preview-v8-4-20260912';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-visual-clean-v8-5-1-20260912';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -80,11 +80,10 @@ function setupAdvancedPreviewUI() {
     style.id = 'lightLabPhase5Styles';
     style.textContent = `
       .preview-column{grid-template-rows:auto minmax(280px,1fr) auto}
-      .preview-toolbar{min-height:48px;align-items:flex-start;gap:12px}
-      .view-tabs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:4px;max-width:min(720px,72%)}
-      .view-tabs button{white-space:nowrap}
-      @media(max-width:1500px){.view-tabs{max-width:66%}.view-tabs button{padding-inline:8px}}
-      @media(max-width:1180px){.preview-toolbar{flex-direction:column}.view-tabs{max-width:100%;justify-content:flex-start}}
+      .preview-toolbar{min-height:58px;display:grid;grid-template-columns:minmax(180px,auto) minmax(0,1fr);align-items:center;gap:14px}
+      .view-tabs{width:100%;max-width:100%;display:flex;flex-wrap:nowrap;justify-content:flex-end;gap:2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin}
+      .view-tabs button{flex:0 0 auto;white-space:nowrap;padding-inline:7px}
+      @media(max-width:1180px){.preview-toolbar{grid-template-columns:1fr}.view-tabs{justify-content:flex-start}}
     `;
     document.head.appendChild(style);
   }
