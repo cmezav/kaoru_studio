@@ -11,6 +11,13 @@ import { createHairModel } from './hairModels3d.js?cache=hair-models-v11-1-20260
 
 export const SCENE3D_PHASE = 6;
 
+const SIDE_SWEPT_CURLS_MODEL_URL = new URL(
+  '../assets/models/hair/side_swept_curls_with_bones=hair-models-v11-3-20260912',
+  import.meta.url
+).href;
+
+const SIDE_SWEPT_CURLS_MODEL_FORMAT = 'glb';
+
 const HAIR_FEMALE_MODEL_URL = new URL(
   '../assets/models/hair/female_hair_3d_model_free.glb?cache=hair-models-v11-1-20260912',
   import.meta.url
@@ -633,6 +640,23 @@ export async function create3dScene(
           format: HAIR_WOLF_MODEL_FORMAT,
           source: 'wolf-haircut-with-bones',
           name: 'kaoru-hair-wolf-bones',
+          floorY: -1.05,
+          targetHeight: 3.35
+        },
+        color
+      );
+
+      if (disposed || version !== loadVersion) return;
+      registerAsset(hairModel);
+      currentLoadError = null;
+    } else if (kind === 'hair-side-swept-curls') {
+      const hairModel = await createHairModel(
+        THREE,
+        {
+          url: SIDE_SWEPT_CURLS_MODEL_URL,
+          format: SIDE_SWEPT_CURLS_MODEL_FORMAT,
+          source: 'side-swept-curls-with-bones',
+          name: 'kaoru-hair-side-swept-curls',
           floorY: -1.05,
           targetHeight: 3.35
         },

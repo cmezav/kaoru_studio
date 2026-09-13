@@ -2,11 +2,11 @@ import { create3dStore } from './state.js?v=6.0';
 import {
   MODEL_REGISTRY,
   modelById
-} from './modelRegistry.js?v=11.1-hair';
+} from './modelRegistry.js?cache=hair-models-v11-3-20260912';
 import {
   detectWebGL,
   create3dScene
-} from './scene3d.js?v=11.1-hair';
+} from './scene3d.js?cache=hair-models-v11-3-20260912';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,

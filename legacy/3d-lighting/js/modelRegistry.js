@@ -1,6 +1,13 @@
 export const MODEL_REGISTRY = [
 
+
   {
+    id: 'hair-side-swept-curls',
+    name: 'Side Swept Curls',
+    description: 'Peinado lateral con rizos y bones; ideal para probar luz y profundidad.',
+    ready: true,
+    source: 'side-swept-curls-with-bones'
+  },{
     id: 'hair-female-free',
     name: 'Female Hair 3D',
     description: 'Cabello femenino detallado para probar color, brillo, sombras y luces de color.',

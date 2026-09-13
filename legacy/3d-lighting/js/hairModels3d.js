@@ -34,12 +34,44 @@ function recolorMaterial(THREE, sourceMaterial, color) {
     ? sourceMaterial.clone()
     : new THREE.MeshStandardMaterial();
 
-  if (material.color?.set) {
-    material.color.set(color);
+  const chosen = new THREE.Color(color || '#6B4436');
+  const hsl = { h: 0, s: 0, l: 0 };
+  chosen.getHSL(hsl);
+
+  const lifted = chosen.clone();
+  const liftFactor = 0.18 + Math.max(0, hsl.l - 0.45) * 0.55;
+  lifted.lerp(new THREE.Color('#ffffff'), Math.min(0.38, liftFactor));
+
+  if (material.color?.copy) {
+    material.color.copy(lifted);
+  } else if (material.color?.set) {
+    material.color.set(lifted);
   }
 
-  if ('roughness' in material) material.roughness = Math.max(0.38, Number(material.roughness ?? 0.72));
-  if ('metalness' in material) material.metalness = Math.min(0.12, Number(material.metalness ?? 0));
+  if ('roughness' in material) {
+    material.roughness = Math.max(0.34, Math.min(0.66, Number(material.roughness ?? 0.58)));
+  }
+
+  if ('metalness' in material) {
+    material.metalness = Math.min(0.08, Number(material.metalness ?? 0));
+  }
+
+  if ('envMapIntensity' in material) {
+    material.envMapIntensity = Math.max(0.9, Number(material.envMapIntensity ?? 1));
+  }
+
+  if ('aoMapIntensity' in material) {
+    material.aoMapIntensity = Math.min(0.82, Number(material.aoMapIntensity ?? 1));
+  }
+
+  if (material.emissive?.copy) {
+    const emissiveLift = lifted.clone().multiplyScalar(0.06 + Math.max(0, hsl.l - 0.35) * 0.08);
+    material.emissive.copy(emissiveLift);
+  }
+  if ('emissiveIntensity' in material) {
+    material.emissiveIntensity = 1;
+  }
+
   material.side = THREE.DoubleSide;
   material.needsUpdate = true;
   material.userData = {
@@ -50,6 +82,7 @@ function recolorMaterial(THREE, sourceMaterial, color) {
 
   return material;
 }
+
 
 function prepareHairMeshes(THREE, root, color) {
   const materials = [];
