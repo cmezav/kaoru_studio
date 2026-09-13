@@ -1,0 +1,4368 @@
+import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
+import { createStore } from './state.js';
+import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
+import { normalizeHex, readableTextColor } from './colorUtils.js';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-multicolor-v9-1-20260913';
+import { downloadProjectStructure } from './exportSystem.js';
+import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
+import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
+import { LIGHT_ATMOSPHERES, coreAtmospheres, creativeAtmospheres, atmosphereById, buildAtmosphereLighting } from './atmospheres.js?cache=lighting-calibration-v3-20260907';
+import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
+import {
+  customLightingPresetById,
+  deleteCustomLightingPreset,
+  isFavoriteLightingPreset,
+  listCustomLightingPresets,
+  saveCustomLightingPreset,
+  toggleFavoriteLightingPreset,
+  exportLightingPresetLibraryData,
+  importLightingPresetLibraryData
+} from '../../shared/lightingPresetLibrary.js?cache=preset-transfer-v11-20260907';
+import {
+  createStudioHistory
+} from '../../shared/studioHistory.js?cache=history-transient-v11-20260907';
+
+const VIEW_LABELS = { sphere: 'Estudio de volumen Â· esfera', band: 'Estudio de reflejo Â· banda', plane: 'Estudio tonal Â· plano', reference: 'Cuentagotas Â· imagen de referencia' };
+const store = createStore();
+const studioHistoryLight =
+  createStudioHistory(
+    store,
+    {
+      limit:120,
+      debounceMs:180
+    }
+  );
+window.LightLabStore = store;
+window.LightLabHistory = studioHistoryLight;
+const ADVANCED_PREVIEW_MODES = [
+  ['sphere', 'Esfera'],
+  ['cylinder', 'Cilindro'],
+  ['skin', 'Piel'],
+  ['metal', 'Metal'],
+  ['gold', 'Oro'],
+  ['silver', 'Plata'],
+  ['steel', 'Acero'],
+  ['head', 'Cabeza'],
+  ['asaro', 'Cabeza de estudio'],
+  ['hair', 'Cabello']
+];
+
+function setupAdvancedPreviewUI() {
+  Object.assign(VIEW_LABELS, {
+    cylinder: 'Estudio de volumen - cilindro',
+    skin: 'Muestra organica - piel',
+    metal: 'Estudio de reflejo - metal',
+    gold: 'Material - oro',
+    silver: 'Material - plata',
+    steel: 'Material - acero',
+    head: 'Cabeza simplificada',
+    asaro: 'Cabeza para estudiar luz y sombra',
+    hair: 'Cabello recoloreable por vista'
+  });
+
+  document.title = "Kaoru's Studio - Light Lab";
+  const phaseBadge = document.querySelector('.lab-intro .eyebrow');
+  if (phaseBadge) phaseBadge.textContent = 'LIGHT LAB';
+
+  elements.previewTabs.replaceChildren(...ADVANCED_PREVIEW_MODES.map(([id, label], index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.view = id;
+    button.setAttribute('role', 'tab');
+    button.setAttribute('aria-selected', String(index === 0));
+    button.className = index === 0 ? 'is-active' : '';
+    button.textContent = label;
+    return button;
+  }));
+
+  if (!document.getElementById('lightLabPhase5Styles')) {
+    const style = document.createElement('style');
+    style.id = 'lightLabPhase5Styles';
+    style.textContent = `
+      .preview-column{grid-template-rows:auto minmax(280px,1fr) auto}
+      .preview-toolbar{min-height:48px;align-items:flex-start;gap:12px}
+      .view-tabs{display:flex;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;gap:4px;max-width:min(720px,72%)}
+      .view-tabs button{white-space:nowrap}
+      @media(max-width:1500px){.view-tabs{max-width:66%}.view-tabs button{padding-inline:8px}}
+      @media(max-width:1180px){.preview-toolbar{flex-direction:column}.view-tabs{max-width:100%;justify-content:flex-start}}
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+const byId = (id) => document.getElementById(id);
+const elements = {
+  categoryGrid: byId('categoryGrid'),
+  basePicker: byId('baseColorPicker'), baseHex: byId('baseHexInput'), applyHex: byId('applyHexBtn'), hexError: byId('hexError'),
+  lightingEnabled: byId('lightingEnabled'), atmosphereScenes: byId('atmosphereScenes'), creativeAtmosphereScenes: byId('creativeAtmosphereScenes'), creativeAtmosphereFilters: byId('creativeAtmosphereFilters'), creativeAtmosphereCount: byId('creativeAtmosphereCount'), creativeAtmosphereSearch: byId('creativeAtmosphereSearch'), creativeAtmosphereSort: byId('creativeAtmosphereSort'), compareAtmosphereA: byId('compareAtmosphereA'), compareAtmosphereB: byId('compareAtmosphereB'), compareAtmosphereCardA: byId('compareAtmosphereCardA'), compareAtmosphereCardB: byId('compareAtmosphereCardB'), applyCompareAtmosphereA: byId('applyCompareAtmosphereA'), applyCompareAtmosphereB: byId('applyCompareAtmosphereB'), customAtmosphereName: byId('customAtmosphereName'), saveCustomAtmosphere: byId('saveCustomAtmosphere'), atmosphereLabel: byId('atmosphereLabel'), lightingScenes: byId('lightingScenes'),
+  atmoTopColor: byId('atmoTopColor'), atmoTopHex: byId('atmoTopHex'), atmoMidColor: byId('atmoMidColor'), atmoMidHex: byId('atmoMidHex'),
+  atmoBottomColor: byId('atmoBottomColor'), atmoBottomHex: byId('atmoBottomHex'), atmoAccentColor: byId('atmoAccentColor'), atmoAccentHex: byId('atmoAccentHex'),
+  atmoEffectType: byId('atmoEffectType'), atmoEffectAColor: byId('atmoEffectAColor'), atmoEffectAHex: byId('atmoEffectAHex'),
+  atmoEffectBColor: byId('atmoEffectBColor'), atmoEffectBHex: byId('atmoEffectBHex'), atmoProjectorLight: byId('atmoProjectorLight'), atmoEffectOpacity: byId('atmoEffectOpacity'),
+  atmoEffectOpacityOut: byId('atmoEffectOpacityOut'), atmoEffectAngle: byId('atmoEffectAngle'), atmoEffectAngleOut: byId('atmoEffectAngleOut'),
+  atmoEffectScale: byId('atmoEffectScale'), atmoEffectScaleOut: byId('atmoEffectScaleOut'),
+  atmoEffectX: byId('atmoEffectX'), atmoEffectXOut: byId('atmoEffectXOut'), atmoEffectY: byId('atmoEffectY'), atmoEffectYOut: byId('atmoEffectYOut'),
+  atmoEffectBlur: byId('atmoEffectBlur'), atmoEffectBlurOut: byId('atmoEffectBlurOut'), atmoEffectContrast: byId('atmoEffectContrast'), atmoEffectContrastOut: byId('atmoEffectContrastOut'),
+  atmoEffectDensity: byId('atmoEffectDensity'), atmoEffectDensityOut: byId('atmoEffectDensityOut'), resetAtmosphere: byId('resetAtmosphereBtn'), activeLightsLabel: byId('activeLightsLabel'), addLight: byId('addLightBtn'), lightsList: byId('lightsList'), environmentControls: byId('environmentControls'),
+  resetParams: byId('resetParamsBtn'), previewTitle: byId('previewTitle'), paletteName: byId('paletteName'), swatchGrid: byId('swatchGrid'),
+  paletteViewTabs: byId('paletteViewTabs'), comparisonGrid: byId('comparisonGrid'),
+  canvas: byId('previewCanvas'), modeLabel: byId('previewModeLabel'), previewTabs: byId('previewTabs'),
+  canvasHint: byId('canvasHint'), referenceFile: byId('referenceFileInput'), pasteImage: byId('pasteImageBtn'), clearImage: byId('clearImageBtn'), imageStatus: byId('imageStatus'),
+  referenceStage: byId('referenceStage'), referenceEmpty: byId('referenceEmpty'), referenceCanvas: byId('referenceCanvas'), marker: byId('eyedropperMarker'), dropOverlay: byId('dropOverlay'),
+  stateCategory: byId('stateCategory'), stateBase: byId('stateBase'), stateLighting: byId('stateLighting'), stateColors: byId('stateColors'),
+  editor: byId('swatchEditor'), editRole: byId('editRole'), editPicker: byId('editColorPicker'), editHex: byId('editHexInput'), editError: byId('editHexError'),
+  closeEditor: byId('closeEditorBtn'), applyEdit: byId('applyEditBtn'),
+  extractedCount: byId('extractedCount'), extractedEmpty: byId('extractedEmpty'), extractedColors: byId('extractedColors'), clearSamples: byId('clearSamplesBtn'),
+  recentEmpty: byId('recentEmpty'), recentColors: byId('recentColors'),
+  copyAll: byId('copyAllBtn'), download: byId('downloadStructureBtn'), toast: byId('toast')
+};
+let toastTimer = 0; let editingIndex = null; let lightsRenderSignature = '';
+let creativeAtmosphereFilter = 'all';
+let creativeAtmosphereSearch = '';
+let creativeAtmosphereSort = 'original';
+setupAdvancedPreviewUI();
+const HAIR_TEXTURE_OPTIONS = [
+  ['1a','Tipo 1A - liso fino','Brillo muy largo, limpio y continuo.'],
+  ['1b','Tipo 1B - liso con cuerpo','Liso con un poco mas de cuerpo y movimiento.'],
+  ['1c','Tipo 1C - liso grueso','Liso pesado y voluminoso.'],
+  ['2a','Tipo 2A - onda suave','Ondas suaves en S.'],
+  ['2b','Tipo 2B - beach waves','Ondas marcadas y brillo por bandas.'],
+  ['2c','Tipo 2C - onda profunda','Ondas gruesas desde la raiz.'],
+  ['3a','Tipo 3A - rizo suelto','Bucles amplios y definidos.'],
+  ['3b','Tipo 3B - tirabuzon','Rizo elastico y con volumen.'],
+  ['3c','Tipo 3C - rizo apretado','Rizo pequeno, denso y compacto.'],
+  ['4a','Tipo 4A - coil definido','Coils pequenos bien definidos.'],
+  ['4b','Tipo 4B - patron Z','Textura angulosa y encogida.'],
+  ['4c','Tipo 4C - zigzag denso','Maxima densidad y brillo puntual.']
+];
+
+window.KAORU_HAIR_STUDY_MODE = window.KAORU_HAIR_STUDY_MODE || 'render';
+window.KAORU_HAIR_VIEW = window.KAORU_HAIR_VIEW || 'back';
+if (!window.__KAORU_HAIR_SHEET_READY_BOUND__) {
+  window.__KAORU_HAIR_SHEET_READY_BOUND__ = true;
+  window.addEventListener('kaoru-hair-sheet-ready', () => {
+    try {
+      render(store.getState());
+    } catch (error) {
+      console.warn('Kaoru Hair refresh skipped:', error);
+    }
+  });
+}
+const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c']);
+const KAORU_HAIR_REFERENCE_CACHE = new Map();
+
+function hairReferenceUrl(type) {
+  return `./assets/hair/${type}/mask-sheet-v2.png?cache=hair-masks-v9-20260913`;
+}
+
+function loadHairReferenceImage(type) {
+  if (!KAORU_HAIR_REFERENCE_AVAILABLE.has(type)) return Promise.resolve(null);
+  if (KAORU_HAIR_REFERENCE_CACHE.has(type)) return KAORU_HAIR_REFERENCE_CACHE.get(type);
+
+  const task = new Promise((resolve) => {
+    const image = new Image();
+    image.decoding = 'async';
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = hairReferenceUrl(type);
+  });
+
+  KAORU_HAIR_REFERENCE_CACHE.set(type, task);
+  return task;
+}
+
+async function drawHairReferenceCrop(type, view = 'back') {
+  const canvas = document.getElementById('hairReferenceCanvas');
+  const status = document.getElementById('hairReferenceStatus');
+  const fullLink = document.getElementById('hairReferenceFullLink');
+  if (!canvas || !status) return;
+
+  const context = canvas.getContext('2d');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cssWidth = Math.max(220, canvas.clientWidth || 300);
+  const cssHeight = Math.max(180, canvas.clientHeight || 230);
+  const width = Math.round(cssWidth * dpr);
+  const height = Math.round(cssHeight * dpr);
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  context.clearRect(0, 0, width, height);
+
+  const dark = document.documentElement.dataset.theme === 'night';
+  context.fillStyle = dark ? '#17151B' : '#F7F3F8';
+  context.fillRect(0, 0, width, height);
+
+  if (!KAORU_HAIR_REFERENCE_AVAILABLE.has(type)) {
+    context.fillStyle = dark ? '#EEE7F3' : '#403746';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.font = `${Math.max(13, Math.round(width * .035))}px Inter, system-ui, sans-serif`;
+    context.fillText(`Referencia ${String(type || '').toUpperCase()} pendiente`, width / 2, height / 2);
+    status.textContent = 'Todavia no tenemos la lamina de este tipo.';
+    if (fullLink) fullLink.hidden = true;
+    return;
+  }
+
+  status.textContent = 'Cargando referencia...';
+  const image = await loadHairReferenceImage(type);
+  if (!image) {
+    status.textContent = 'No se pudo cargar esta referencia.';
+    return;
+  }
+
+  const thirds = {
+    front: [0, 1 / 3],
+    side:  [1 / 3, 2 / 3],
+    back:  [2 / 3, 1]
+  };
+  const region = thirds[view] || thirds.back;
+
+  const sx = Math.round(image.naturalWidth * region[0]);
+  const sw = Math.round(image.naturalWidth * (region[1] - region[0]));
+  const sy = 0;
+  const sh = image.naturalHeight;
+
+  const sourceRatio = sw / sh;
+  const targetRatio = width / height;
+  let dw = width;
+  let dh = height;
+  let dx = 0;
+  let dy = 0;
+
+  if (sourceRatio > targetRatio) {
+    dh = width / sourceRatio;
+    dy = (height - dh) / 2;
+  } else {
+    dw = height * sourceRatio;
+    dx = (width - dw) / 2;
+  }
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
+
+  const label = view === 'front' ? 'FRENTE' : view === 'side' ? 'COSTADO' : 'ATRAS';
+  context.fillStyle = 'rgba(0,0,0,.64)';
+  const badgeW = Math.max(74, width * .18);
+  const badgeH = Math.max(26, height * .10);
+  context.beginPath();
+  if (typeof context.roundRect === 'function') context.roundRect(10, 10, badgeW, badgeH, 10);
+  else context.rect(10, 10, badgeW, badgeH);
+  context.fill();
+  context.fillStyle = '#FFFFFF';
+  context.font = `800 ${Math.max(10, Math.round(width * .025))}px Inter, system-ui, sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(label, 10 + badgeW / 2, 10 + badgeH / 2);
+
+  status.textContent = `Mascara ${String(type).toUpperCase()} - ${label.toLowerCase()}`;
+  if (fullLink) {
+    fullLink.hidden = false;
+    fullLink.href = hairReferenceUrl(type);
+  }
+}
+
+function hairTextureMeta(id){
+  const found = HAIR_TEXTURE_OPTIONS.find((item) => item[0] === id);
+  return found || HAIR_TEXTURE_OPTIONS[1];
+}
+
+function ensureHairTextureUI() {
+  if (document.getElementById('hairTexturePanel')) return;
+
+  const panel = document.createElement('section');
+  panel.id = 'hairTexturePanel';
+  panel.className = 'glass-card hair-texture-panel';
+  panel.hidden = true;
+  panel.innerHTML = `
+    <div class="panel-head">
+      <strong>Textura de cabello</strong>
+      <span>1A a 4C</span>
+    </div>
+    <label class="field-stack" for="hairTextureSelect">
+      <span>Tipo de cabello</span>
+      <select id="hairTextureSelect"></select>
+    </label>
+    <p id="hairTextureHint" class="hair-texture-hint"></p>
+  `;
+
+  const container = elements.categoryGrid?.parentElement || elements.categoryGrid;
+  if (!container) return;
+  container.insertAdjacentElement('afterend', panel);
+
+  const select = document.getElementById('hairTextureSelect');
+  select.innerHTML = HAIR_TEXTURE_OPTIONS
+    .map(([id, label]) => `<option value="${id}">${label}</option>`)
+    .join('');
+  const hairColorLibrary = document.createElement('details');
+  hairColorLibrary.className = 'hair-color-library';
+  hairColorLibrary.open = true;
+  hairColorLibrary.innerHTML = `
+    <summary>
+      <span>
+        <strong>Colores de cabello</strong>
+        <small id="hairColorName">Elige una variante</small>
+      </span>
+      <b id="hairColorCount"></b>
+    </summary>
+    <div class="hair-color-tools">
+      <input id="hairColorSearch" type="search" autocomplete="off" placeholder="Buscar negro, rubio, violeta, cian..." aria-label="Buscar color de cabello">
+    </div>
+    <div id="hairColorSwatches" class="hair-color-swatches" aria-label="Biblioteca de colores de cabello"></div>
+    <p class="hair-color-help">Elige una base y luego puedes editarla libremente con el selector HEX de arriba. La iluminación seguirá afectando sombras, luces, rebote y rim light.</p>
+  `;
+  panel.appendChild(hairColorLibrary);
+
+  const hairColorSearch = hairColorLibrary.querySelector('#hairColorSearch');
+  const hairColorSwatches = hairColorLibrary.querySelector('#hairColorSwatches');
+  const hairColorCount = hairColorLibrary.querySelector('#hairColorCount');
+
+  const renderHairColorLibrary = (filter = '') => {
+    const hairCategory = categoryById('hair-stylized');
+    const query = String(filter || '').trim().toLowerCase();
+    const variants = (hairCategory?.variants || []).filter((variant) => {
+      if (!query) return true;
+      return `${variant.name} ${variant.id}`.toLowerCase().includes(query);
+    });
+
+    hairColorCount.textContent = `${variants.length}/${hairCategory?.variants?.length || 0}`;
+    hairColorSwatches.innerHTML = variants.map((variant) => `
+      <button type="button" class="hair-color-swatch" data-hair-color="${variant.id}" title="${variant.name} · ${variant.baseHex}">
+        <i style="--hair-swatch:${variant.baseHex}"></i>
+        <span>${variant.name}</span>
+        <small>${variant.baseHex}</small>
+      </button>
+    `).join('');
+  };
+
+  renderHairColorLibrary();
+  hairColorSearch.addEventListener('input', () => renderHairColorLibrary(hairColorSearch.value));
+  hairColorSwatches.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-hair-color]');
+    if (!button) return;
+    const hairCategory = categoryById('hair-stylized');
+    const variant = hairCategory?.variants?.find((item) => item.id === button.dataset.hairColor);
+    if (!variant) return;
+
+    store.setState((state) => {
+      const next = {
+        ...state,
+        selection: {
+          ...state.selection,
+          variantId: variant.id,
+          presetId: 'custom'
+        }
+      };
+      return {
+        ...next,
+        palette: paletteFrom(next, variant.baseHex)
+      };
+    });
+    showToast(`${variant.name} · ${variant.baseHex}`);
+  });
+
+  if (!document.getElementById('hairColorLibraryStyles')) {
+    const style = document.createElement('style');
+    style.id = 'hairColorLibraryStyles';
+    style.textContent = `
+      .hair-color-library{margin-top:12px;border:1px solid var(--lab-line);border-radius:12px;background:var(--lab-surface-2);overflow:hidden;color:var(--lab-text)}
+      .hair-color-library>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 11px;cursor:pointer;list-style:none}
+      .hair-color-library>summary::-webkit-details-marker{display:none}
+      .hair-color-library>summary span{display:grid;gap:2px;min-width:0}
+      .hair-color-library>summary strong{font-size:12px}
+      .hair-color-library>summary small{color:var(--lab-muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .hair-color-library>summary b{font-size:9px;color:var(--lab-accent);background:var(--lab-accent-soft);padding:4px 6px;border-radius:999px}
+      .hair-color-tools{padding:0 9px 8px}
+      .hair-color-tools input{width:100%;height:34px;border:1px solid var(--lab-line);border-radius:9px;background:var(--lab-surface);color:var(--lab-text);padding:0 9px;font-size:11px;outline:none}
+      .hair-color-tools input:focus{border-color:var(--lab-accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--lab-accent) 16%,transparent)}
+      .hair-color-swatches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:245px;overflow:auto;padding:0 9px 9px;scrollbar-width:thin}
+      .hair-color-swatch{min-width:0;display:grid;grid-template-columns:28px minmax(0,1fr);grid-template-rows:auto auto;column-gap:7px;align-items:center;padding:6px;border:1px solid var(--lab-line);border-radius:9px;background:var(--lab-surface);color:var(--lab-text);text-align:left;cursor:pointer}
+      .hair-color-swatch:hover{border-color:var(--lab-accent);transform:translateY(-1px)}
+      .hair-color-swatch.is-active{border-color:var(--lab-accent);background:var(--lab-accent-soft);box-shadow:inset 0 0 0 1px var(--lab-accent)}
+      .hair-color-swatch i{grid-row:1/3;width:28px;height:28px;border-radius:8px;background:var(--hair-swatch);border:1px solid color-mix(in srgb,var(--lab-text) 18%,transparent);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+      .hair-color-swatch span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:800}
+      .hair-color-swatch small{color:var(--lab-muted);font:700 8px/1.1 ui-monospace,SFMono-Regular,Consolas,monospace}
+      .hair-color-help{margin:0;padding:0 10px 10px;color:var(--lab-muted);font-size:9px;line-height:1.4}
+    `;
+    document.head.appendChild(style);
+  }
+
+  select.addEventListener('change', () => {
+    const value = select.value || '1b';
+
+    store.setState((state) => {
+      const next = {
+        ...state,
+        selection: {
+          ...state.selection,
+          hairTexture: value,
+          undertoneId: value,
+          presetId: 'custom'
+        }
+      };
+
+      return {
+        ...next,
+        palette: paletteFrom(next, state.palette.baseHex)
+      };
+    });
+
+    const meta = hairTextureMeta(value);
+    const hint = document.getElementById('hairTextureHint');
+    if (hint) hint.textContent = meta[2];
+    showToast(`Cabello ${meta[1]}`);
+  });
+
+  const studyControls = document.createElement('div');
+  studyControls.className = 'hair-study-controls';
+  studyControls.innerHTML = [
+    '<span>Visualizacion</span>',
+    '<div class="hair-study-buttons">',
+    '<button type="button" data-hair-study="render">Cabello</button>',
+    '<button type="button" data-hair-study="map">Mapa de estudio</button>',
+    '</div>'
+  ].join('');
+  panel.appendChild(studyControls);
+  const viewControls = document.createElement('div');
+  viewControls.className = 'hair-view-controls';
+  viewControls.innerHTML = [
+    '<span>Vista del cabello</span>',
+    '<div class="hair-view-buttons">',
+    '<button type="button" data-hair-view="front">Frente</button>',
+    '<button type="button" data-hair-view="side">Costado</button>',
+    '<button type="button" data-hair-view="back">Atras</button>',
+    '</div>',
+    '<small>Cada tipo 1A-4C tiene las tres vistas y conserva color, sombras y luces.</small>'
+  ].join('');
+  panel.appendChild(viewControls);
+
+  const referencePanel = document.createElement('details');
+  referencePanel.id = 'hairReferencePanel';
+  referencePanel.className = 'hair-reference-panel';
+  referencePanel.open = true;
+  referencePanel.innerHTML = [
+    '<summary><span><strong>Mascara tecnica</strong><small>Frente - Costado - Atras</small></span><b>ALFA</b></summary>',
+    '<div class="hair-reference-stage"><canvas id="hairReferenceCanvas"></canvas></div>',
+    '<div class="hair-reference-meta">',
+    '<span id="hairReferenceStatus">Cargando referencia...</span>',
+    '<a id="hairReferenceFullLink" href="#" target="_blank" rel="noopener">Ver lamina completa</a>',
+    '</div>',
+    '<p>PNG gris con transparencia real. El preview aplica tu color base y despues calcula sombras, luces y reflejos.</p>'
+  ].join('');
+  panel.appendChild(referencePanel);
+
+  viewControls.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-hair-view]');
+    if (!button) return;
+    const nextView = ['front','side','back'].includes(button.dataset.hairView)
+      ? button.dataset.hairView
+      : 'back';
+    window.KAORU_HAIR_VIEW = nextView;
+    const current = store.getState();
+    const currentType = current.selection.hairTexture || current.selection.undertoneId || '1b';
+    drawHairReferenceCrop(currentType, nextView);
+    render(current);
+  });
+
+  studyControls.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-hair-study]');
+    if (!button) return;
+    window.KAORU_HAIR_STUDY_MODE = button.dataset.hairStudy === 'map' ? 'map' : 'render';
+    render(store.getState());
+  });
+
+  if (!document.getElementById('hairStudyModeStyles')) {
+    const style = document.createElement('style');
+    style.id = 'hairStudyModeStyles';
+    style.textContent = [
+      '.hair-study-controls{display:grid;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(127,116,132,.18)}',
+      '.hair-study-controls>span{font-size:12px;font-weight:700}',
+      '.hair-study-buttons{display:grid;grid-template-columns:1fr 1fr;gap:6px}',
+      '.hair-study-buttons button{min-height:36px;padding:7px 9px;border-radius:10px;font:600 12px/1.2 Inter,system-ui,sans-serif}',
+      '.hair-study-buttons button.is-active{box-shadow:inset 0 0 0 1px currentColor}',
+      '.hair-view-controls{display:grid;gap:7px;margin-top:11px;padding-top:11px;border-top:1px solid var(--lab-line)}',
+      '.hair-view-controls>span{font-size:12px;font-weight:700}',
+      '.hair-view-controls>small{font-size:9px;line-height:1.35;color:var(--lab-muted)}',
+      '.hair-view-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}',
+      '.hair-view-buttons button{min-height:34px;padding:6px 8px;border:1px solid var(--lab-line);border-radius:10px;background:var(--lab-surface);color:var(--lab-text);font:700 10px/1.15 Inter,system-ui,sans-serif;cursor:pointer}',
+      '.hair-view-buttons button:hover{border-color:var(--lab-accent);color:var(--lab-accent)}',
+      '.hair-view-buttons button.is-active{border-color:var(--lab-accent);background:var(--lab-accent-soft);color:var(--lab-accent);box-shadow:inset 0 0 0 1px var(--lab-accent)}',
+      '.hair-reference-panel{margin-top:11px;border:1px solid var(--lab-line);border-radius:12px;background:var(--lab-surface-2);overflow:hidden;color:var(--lab-text)}',
+      '.hair-reference-panel>summary{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;list-style:none}',
+      '.hair-reference-panel>summary::-webkit-details-marker{display:none}',
+      '.hair-reference-panel>summary span{display:grid;gap:1px}',
+      '.hair-reference-panel>summary strong{font-size:11px}',
+      '.hair-reference-panel>summary small{font-size:9px;color:var(--lab-muted)}',
+      '.hair-reference-panel>summary b{font-size:8px;color:var(--lab-accent);background:var(--lab-accent-soft);padding:4px 6px;border-radius:999px}',
+      '.hair-reference-stage{margin:0 8px;border:1px solid var(--lab-line);border-radius:10px;overflow:hidden;background:var(--lab-surface)}',
+      '.hair-reference-stage canvas{display:block;width:100%;height:230px}',
+      '.hair-reference-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px 2px;font-size:8px;color:var(--lab-muted)}',
+      '.hair-reference-meta a{color:var(--lab-accent);font-weight:800;text-decoration:none;white-space:nowrap}',
+      '.hair-reference-panel>p{margin:0;padding:6px 9px 10px;font-size:8px;line-height:1.4;color:var(--lab-muted)}',
+      '.hair-texture-panel.is-active-hair + *{}'
+    ].join('');
+    document.head.appendChild(style);
+  }
+
+  if (!document.getElementById('hairTexturePanelStyles')) {
+    const style = document.createElement('style');
+    style.id = 'hairTexturePanelStyles';
+    style.textContent = `
+      .hair-texture-panel{
+        margin:14px 0 0;
+        padding:14px;
+        border-radius:18px;
+      }
+      .hair-texture-panel .panel-head{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        margin-bottom:10px;
+      }
+      .hair-texture-panel .panel-head strong{
+        font-size:14px;
+      }
+      .hair-texture-panel .panel-head span{
+        font-size:12px;
+        opacity:.72;
+      }
+      .hair-texture-panel .field-stack{
+        display:grid;
+        gap:6px;
+      }
+      .hair-texture-panel .field-stack > span{
+        font-size:12px;
+      }
+      .hair-texture-panel select{
+        width:100%;
+        min-height:40px;
+        padding:8px 10px;
+        border-radius:12px;
+        font:inherit;
+        font-size:13px;
+      }
+      .hair-texture-hint{
+        margin:8px 0 0;
+        font-size:12px;
+        line-height:1.45;
+        opacity:.82;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+function syncHairTextureUI(state) {
+  ensureHairTextureUI();
+
+  const panel = document.getElementById('hairTexturePanel');
+  const select = document.getElementById('hairTextureSelect');
+  const hint = document.getElementById('hairTextureHint');
+
+  if (!panel || !select || !hint) return;
+
+  const active = state.selection.categoryId === 'hair-stylized';
+  panel.hidden = !active;
+  if (!active) return;
+
+  const value =
+    state.selection.hairTexture ||
+    state.selection.undertoneId ||
+    '1b';
+
+  if (document.activeElement !== select) {
+    select.value = value;
+  }
+
+  const meta = hairTextureMeta(value);
+  hint.textContent = meta[2];
+  drawHairReferenceCrop(value, window.KAORU_HAIR_VIEW || 'back');
+  const hairCategory = categoryById('hair-stylized');
+  const baseHex = String(state.palette.baseHex || '').toUpperCase();
+  const selectedHairColor = (hairCategory?.variants || []).find((variant) =>
+    String(variant.baseHex || '').toUpperCase() === baseHex
+  );
+  const colorName = panel.querySelector('#hairColorName');
+  if (colorName) {
+    colorName.textContent = selectedHairColor
+      ? `${selectedHairColor.name} · ${selectedHairColor.baseHex}`
+      : `Personalizado · ${state.palette.baseHex}`;
+  }
+  panel.querySelectorAll('[data-hair-color]').forEach((button) => {
+    const variant = (hairCategory?.variants || []).find((item) => item.id === button.dataset.hairColor);
+    const selected = Boolean(variant) && String(variant.baseHex).toUpperCase() === baseHex;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+
+
+  const studyMode = window.KAORU_HAIR_STUDY_MODE || 'render';
+  panel.querySelectorAll('[data-hair-study]').forEach((button) => {
+    const selected = button.dataset.hairStudy === studyMode;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const hairView = window.KAORU_HAIR_VIEW || 'back';
+  panel.querySelectorAll('[data-hair-view]').forEach((button) => {
+    const selected = button.dataset.hairView === hairView;
+    button.classList.toggle('is-active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+
+  if (elements.previewTabs) {
+    elements.previewTabs.style.opacity = '';
+    elements.previewTabs.style.pointerEvents = '';
+  }
+}
+
+
+const KAORU_CREATIVE_ATMO_FILTERS = {
+  natural: new Set([
+    'sun-side',
+    'golden-rim',
+    'window-cross',
+    'warm-blinds',
+    'window-cool',
+    'blinds-golden',
+    'leaf-light',
+    'leaf-dense',
+    'sun-blast',
+    'bokeh-gold'
+  ]),
+  dramatic: new Set([
+    'yellow-stripe',
+    'golden-rim',
+    'violet-orange',
+    'olive-crimson',
+    'forest-lowkey',
+    'neon-red-cyan',
+    'neon-dual',
+    'cyan-floor',
+    'purple-gold-split',
+    'flash-editorial',
+    'blue-red-drama'
+  ]),
+  color: new Set([
+    'cool-blue',
+    'pink-lavender',
+    'violet-orange',
+    'neon-red-cyan',
+    'neon-dual',
+    'cyan-floor',
+    'purple-gold-split',
+    'iridescent',
+    'rainbow',
+    'rainbow-prism',
+    'blue-red-drama'
+  ])
+};
+
+function kaoruCreativeAtmosphereTags(preset){
+  const tags=new Set(preset?.tags||[]);
+  const id=preset?.id||'';
+  const type=
+    preset?.scene?.effect?.type||
+    preset?.backdrop?.effect?.type||
+    'none';
+
+  Object.entries(
+    KAORU_CREATIVE_ATMO_FILTERS
+  ).forEach(([tag,ids])=>{
+    if(ids.has(id))tags.add(tag);
+  });
+
+  if([
+    'stripe',
+    'window',
+    'leaves',
+    'blinds',
+    'bokeh',
+    'circles',
+    'sparkles',
+    'underwater',
+    'caustics'
+  ].includes(type)){
+    tags.add('pattern');
+  }
+
+  if([
+    'iridescent',
+    'rainbow',
+    'underwater',
+    'caustics',
+    'sparkles',
+    'bokeh',
+    'circles'
+  ].includes(type)){
+    tags.add('fantasy');
+  }
+
+  if([
+    'split',
+    'neon',
+    'iridescent',
+    'rainbow'
+  ].includes(type)){
+    tags.add('color');
+  }
+
+  if([
+    'glow',
+    'rim',
+    'window',
+    'leaves',
+    'blinds'
+  ].includes(type)){
+    tags.add('natural');
+  }
+
+  return tags;
+}
+
+function kaoruNormalizeAtmosphereSearch(value){
+  return String(value||'')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase()
+    .trim();
+}
+
+function kaoruCreativeAtmosphereMatches(
+  preset,
+  filter
+){
+  const tags=
+    kaoruCreativeAtmosphereTags(
+      preset
+    );
+
+  const id=
+    String(preset?.id||'');
+
+  const isNew=
+    id.startsWith('ref-');
+
+  const isCustom=
+    id.startsWith('user-atmo-');
+
+  const filterMatch=
+    filter==='all'||
+    (filter==='new'&&isNew)||
+    (
+      filter==='classic'&&
+      !isNew&&
+      !isCustom
+    )||
+    (
+      filter==='favorite'&&
+      isFavoriteLightingPreset(id)
+    )||
+    (
+      filter==='custom'&&
+      isCustom
+    )||
+    tags.has(filter);
+
+  if(!filterMatch){
+    return false;
+  }
+
+  const query=
+    kaoruNormalizeAtmosphereSearch(
+      creativeAtmosphereSearch
+    );
+
+  if(!query){
+    return true;
+  }
+
+  const haystack=
+    kaoruNormalizeAtmosphereSearch(
+      [
+        preset?.id,
+        preset?.name,
+        preset?.description,
+        ...tags
+      ].filter(Boolean).join(' ')
+    );
+
+  return haystack.includes(query);
+}
+
+
+
+function kaoruUserAtmospheresLight(){
+  return listCustomLightingPresets('light')
+    .map((record)=>{
+      const lighting=
+        record.snapshot?.lighting||{};
+      const backdrop=
+        lighting.atmosphere?.backdrop||{};
+
+      return{
+        id:record.id,
+        group:'creative',
+        tags:['custom'],
+        name:record.name,
+        description:
+          record.description||
+          'Variante personalizada',
+        userPreset:true,
+        overrides:
+          kaoruCustomOverridesLight(
+            lighting
+          ),
+        backdrop:{
+          top:
+            backdrop.top||
+            '#2A2432',
+          mid:
+            backdrop.mid||
+            backdrop.top||
+            '#3C3348',
+          bottom:
+            backdrop.bottom||
+            '#241F2A',
+          accent:
+            backdrop.accent||
+            lighting.lights?.[0]?.color||
+            '#FFFFFF',
+          weather:
+            backdrop.weather||
+            'clear',
+          effect:
+            structuredClone(
+              backdrop.effect||
+              lighting.projector||
+              {type:'none'}
+            )
+        }
+      };
+    });
+}
+
+function kaoruAllCreativeAtmospheresLight(){
+  return[
+    ...creativeAtmospheres(),
+    ...kaoruUserAtmospheresLight()
+  ];
+}
+
+function kaoruRefreshCreativeAtmospheresLight(){
+  elements.creativeAtmosphereScenes
+    ?.replaceChildren();
+
+  renderLightingControls(
+    store.getState()
+  );
+}
+
+function kaoruAtmosphereEffectLabel(type){
+  const labels={
+    none:'',
+    glow:'Glow',
+    split:'Split',
+    stripe:'Franja',
+    window:'Ventana',
+    leaves:'Follaje',
+    blinds:'Persianas',
+    grid:'Rejilla',
+    neon:'NeÃ³n',
+    rim:'Rim',
+    iridescent:'Iridescente',
+    rainbow:'Prisma',
+    bokeh:'Bokeh',
+    circles:'CÃ­rculos',
+    sparkles:'Brillos',
+    blacklight:'Blacklight',
+    flash:'Flash',
+    caustics:'CaÃºsticas',
+    underwater:'AcuÃ¡tico'
+  };
+
+  return labels[type]||type||'';
+}
+
+function kaoruAtmosphereDirectionLabel(
+  direction,
+  elevation
+){
+  const a=Number(direction||0);
+  const e=Number(elevation||0);
+
+  if(e>=68)return 'Cenital';
+  if(e<=-28)return 'Inferior';
+  if(Math.abs(a)>=138)return 'Trasera';
+  if(a<=-48)return 'Izquierda';
+  if(a>=48)return 'Derecha';
+  return 'Frontal';
+}
+
+function kaoruAtmosphereSoftnessLabel(
+  softness
+){
+  const value=Number(softness??50);
+
+  if(value<=24)return 'Dura';
+  if(value<=64)return 'Media';
+  return 'Difusa';
+}
+
+function kaoruAtmosphereVisualLight(
+  preset
+){
+  const first=
+    preset?.overrides?.firstLight||{};
+
+  const second=
+    preset?.overrides?.secondLight||{};
+
+  const shadow=
+    preset?.overrides?.shadow||{};
+
+  const ambient=
+    preset?.overrides?.ambient||{};
+
+  const rim=
+    preset?.overrides?.rim||{};
+
+  const backdrop=
+    preset?.backdrop||{};
+
+  const effect=
+    backdrop.effect||{};
+
+  const direction=
+    Number(first.direction||0);
+
+  const elevation=
+    Number(first.elevation||0);
+
+  const rad=
+    direction*Math.PI/180;
+
+  const elevRad=
+    elevation*Math.PI/180;
+
+  const x=
+    Math.max(
+      12,
+      Math.min(
+        88,
+        50+Math.sin(rad)*34
+      )
+    );
+
+  const y=
+    Math.max(
+      12,
+      Math.min(
+        88,
+        53-Math.sin(elevRad)*32
+      )
+    );
+
+  return{
+    key:
+      first.color||
+      backdrop.accent||
+      '#FFFFFF',
+    fill:
+      second.color||
+      ambient.color||
+      backdrop.mid||
+      '#8A8A92',
+    shadow:
+      shadow.color||
+      backdrop.bottom||
+      '#24242B',
+    base:
+      backdrop.mid||
+      backdrop.top||
+      '#85818A',
+    rim:
+      rim.color||
+      backdrop.accent||
+      first.color||
+      '#FFFFFF',
+    x,
+    y,
+    direction:
+      kaoruAtmosphereDirectionLabel(
+        direction,
+        elevation
+      ),
+    softness:
+      kaoruAtmosphereSoftnessLabel(
+        first.softness
+      ),
+    effectLabel:
+      kaoruAtmosphereEffectLabel(
+        effect.type
+      )
+  };
+}
+
+function kaoruDecorateLightAtmosphereCard(
+  button,
+  preset
+){
+  const effect=
+    preset?.backdrop?.effect||{};
+
+  const visual=
+    kaoruAtmosphereVisualLight(
+      preset
+    );
+
+  button.dataset.effect=
+    effect.type||'none';
+
+  button.style.setProperty(
+    '--atmo-effect-a',
+    effect.colorA||
+    visual.key
+  );
+
+  button.style.setProperty(
+    '--atmo-effect-b',
+    effect.colorB||
+    visual.fill
+  );
+
+  button.style.setProperty(
+    '--pv-key',
+    visual.key
+  );
+
+  button.style.setProperty(
+    '--pv-fill',
+    visual.fill
+  );
+
+  button.style.setProperty(
+    '--pv-shadow',
+    visual.shadow
+  );
+
+  button.style.setProperty(
+    '--pv-base',
+    visual.base
+  );
+
+  button.style.setProperty(
+    '--pv-rim',
+    visual.rim
+  );
+
+  button.style.setProperty(
+    '--pv-x',
+    `${visual.x}%`
+  );
+
+  button.style.setProperty(
+    '--pv-y',
+    `${visual.y}%`
+  );
+
+  return visual;
+}
+
+
+function kaoruPresetWarmthLight(preset){
+  const color=
+    preset?.overrides?.firstLight?.color||
+    preset?.backdrop?.accent||
+    preset?.backdrop?.mid||
+    '#808080';
+
+  const match=
+    /^#([0-9a-f]{6})$/i.exec(
+      String(color)
+    );
+
+  if(!match)return 0;
+
+  const value=parseInt(match[1],16);
+  const r=(value>>16)&255;
+  const g=(value>>8)&255;
+  const b=value&255;
+
+  return(
+    (r-b)+
+    ((r+g-b*2)*.12)
+  );
+}
+
+function kaoruPresetIntensityLight(preset){
+  return Number(
+    preset?.overrides
+      ?.firstLight
+      ?.intensity??
+    0
+  );
+}
+
+function kaoruPresetSoftnessLight(preset){
+  return Number(
+    preset?.overrides
+      ?.firstLight
+      ?.softness??
+    50
+  );
+}
+
+function kaoruPresetTypeLight(preset){
+  return(
+    kaoruAtmosphereEffectLabel(
+      preset?.backdrop?.effect?.type
+    )||
+    kaoruAtmosphereDirectionLabel(
+      preset?.overrides
+        ?.firstLight
+        ?.direction,
+      preset?.overrides
+        ?.firstLight
+        ?.elevation
+    )
+  );
+}
+
+function kaoruCompareText(a,b){
+  return String(a||'').localeCompare(
+    String(b||''),
+    'es',
+    {sensitivity:'base'}
+  );
+}
+
+function kaoruSortCreativeAtmospheresLight(
+  presets
+){
+  const items=[...presets];
+
+  switch(creativeAtmosphereSort){
+    case 'favorite':
+      return items.sort((a,b)=>
+        Number(
+          isFavoriteLightingPreset(b.id)
+        )-
+        Number(
+          isFavoriteLightingPreset(a.id)
+        )||
+        kaoruCompareText(
+          a.name,
+          b.name
+        )
+      );
+
+    case 'name':
+      return items.sort((a,b)=>
+        kaoruCompareText(
+          a.name,
+          b.name
+        )
+      );
+
+    case 'intensity-desc':
+      return items.sort((a,b)=>
+        kaoruPresetIntensityLight(b)-
+        kaoruPresetIntensityLight(a)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'intensity-asc':
+      return items.sort((a,b)=>
+        kaoruPresetIntensityLight(a)-
+        kaoruPresetIntensityLight(b)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'warm':
+      return items.sort((a,b)=>
+        kaoruPresetWarmthLight(b)-
+        kaoruPresetWarmthLight(a)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'cool':
+      return items.sort((a,b)=>
+        kaoruPresetWarmthLight(a)-
+        kaoruPresetWarmthLight(b)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'hard':
+      return items.sort((a,b)=>
+        kaoruPresetSoftnessLight(a)-
+        kaoruPresetSoftnessLight(b)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'diffuse':
+      return items.sort((a,b)=>
+        kaoruPresetSoftnessLight(b)-
+        kaoruPresetSoftnessLight(a)||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'type':
+      return items.sort((a,b)=>
+        kaoruCompareText(
+          kaoruPresetTypeLight(a),
+          kaoruPresetTypeLight(b)
+        )||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    case 'direction':
+      return items.sort((a,b)=>
+        kaoruCompareText(
+          kaoruAtmosphereDirectionLabel(
+            a?.overrides
+              ?.firstLight
+              ?.direction,
+            a?.overrides
+              ?.firstLight
+              ?.elevation
+          ),
+          kaoruAtmosphereDirectionLabel(
+            b?.overrides
+              ?.firstLight
+              ?.direction,
+            b?.overrides
+              ?.firstLight
+              ?.elevation
+          )
+        )||
+        kaoruCompareText(a.name,b.name)
+      );
+
+    default:
+      return items;
+  }
+}
+
+
+function kaoruEscapeCompareHtml(value){
+  return String(value??'')
+    .replace(
+      /[&<>"']/g,
+      (char)=>({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      }[char])
+    );
+}
+
+function kaoruComparePresetByIdLight(id){
+  return kaoruAllCreativeAtmospheresLight()
+    .find(
+      preset=>preset.id===id
+    )||null;
+}
+
+function kaoruCustomOverridesLight(
+  lighting
+){
+  const lights=
+    Array.isArray(lighting?.lights)
+      ?lighting.lights
+      :[];
+
+  const first=
+    lights[0]||{};
+
+  const second=
+    lights[1]||{};
+
+  return{
+    ambient:{
+      ...(lighting?.ambient||{})
+    },
+    shadow:{
+      ...(lighting?.shadow||{})
+    },
+    bounce:{
+      ...(lighting?.bounce||{})
+    },
+    rim:{
+      ...(lighting?.rim||{})
+    },
+    firstLight:{
+      color:
+        first.color||
+        '#FFFFFF',
+      intensity:
+        Number(
+          first.intensity??70
+        ),
+      direction:
+        Number(
+          first.direction??
+          first.azimuth??
+          0
+        ),
+      elevation:
+        Number(
+          first.elevation??35
+        ),
+      softness:
+        Number(
+          first.softness??50
+        )
+    },
+    secondLight:{
+      color:
+        second.color||
+        first.color||
+        '#FFFFFF',
+      intensity:
+        Number(
+          second.intensity??25
+        ),
+      direction:
+        Number(
+          second.direction??
+          second.azimuth??
+          65
+        ),
+      elevation:
+        Number(
+          second.elevation??20
+        ),
+      softness:
+        Number(
+          second.softness??70
+        )
+    }
+  };
+}
+
+function kaoruFillCompareSelectLight(
+  select,
+  presets,
+  fallbackIndex
+){
+  if(!select)return;
+
+  const signature=
+    presets
+      .map(
+        preset=>
+          `${preset.id}:${preset.name}`
+      )
+      .join('|');
+
+  const current=
+    select.value;
+
+  if(
+    select.dataset.signature!==
+    signature
+  ){
+    select.dataset.signature=
+      signature;
+
+    select.replaceChildren(
+      ...presets.map((preset)=>{
+        const option=
+          document.createElement(
+            'option'
+          );
+
+        option.value=preset.id;
+        option.textContent=
+          preset.name;
+
+        return option;
+      })
+    );
+  }
+
+  if(
+    current&&
+    presets.some(
+      preset=>preset.id===current
+    )
+  ){
+    select.value=current;
+  }else if(presets.length){
+    select.value=
+      presets[
+        Math.min(
+          fallbackIndex,
+          presets.length-1
+        )
+      ].id;
+  }
+}
+
+function kaoruRenderCompareCardLight(
+  card,
+  preset
+){
+  if(!card)return;
+
+  if(!preset){
+    card.innerHTML=
+      '<p class="preset-compare-empty">Sin preset</p>';
+    return;
+  }
+
+  const visual=
+    kaoruAtmosphereVisualLight(
+      preset
+    );
+
+  const effect=
+    preset.backdrop?.effect||{};
+
+  card.dataset.effect=
+    effect.type||'none';
+
+  card.style.setProperty(
+    '--atmo-top',
+    preset.backdrop?.top||
+    '#2A2432'
+  );
+
+  card.style.setProperty(
+    '--atmo-mid',
+    preset.backdrop?.mid||
+    '#3C3348'
+  );
+
+  card.style.setProperty(
+    '--atmo-bottom',
+    preset.backdrop?.bottom||
+    '#241F2A'
+  );
+
+  card.style.setProperty(
+    '--atmo-accent',
+    preset.backdrop?.accent||
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--atmo-effect-a',
+    effect.colorA||
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--atmo-effect-b',
+    effect.colorB||
+    visual.fill
+  );
+
+  card.style.setProperty(
+    '--pv-key',
+    visual.key
+  );
+
+  card.style.setProperty(
+    '--pv-fill',
+    visual.fill
+  );
+
+  card.style.setProperty(
+    '--pv-shadow',
+    visual.shadow
+  );
+
+  card.style.setProperty(
+    '--pv-base',
+    visual.base
+  );
+
+  card.style.setProperty(
+    '--pv-rim',
+    visual.rim
+  );
+
+  card.style.setProperty(
+    '--pv-x',
+    `${visual.x}%`
+  );
+
+  card.style.setProperty(
+    '--pv-y',
+    `${visual.y}%`
+  );
+
+  const intensity=
+    Math.round(
+      kaoruPresetIntensityLight(
+        preset
+      )
+    );
+
+  const softness=
+    Math.round(
+      kaoruPresetSoftnessLight(
+        preset
+      )
+    );
+
+  card.innerHTML=`
+    <span class="preset-compare-preview atmosphere-preview atmosphere-3d-preview" aria-hidden="true">
+      <b class="atmo-study-orb"></b>
+      <i></i>
+    </span>
+    <span class="preset-compare-copy">
+      <strong>${kaoruEscapeCompareHtml(preset.name)}</strong>
+      <small>${kaoruEscapeCompareHtml(preset.description)}</small>
+      <span class="atmo-visual-meta">
+        <em>${kaoruEscapeCompareHtml(visual.direction)}</em>
+        <em>${kaoruEscapeCompareHtml(visual.softness)}</em>
+        ${
+          visual.effectLabel
+            ?`<em>${kaoruEscapeCompareHtml(visual.effectLabel)}</em>`
+            :''
+        }
+      </span>
+      <dl class="preset-compare-stats">
+        <div>
+          <dt>Intensidad</dt>
+          <dd>${intensity}%</dd>
+        </div>
+        <div>
+          <dt>Softness</dt>
+          <dd>${softness}%</dd>
+        </div>
+      </dl>
+      <span class="preset-compare-swatches" aria-label="Colores principales">
+        <i style="background:${visual.key}" title="Principal ${visual.key}"></i>
+        <i style="background:${visual.fill}" title="Relleno ${visual.fill}"></i>
+        <i style="background:${visual.shadow}" title="Sombra ${visual.shadow}"></i>
+        <i style="background:${visual.rim}" title="Rim ${visual.rim}"></i>
+      </span>
+    </span>
+  `;
+}
+
+function kaoruRenderComparatorLight(){
+  const presets=
+    kaoruSortCreativeAtmospheresLight(
+      kaoruAllCreativeAtmospheresLight()
+    );
+
+  kaoruFillCompareSelectLight(
+    elements.compareAtmosphereA,
+    presets,
+    0
+  );
+
+  kaoruFillCompareSelectLight(
+    elements.compareAtmosphereB,
+    presets,
+    1
+  );
+
+  kaoruRenderCompareCardLight(
+    elements.compareAtmosphereCardA,
+    kaoruComparePresetByIdLight(
+      elements.compareAtmosphereA
+        ?.value
+    )
+  );
+
+  kaoruRenderCompareCardLight(
+    elements.compareAtmosphereCardB,
+    kaoruComparePresetByIdLight(
+      elements.compareAtmosphereB
+        ?.value
+    )
+  );
+}
+
+function kaoruApplyComparePresetLight(id){
+  const custom=
+    customLightingPresetById(
+      id,
+      'light'
+    );
+
+  lightsRenderSignature='';
+
+  if(custom){
+    const snapshot=
+      structuredClone(
+        custom.snapshot
+      );
+
+    store.setState((state)=>({
+      ...state,
+      lighting:{
+        ...(snapshot.lighting||{}),
+        atmosphere:{
+          ...(snapshot.lighting
+            ?.atmosphere||{}),
+          id:custom.id,
+          name:custom.name
+        }
+      },
+      ui:{
+        ...state.ui,
+        paletteView:'illuminated'
+      }
+    }));
+
+    showToast(
+      `Mi preset: ${custom.name}`
+    );
+    return;
+  }
+
+  const preset=
+    atmosphereById(id);
+
+  store.setState((state)=>({
+    ...state,
+    lighting:
+      buildAtmosphereLighting(
+        preset.id
+      ),
+    ui:{
+      ...state.ui,
+      paletteView:'illuminated'
+    }
+  }));
+
+  showToast(
+    `Estilo: ${preset.name}`
+  );
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
+}
+
+function showToast(message) {
+  elements.toast.textContent = message; elements.toast.classList.add('is-visible');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => elements.toast.classList.remove('is-visible'), 1800);
+}
+
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (_) {
+    const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0';
+    document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove();
+  }
+}
+
+function paletteFrom(state, baseHex = state.palette.baseHex, params = state.params) {
+  const entries = generateDetailedPalette({ categoryId: state.selection.categoryId, baseHex, params, hairTexture: state.selection.hairTexture || state.selection.undertoneId || '1b' });
+  return { source: 'base-color', baseHex, entries, colors: entries.map((item) => item.hex), roles: entries.map((item) => item.role) };
+}
+
+function renderCategories(state) {
+  elements.categoryGrid.replaceChildren(...LIGHT_LAB_CATEGORIES.map((category) => {
+    const button = document.createElement('button'); button.type = 'button'; button.dataset.category = category.id; button.setAttribute('role','listitem');
+    button.className = `category-button${state.selection.categoryId === category.id ? ' is-active' : ''}`;
+    button.innerHTML = `<i>${category.icon}</i><strong>${category.label}</strong><small>Usar este tipo</small>`;
+    return button;
+  }));
+}
+
+function renderParameters(params) {
+  document.querySelectorAll('[data-param]').forEach((input) => { input.value=String(params[input.dataset.param] ?? 0); });
+  document.querySelectorAll('[data-output]').forEach((output) => { const value=params[output.dataset.output] ?? 0; output.value=`${value>0?'+':''}${value}`; output.textContent=output.value; });
+}
+
+function directionLabel(value) {
+  const angle = Number(value) || 0;
+  if (angle <= -135 || angle >= 135) return 'Desde atrÃ¡s';
+  if (angle < -45) return 'Desde la izquierda';
+  if (angle > 45) return 'Desde la derecha';
+  return 'Desde el frente';
+}
+
+function elevationLabel(value) {
+  const angle = Number(value) || 0;
+  if (angle <= -30) return 'Desde abajo';
+  if (angle >= 30) return 'Desde arriba';
+  return 'A la altura';
+}
+
+function softnessLabel(value) {
+  const amount = Number(value) || 0;
+  if (amount < 28) return 'Marcada';
+  if (amount < 68) return 'Suave';
+  return 'Muy suave';
+}
+
+function formatLightControlValue(field, value) {
+  const amount = Number(value) || 0;
+  if (field === 'intensity') return `${Math.round(amount)}%`;
+  if (field === 'direction') return directionLabel(amount);
+  if (field === 'elevation') return elevationLabel(amount);
+  if (field === 'softness') return softnessLabel(amount);
+  return String(Math.round(amount));
+}
+
+/* === KAORU LIGHT SHARED 3D CREATIVE V2 === */
+
+function normalizeEffectOpacity(value){
+  const number =
+    Number(value || 0);
+
+  if(number > 1){
+    return Math.max(
+      0,
+      Math.min(
+        1,
+        number / 100
+      )
+    );
+  }
+
+  return Math.max(
+    0,
+    Math.min(
+      1,
+      number
+    )
+  );
+}
+
+function setAtmoColorPair(
+  picker,
+  input,
+  value
+){
+  const hex =
+    normalizeHex(value) ||
+    '#000000';
+
+  if(
+    document.activeElement !==
+    picker
+  ){
+    picker.value = hex;
+  }
+
+  if(
+    document.activeElement !==
+    input
+  ){
+    input.value = hex;
+  }
+}
+
+function syncAtmosphereEditor(
+  lighting
+){
+  const preset =
+    atmosphereById(
+      lighting.atmosphere?.id ||
+      'day'
+    );
+
+  const backdrop =
+    lighting.atmosphere?.backdrop ||
+    preset.backdrop ||
+    {};
+
+  const effect =
+    lighting.projector ||
+    backdrop.effect ||
+    {};
+
+  setAtmoColorPair(
+    elements.atmoTopColor,
+    elements.atmoTopHex,
+    backdrop.top || '#82C9F4'
+  );
+
+  setAtmoColorPair(
+    elements.atmoMidColor,
+    elements.atmoMidHex,
+    backdrop.mid || '#DDF2FF'
+  );
+
+  setAtmoColorPair(
+    elements.atmoBottomColor,
+    elements.atmoBottomHex,
+    backdrop.bottom || '#F4E7BF'
+  );
+
+  setAtmoColorPair(
+    elements.atmoAccentColor,
+    elements.atmoAccentHex,
+    backdrop.accent || '#FFF2B3'
+  );
+
+  const type =
+    effect.type || 'none';
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectType
+  ){
+    elements.atmoEffectType.value =
+      type;
+  }
+
+  setAtmoColorPair(
+    elements.atmoEffectAColor,
+    elements.atmoEffectAHex,
+    effect.colorA || '#FFFFFF'
+  );
+
+  setAtmoColorPair(
+    elements.atmoEffectBColor,
+    elements.atmoEffectBHex,
+    effect.colorB || '#7C3AED'
+  );
+
+  const opacity =
+    Math.round(
+      normalizeEffectOpacity(
+        effect.opacity ??
+        effect.intensity
+      ) * 100
+    );
+
+  const angle =
+    Number(
+      effect.angle || 0
+    );
+
+  const scaleRaw =
+    Number(
+      effect.scale ?? 100
+    );
+
+  const scale =
+    scaleRaw <= 3
+      ? Math.round(
+          scaleRaw * 100
+        )
+      : Math.round(
+          scaleRaw
+        );
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectOpacity
+  ){
+    elements.atmoEffectOpacity.value =
+      String(opacity);
+  }
+
+  elements.atmoEffectOpacityOut
+    .textContent =
+      `${opacity}%`;
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectAngle
+  ){
+    elements.atmoEffectAngle.value =
+      String(angle);
+  }
+
+  elements.atmoEffectAngleOut
+    .textContent =
+      `${Math.round(angle)}Â°`;
+
+  if(
+    document.activeElement !==
+    elements.atmoEffectScale
+  ){
+    elements.atmoEffectScale.value =
+      String(scale);
+  }
+
+  elements.atmoEffectScaleOut
+    .textContent =
+      `${scale}%`;
+
+  const projectorLightId =
+    effect.lightId ||
+    lighting.lights?.[0]?.id ||
+    '';
+
+  if(elements.atmoProjectorLight){
+    const optionsSignature =
+      lighting.lights
+        .map(
+          (light) =>
+            `${light.id}:${light.name}`
+        )
+        .join('|');
+
+    if(
+      elements.atmoProjectorLight
+        .dataset.signature !==
+      optionsSignature
+    ){
+      elements.atmoProjectorLight
+        .dataset.signature =
+          optionsSignature;
+
+      elements.atmoProjectorLight
+        .replaceChildren(
+          ...lighting.lights.map(
+            (light)=>{
+              const option =
+                document.createElement(
+                  'option'
+                );
+
+              option.value=light.id;
+              option.textContent=
+                light.name ||
+                'Luz';
+
+              return option;
+            }
+          )
+        );
+    }
+
+    if(
+      document.activeElement !==
+      elements.atmoProjectorLight
+    ){
+      elements.atmoProjectorLight.value =
+        projectorLightId;
+    }
+  }
+
+  const extraControls=[
+    [elements.atmoEffectX,elements.atmoEffectXOut,Number(effect.offsetX||0),'%'],
+    [elements.atmoEffectY,elements.atmoEffectYOut,Number(effect.offsetY||0),'%'],
+    [elements.atmoEffectBlur,elements.atmoEffectBlurOut,Number(effect.blur??8),'%'],
+    [elements.atmoEffectContrast,elements.atmoEffectContrastOut,Number(effect.contrast??70),'%'],
+    [elements.atmoEffectDensity,elements.atmoEffectDensityOut,Number(effect.density??50),'%']
+  ];
+
+  extraControls.forEach(
+    ([input,output,value,suffix])=>{
+      if(
+        input &&
+        document.activeElement !== input
+      ){
+        input.value=String(value);
+      }
+
+      if(output){
+        output.textContent=
+          `${Math.round(value)}${suffix}`;
+      }
+    }
+  );
+}
+
+function patchAtmosphereBackdrop(
+  changes
+){
+  store.setState((state)=>({
+    ...state,
+    lighting:{
+      ...state.lighting,
+      sceneId:'custom',
+      atmosphere:{
+        ...(state.lighting
+          .atmosphere || {
+            id:'custom',
+            name:'Personalizado',
+            description:''
+          }),
+        backdrop:{
+          ...(state.lighting
+            .atmosphere
+            ?.backdrop || {}),
+          ...changes
+        }
+      }
+    }
+  }));
+}
+
+function patchAtmosphereEffect(
+  changes
+){
+  store.setState((state)=>{
+    const backdrop =
+      state.lighting
+        .atmosphere
+        ?.backdrop || {};
+
+    const effect={
+      type:'none',
+      colorA:'#FFFFFF',
+      colorB:'#7C3AED',
+      opacity:0,
+      angle:0,
+      scale:100,
+      blur:8,
+      offsetX:0,
+      offsetY:0,
+      contrast:70,
+      density:50,
+      ...(backdrop.effect || {}),
+      ...(state.lighting.projector || {}),
+      ...changes
+    };
+
+    const projector=
+      projectorFromEffect(
+        effect
+      );
+
+    if(
+      projector.enabled &&
+      !projector.lightId &&
+      state.lighting.lights?.[0]
+    ){
+      projector.lightId=
+        state.lighting.lights[0].id;
+    }
+
+    return {
+      ...state,
+      lighting:{
+        ...state.lighting,
+        sceneId:'custom',
+        projector,
+        atmosphere:{
+          ...(state.lighting
+            .atmosphere || {
+              id:'custom',
+              name:'Personalizado',
+              description:''
+            }),
+          backdrop:{
+            ...backdrop,
+            effect
+          }
+        }
+      }
+    };
+  });
+}
+
+function applyAtmosphereColorInput(
+  picker,
+  textInput,
+  property
+){
+  const apply = (raw)=>{
+    const hex =
+      normalizeHex(raw);
+
+    if(!hex)return;
+
+    picker.value = hex;
+    textInput.value = hex;
+
+    patchAtmosphereBackdrop({
+      [property]:hex
+    });
+  };
+
+  picker.addEventListener(
+    'input',
+    ()=>{
+      apply(picker.value);
+    }
+  );
+
+  textInput.addEventListener(
+    'keydown',
+    (event)=>{
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        apply(textInput.value);
+      }
+    }
+  );
+
+  textInput.addEventListener(
+    'focusout',
+    ()=>{
+      apply(textInput.value);
+    }
+  );
+}
+
+function applyEffectColorInput(
+  picker,
+  textInput,
+  property
+){
+  const apply = (raw)=>{
+    const hex =
+      normalizeHex(raw);
+
+    if(!hex)return;
+
+    picker.value = hex;
+    textInput.value = hex;
+
+    patchAtmosphereEffect({
+      [property]:hex
+    });
+  };
+
+  picker.addEventListener(
+    'input',
+    ()=>{
+      apply(picker.value);
+    }
+  );
+
+  textInput.addEventListener(
+    'keydown',
+    (event)=>{
+      if(event.key === 'Enter'){
+        event.preventDefault();
+        apply(textInput.value);
+      }
+    }
+  );
+
+  textInput.addEventListener(
+    'focusout',
+    ()=>{
+      apply(textInput.value);
+    }
+  );
+}
+
+/* === /KAORU LIGHT SHARED 3D CREATIVE V2 === */
+function renderLightingControls(state) {
+  const lighting = state.lighting;
+  const selected =
+    lighting.lights.find(
+      (light) =>
+        light.id === lighting.selectedLightId
+    ) || lighting.lights[0];
+
+  elements.lightingEnabled.checked =
+    lighting.enabled;
+
+  elements.activeLightsLabel.textContent =
+    lightingSummary(lighting);
+
+  elements.addLight.disabled =
+    lighting.lights.length >= MAX_DIRECT_LIGHTS;
+
+    if (
+    elements.atmosphereScenes &&
+    !elements.atmosphereScenes.childElementCount
+  ) {
+    elements.atmosphereScenes.replaceChildren(
+      ...coreAtmospheres().map((preset) => {
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='atmosphere-card';
+        button.dataset.atmosphere=preset.id;
+        button.style.setProperty('--atmo-top',preset.backdrop.top);
+        button.style.setProperty('--atmo-mid',preset.backdrop.mid);
+        button.style.setProperty('--atmo-bottom',preset.backdrop.bottom);
+        button.style.setProperty('--atmo-accent',preset.backdrop.accent);
+        const visual=
+          kaoruDecorateLightAtmosphereCard(
+            button,
+            preset
+          );
+        button.innerHTML=`
+          <span class="atmosphere-preview" aria-hidden="true">
+            <b class="atmo-study-orb"></b>
+            <i></i>
+          </span>
+          <span>
+            <strong>${escapeHtml(preset.name)}</strong>
+            <small>${escapeHtml(preset.description)}</small>
+            <span class="atmo-visual-meta">
+              <em>${escapeHtml(visual.direction)}</em>
+              <em>${escapeHtml(visual.softness)}</em>
+              ${
+                visual.effectLabel
+                  ?`<em>${escapeHtml(visual.effectLabel)}</em>`
+                  :''
+              }
+            </span>
+          </span>
+        `;
+        return button;
+      })
+    );
+  }
+
+  const activeAtmosphere=
+    lighting.atmosphere?.id||
+    'day';
+
+  elements.atmosphereScenes
+    ?.querySelectorAll('[data-atmosphere]')
+    .forEach((button)=>{
+      const active=
+        button.dataset.atmosphere===
+        activeAtmosphere;
+
+      button.classList.toggle(
+        'is-active',
+        active
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(active)
+      );
+    });
+
+  if(elements.atmosphereLabel){
+    elements.atmosphereLabel.textContent=
+      atmosphereById(activeAtmosphere).name;
+  }
+  if(
+    elements.creativeAtmosphereScenes &&
+    !elements.creativeAtmosphereScenes
+      .childElementCount
+  ){
+    elements.creativeAtmosphereScenes
+      .replaceChildren(
+        ...kaoruSortCreativeAtmospheresLight(
+          kaoruAllCreativeAtmospheresLight()
+            .filter(
+              (preset)=>
+                kaoruCreativeAtmosphereMatches(
+                  preset,
+                  creativeAtmosphereFilter
+                )
+            )
+        )
+          .map((preset)=>{
+            const button =
+              document.createElement(
+                'button'
+              );
+
+            button.type='button';
+            button.className=
+              'atmosphere-card atmosphere-card-creative';
+
+            button.dataset.atmosphere=
+              preset.id;
+
+            button.title=
+              `${preset.name} â€” ${preset.description}`;
+
+            button.style.setProperty(
+              '--atmo-top',
+              preset.backdrop.top
+            );
+
+            button.style.setProperty(
+              '--atmo-mid',
+              preset.backdrop.mid
+            );
+
+            button.style.setProperty(
+              '--atmo-bottom',
+              preset.backdrop.bottom
+            );
+
+            button.style.setProperty(
+              '--atmo-accent',
+              preset.backdrop.accent
+            );
+
+            const visual=
+              kaoruDecorateLightAtmosphereCard(
+                button,
+                preset
+              );
+
+            const favorite=
+              isFavoriteLightingPreset(
+                preset.id
+              );
+
+            button.innerHTML=`
+              <span class="atmosphere-preview" aria-hidden="true">
+                <b class="atmo-study-orb"></b>
+                <i></i>
+              </span>
+              <span class="atmo-card-copy">
+                <strong>${escapeHtml(preset.name)}</strong>
+                <small>${escapeHtml(preset.description)}</small>
+                <span class="atmo-visual-meta">
+                  <em>${escapeHtml(visual.direction)}</em>
+                  <em>${escapeHtml(visual.softness)}</em>
+                  ${
+                    visual.effectLabel
+                      ?`<em>${escapeHtml(visual.effectLabel)}</em>`
+                      :''
+                  }
+                </span>
+                <span class="atmo-card-actions">
+                  <span
+                    class="atmo-favorite-toggle"
+                    data-favorite-toggle="${preset.id}"
+                    role="button"
+                    tabindex="0"
+                    title="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
+                    aria-label="${favorite?'Quitar de favoritos':'Agregar a favoritos'}"
+                  >${favorite?'â˜…':'â˜†'}</span>
+                  ${
+                    preset.userPreset
+                      ?`<span
+                          class="atmo-delete-user"
+                          data-user-preset-delete="${preset.id}"
+                          role="button"
+                          tabindex="0"
+                          title="Eliminar preset personal"
+                          aria-label="Eliminar preset personal"
+                        >Ã—</span>`
+                      :''
+                  }
+                </span>
+              </span>
+            `;
+
+            return button;
+          })
+      );
+  }
+
+  kaoruRenderComparatorLight();
+
+  if(elements.creativeAtmosphereCount){
+    const visibleCount=
+      kaoruAllCreativeAtmospheresLight()
+        .filter(
+          (preset)=>
+            kaoruCreativeAtmosphereMatches(
+              preset,
+              creativeAtmosphereFilter
+            )
+        )
+        .length;
+
+    elements.creativeAtmosphereCount
+      .textContent=
+        `${visibleCount} estilo${
+          visibleCount===1?'':'s'
+        }`;
+  }
+
+  elements.creativeAtmosphereScenes
+    ?.querySelectorAll(
+      '[data-atmosphere]'
+    )
+    .forEach((button)=>{
+      const active =
+        button.dataset.atmosphere ===
+        activeAtmosphere;
+
+      button.classList.toggle(
+        'is-active',
+        active
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(active)
+      );
+    });
+
+  syncAtmosphereEditor(
+    lighting
+  );
+if (!elements.lightingScenes.childElementCount) {
+    elements.lightingScenes.replaceChildren(
+      ...LIGHTING_SCENES.map((scene) => {
+        const button = document.createElement('button');
+
+        button.type = 'button';
+        button.dataset.scene = scene.id;
+        button.className = 'lighting-preset-card';
+
+        button.style.setProperty(
+          '--scene-a',
+          scene.preview?.a || '#FFF1D6'
+        );
+
+        button.style.setProperty(
+          '--scene-b',
+          scene.preview?.b || '#232532'
+        );
+
+        button.style.setProperty(
+          '--scene-bg',
+          scene.preview?.bg || '#11131A'
+        );
+
+        button.style.setProperty(
+          '--scene-x',
+          scene.preview?.x || '35%'
+        );
+
+        button.style.setProperty(
+          '--scene-y',
+          scene.preview?.y || '28%'
+        );
+
+        button.innerHTML = `
+          <span class="scene-preview" aria-hidden="true">
+            <i></i>
+          </span>
+          <span class="scene-copy">
+            <strong>${escapeHtml(scene.name)}</strong>
+            <small>${escapeHtml(scene.description)}</small>
+          </span>
+        `;
+
+        return button;
+      })
+    );
+  }
+
+  elements.lightingScenes
+    .querySelectorAll('[data-scene]')
+    .forEach((button) => {
+      const active =
+        button.dataset.scene === lighting.sceneId;
+
+      button.classList.toggle(
+        'is-active',
+        active
+      );
+
+      button.setAttribute(
+        'aria-pressed',
+        String(active)
+      );
+    });
+
+  const signature = `${
+    lighting.sceneId || 'custom'
+  }::${
+    lighting.lights
+      .map(
+        (light) =>
+          `${light.id}:${light.name}:${light.color}:${light.enabled}`
+      )
+      .join('|')
+  }::${selected?.id || ''}`;
+
+  if (signature !== lightsRenderSignature) {
+    lightsRenderSignature = signature;
+
+    elements.lightsList.replaceChildren(
+      ...lighting.lights.map((light) => {
+        const item =
+          document.createElement('article');
+
+        const isSelected =
+          light.id === selected?.id;
+
+        item.className =
+          `light-item friendly-light-item${
+            isSelected ? ' is-selected' : ''
+          }${
+            light.enabled ? '' : ' is-disabled'
+          }`;
+
+        item.dataset.lightId = light.id;
+
+        item.innerHTML = `
+          <div class="light-item-head">
+            <input
+              type="checkbox"
+              data-light-field="enabled"
+              ${light.enabled ? 'checked' : ''}
+              aria-label="Activar ${escapeHtml(light.name)}"
+            >
+
+            <button
+              type="button"
+              data-light-action="select"
+              class="light-select"
+            >
+              <i style="--light-color:${light.color}"></i>
+              <span>
+                <strong>${escapeHtml(light.name)}</strong>
+                <small>${light.color} Â· ${Math.round(light.intensity)}%</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              data-light-action="duplicate"
+              title="Duplicar esta luz"
+              aria-label="Duplicar ${escapeHtml(light.name)}"
+            >â§‰</button>
+
+            <button
+              type="button"
+              data-light-action="delete"
+              title="Eliminar esta luz"
+              aria-label="Eliminar ${escapeHtml(light.name)}"
+              ${lighting.lights.length === 1 ? 'disabled' : ''}
+            >Ã—</button>
+          </div>
+
+          ${
+            isSelected
+              ? `
+                <div class="light-editor-inline friendly-light-editor">
+                  <label class="friendly-name-field">
+                    <span>Nombre de la luz</span>
+                    <input
+                      type="text"
+                      maxlength="28"
+                      data-light-field="name"
+                      value="${escapeHtml(light.name)}"
+                    >
+                  </label>
+
+                  <label class="friendly-color-field">
+                    <span>Color de esta luz</span>
+                    <div class="light-color-row">
+                      <input
+                        type="color"
+                        data-light-field="color"
+                        value="${light.color}"
+                        aria-label="Color de ${escapeHtml(light.name)}"
+                      >
+                      <input
+                        type="text"
+                        maxlength="7"
+                        data-light-hex
+                        value="${light.color}"
+                        aria-label="HEX de ${escapeHtml(light.name)}"
+                      >
+                    </div>
+                  </label>
+
+                  <label>
+                    <span>
+                      Fuerza
+                      <output>${formatLightControlValue('intensity', light.intensity)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      data-light-field="intensity"
+                      value="${light.intensity}"
+                    >
+                  </label>
+
+                  <label>
+                    <span>
+                      Â¿Desde quÃ© lado?
+                      <output>${formatLightControlValue('direction', light.direction)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="-180"
+                      max="180"
+                      data-light-field="direction"
+                      value="${light.direction}"
+                    >
+                  </label>
+
+                  <label>
+                    <span>
+                      Altura de la luz
+                      <output>${formatLightControlValue('elevation', light.elevation)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="-90"
+                      max="90"
+                      data-light-field="elevation"
+                      value="${light.elevation}"
+                    >
+                  </label>
+
+                  <label>
+                    <span>
+                      Suavidad
+                      <output>${formatLightControlValue('softness', light.softness)}</output>
+                    </span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      data-light-field="softness"
+                      value="${light.softness}"
+                    >
+                  </label>
+                </div>
+              `
+              : ''
+          }
+        `;
+
+        return item;
+      })
+    );
+  }
+
+  lighting.lights.forEach((light) => {
+    const item =
+      elements.lightsList.querySelector(
+        `[data-light-id="${light.id}"]`
+      );
+
+    if (!item) return;
+
+    const summary =
+      item.querySelector('.light-select small');
+
+    if (summary) {
+      summary.textContent =
+        `${light.color} Â· ${Math.round(light.intensity)}%`;
+    }
+
+    item
+      .querySelectorAll('[data-light-field]')
+      .forEach((input) => {
+        const field =
+          input.dataset.lightField;
+
+        if (
+          document.activeElement === input ||
+          input.type === 'checkbox' ||
+          field === 'name' ||
+          field === 'color'
+        ) {
+          return;
+        }
+
+        input.value =
+          String(light[field]);
+
+        const output =
+          input
+            .closest('label')
+            ?.querySelector('output');
+
+        if (output) {
+          const text =
+            formatLightControlValue(
+              field,
+              light[field]
+            );
+
+          output.value = text;
+          output.textContent = text;
+        }
+      });
+  });
+
+  elements.environmentControls
+    .querySelectorAll('[data-light-component]')
+    .forEach((row) => {
+      const component =
+        lighting[row.dataset.lightComponent];
+
+      if (!component) return;
+
+      const picker =
+        row.querySelector(
+          '[data-component-field="color"]'
+        );
+
+      const hex =
+        row.querySelector(
+          '[data-component-hex]'
+        );
+
+      const intensity =
+        row.querySelector(
+          '[data-component-field="intensity"]'
+        );
+
+      const output =
+        row.querySelector(
+          '[data-component-output]'
+        );
+
+      if (document.activeElement !== picker)
+        picker.value = component.color;
+
+      if (document.activeElement !== hex)
+        hex.value = component.color;
+
+      if (document.activeElement !== intensity)
+        intensity.value =
+          String(component.intensity);
+
+      const text =
+        `${Math.round(component.intensity)}%`;
+
+      output.value = text;
+      output.textContent = text;
+    });
+}
+function renderSwatches(entries,{editable=false,kind='illuminated'}={}) {
+  elements.swatchGrid.replaceChildren(...entries.map((color,index) => {
+    const item=document.createElement('article'); item.className='swatch'; item.dataset.index=String(index); item.dataset.paletteKind=kind; item.tabIndex=0; item.setAttribute('role','button');
+    item.setAttribute('aria-label',`${color.role} ${color.hex}. Clic para copiar.`); item.style.setProperty('--swatch',color.hex); item.style.setProperty('--swatch-text',readableTextColor(color.hex));
+    item.innerHTML=`<div class="swatch-color"><span>Copiar</span></div><div class="swatch-meta"><div><strong>${color.role}</strong><span>${color.hex}</span></div>${editable?`<button class="edit-swatch" type="button" title="Editar ${color.role}" aria-label="Editar ${color.role}">âœŽ</button>`:''}</div>`;
+    return item;
+  }));
+}
+
+function renderComparison(original,illuminated) {
+  elements.comparisonGrid.replaceChildren(...original.map((entry,index)=>{
+    const changed=illuminated[index];const item=document.createElement('article');item.className='comparison-item';
+    item.innerHTML=`<strong>${escapeHtml(entry.role)}</strong><div><button type="button" data-copy-hex="${entry.hex}" style="--compare:${entry.hex}" title="Copiar original ${entry.hex}"><i></i><span>${entry.hex}</span></button><b>â†’</b><button type="button" data-copy-hex="${changed.hex}" style="--compare:${changed.hex}" title="Copiar iluminado ${changed.hex}"><i></i><span>${changed.hex}</span></button></div>`;
+    return item;
+  }));
+}
+
+function renderExtractedColors(samples) {
+  elements.extractedCount.textContent=`${samples.length} ${samples.length===1?'muestra':'muestras'}`;
+  elements.extractedEmpty.hidden=samples.length>0; elements.clearSamples.hidden=samples.length===0;
+  elements.extractedColors.replaceChildren(...samples.map((sample)=>{
+    const item=document.createElement('article'); item.className='extracted-item'; item.dataset.sampleId=sample.id;
+    const roleOptions=SAMPLE_ROLES.map((role)=>`<option value="${role.id}"${role.id===sample.role?' selected':''}>${role.name}</option>`).join('');
+    item.innerHTML=`<button class="extracted-swatch" data-sample-action="copy" type="button" style="--sample:${sample.hex};--sample-text:${readableTextColor(sample.hex)}" title="Copiar ${sample.hex}"><span>${sample.hex}</span></button><div class="extracted-data"><select data-sample-action="role" aria-label="Rol de ${sample.hex}">${roleOptions}</select><div><button data-sample-action="base" type="button">Usar como base</button><button data-sample-action="delete" type="button" aria-label="Eliminar ${sample.hex}">Ã—</button></div></div>`;
+    return item;
+  }));
+}
+
+function renderRecentColors(colors) {
+  elements.recentEmpty.hidden=colors.length>0;
+  elements.recentColors.replaceChildren(...colors.map((color)=>{
+    const item=document.createElement('div'); item.className='recent-item'; item.dataset.recentHex=color.hex;
+    item.innerHTML=`<button data-recent-action="copy" type="button" style="--recent:${color.hex}" title="Copiar ${color.hex}"><span></span><b>${color.hex}</b></button><button data-recent-action="base" type="button" title="Usar ${color.hex} como base">ï¼‹</button>`;
+    return item;
+  }));
+}
+
+function render(state) {
+  const category=categoryById(state.selection.categoryId);
+  const original=state.palette.entries;const illuminated=applyLightingToPalette(original,state.lighting);const paletteView=state.ui.paletteView || 'illuminated';const selectedLight=state.lighting.lights.find((light)=>light.id===state.lighting.selectedLightId) || state.lighting.lights[0];const selectedEntries=applyLightingToPalette(original,state.lighting,{onlyLightId:selectedLight?.id});
+  renderCategories(state); renderParameters(state.params); renderLightingControls(state);
+  syncHairTextureUI(state);
+  const comparing=paletteView==='compare';elements.swatchGrid.hidden=comparing;elements.comparisonGrid.hidden=!comparing;
+  if(comparing)renderComparison(original,illuminated);else renderSwatches(paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated,{editable:paletteView==='original',kind:paletteView});
+  renderExtractedColors(state.reference.extractedColors); renderRecentColors(state.reference.recentColors);
+  elements.previewTitle.textContent=category.label;
+  elements.paletteName.textContent=paletteView==='original'?`Original Â· ${state.palette.baseHex}`:paletteView==='compare'?`Original vs. iluminada`:paletteView==='selected'?`Aporte Â· ${selectedLight?.name || 'Luz elegida'}`:`Iluminada Â· ${state.palette.baseHex}`;
+  elements.stateCategory.textContent=category.label;
+  elements.stateBase.textContent=state.palette.baseHex;elements.stateLighting.textContent=lightingSummary(state.lighting);elements.stateColors.textContent=`${state.palette.entries.length} colores`;
+  elements.clearImage.hidden=!state.reference.image;
+  if (document.activeElement!==elements.baseHex) elements.baseHex.value=state.palette.baseHex; elements.basePicker.value=state.palette.baseHex;
+  elements.modeLabel.textContent=VIEW_LABELS[state.selection.previewMode];
+  const referenceActive=state.selection.previewMode==='reference'; elements.canvas.hidden=referenceActive; elements.referenceStage.hidden=!referenceActive;
+  elements.referenceEmpty.hidden=Boolean(state.reference.image); elements.referenceCanvas.hidden=!state.reference.image;
+  elements.canvasHint.textContent=referenceActive?(state.reference.image?'Haz clic sobre la imagen para capturar el color':'Sube, pega o arrastra una imagen'):(paletteView==='original'?'Paleta sin iluminaciÃ³n':paletteView==='selected'?`Solo ${selectedLight?.name || 'luz elegida'}`:lightingSummary(state.lighting));
+  elements.previewTabs.querySelectorAll('[data-view]').forEach((button)=>{const active=button.dataset.view===state.selection.previewMode;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
+  elements.paletteViewTabs.querySelectorAll('[data-palette-view]').forEach((button)=>{const active=button.dataset.paletteView===paletteView;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
+  if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting,{categoryId:state.selection.categoryId,hairTexture:state.selection.hairTexture||state.selection.undertoneId||'1b',hairStudyMode:window.KAORU_HAIR_STUDY_MODE||'render',hairView:window.KAORU_HAIR_VIEW||'back'}));}
+}
+
+function applyManualHex() {
+  const hex=normalizeHex(elements.baseHex.value); elements.hexError.hidden=Boolean(hex); elements.baseHex.setAttribute('aria-invalid',String(!hex));
+  if (!hex) return;
+  store.setState((state)=>{const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`Color base ${hex}`};return {...next,palette:paletteFrom(next,hex),reference:{...state.reference,recentColors:addRecentColor(state.reference.recentColors,hex,'manual-hex')}};});
+  showToast(`Base aplicada: ${hex}`);
+}
+
+function openEditor(index) {
+  const color=store.getState().palette.entries[index]; if (!color) return; editingIndex=index; elements.editor.hidden=false; elements.editRole.textContent=color.role;
+  elements.editPicker.value=color.hex; elements.editHex.value=color.hex; elements.editError.hidden=true; elements.editHex.focus(); elements.editHex.select();
+}
+
+function applyEditedColor() {
+  const hex=normalizeHex(elements.editHex.value); elements.editError.hidden=Boolean(hex); if (!hex || editingIndex===null) return;
+  store.setState((state)=>{const entries=state.palette.entries.map((item,index)=>index===editingIndex?{...item,hex}:item);return {...state,palette:{...state.palette,source:'manual-edit',entries,colors:entries.map(x=>x.hex),roles:entries.map(x=>x.role)},reference:{...state.reference,recentColors:addRecentColor(state.reference.recentColors,hex,'swatch-edit')}};});
+  elements.editor.hidden=true; editingIndex=null; showToast(`Color actualizado: ${hex}`);
+}
+
+function useExtractedAsBase(hex, label='color extraÃ­do') {
+  store.setState((state)=>{
+    const next={...state,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraÃ­do ${hex}`};
+    return {...next,palette:paletteFrom(next,hex),reference:{...state.reference,extractedColors:state.reference.extractedColors.map((sample)=>sample.hex===hex?{...sample,role:'base'}:sample),recentColors:addRecentColor(state.reference.recentColors,hex,label)}};
+  });
+  showToast(`${hex} usado como base Â· paleta regenerada`);
+}
+
+function updateDirectLight(lightId, changes) {
+  store.setState((state)=>({
+    ...state,
+    lighting:{
+      ...state.lighting,
+      sceneId:'custom',
+      lights:state.lighting.lights.map(
+        (light)=>
+          light.id===lightId
+            ? {...light,...changes}
+            : light
+      )
+    },
+    reference:changes.color
+      ? {
+          ...state.reference,
+          recentColors:addRecentColor(
+            state.reference.recentColors,
+            changes.color,
+            'light'
+          )
+        }
+      : state.reference
+  }));
+}
+
+function updateLightingComponent(component, changes) {
+  store.setState((state)=>({
+    ...state,
+    lighting:{
+      ...state.lighting,
+      sceneId:'custom',
+      [component]:{
+        ...state.lighting[component],
+        ...changes
+      }
+    },
+    reference:changes.color
+      ? {
+          ...state.reference,
+          recentColors:addRecentColor(
+            state.reference.recentColors,
+            changes.color,
+            component
+          )
+        }
+      : state.reference
+  }));
+}
+function applyLightHex(input) {
+  const item=input.closest('[data-light-id]');const hex=normalizeHex(input.value);input.setAttribute('aria-invalid',String(!hex));
+  if(hex&&item)updateDirectLight(item.dataset.lightId,{color:hex});
+}
+
+function applyComponentHex(input) {
+  const row=input.closest('[data-light-component]');const hex=normalizeHex(input.value);input.setAttribute('aria-invalid',String(!hex));
+  if(hex&&row)updateLightingComponent(row.dataset.lightComponent,{color:hex});
+}
+
+function applySampleRole(sample, role) {
+  store.setState((state)=>{
+    const reference={...state.reference,extractedColors:state.reference.extractedColors.map((item)=>item.id===sample.id?{...item,role}:item)};
+    if(role==='base'){
+      const next={...state,reference,selection:{...state.selection,presetId:'custom'},interpretation:`Color base extraÃ­do ${sample.hex}`};
+      return {...next,palette:paletteFrom(next,sample.hex)};
+    }
+    if(role==='light'){
+      const selectedId=state.lighting.selectedLightId || state.lighting.lights[0]?.id;
+      return {...state,reference,lighting:{...state.lighting,lights:state.lighting.lights.map((light)=>light.id===selectedId?{...light,color:sample.hex}:light)}};
+    }
+    const component=role==='shadow'?'shadow':role==='ambient'?'ambient':role==='bounce'?'bounce':null;
+    return component?{...state,reference,lighting:{...state.lighting,[component]:{...state.lighting[component],color:sample.hex}}}:{...state,reference};
+  });
+  return role==='sample'?'Marcada como muestra':role==='base'?'Usado como color base':role==='light'?'Aplicado a la luz seleccionada':role==='shadow'?'Aplicado al color de sombra':role==='ambient'?'Aplicado al ambiente':'Aplicado al rebote';
+}
+
+async function loadReferenceBlob(blob,name='imagen-pegada') {
+  try {
+    elements.imageStatus.textContent='Cargando imagenâ€¦';
+    const metadata=await renderImageBlob(blob,elements.referenceCanvas,name);
+    elements.marker.hidden=true;
+    store.setState((state)=>({...state,selection:{...state.selection,previewMode:'reference'},reference:{...state.reference,image:metadata,extractedColors:[]},ui:{...state.ui,lastSamplePosition:null}}));
+    elements.imageStatus.textContent=`${metadata.name} Â· ${metadata.originalWidth}Ã—${metadata.originalHeight}px`;
+    showToast('Imagen lista Â· haz clic para extraer colores');
+  } catch (error) {
+    elements.imageStatus.textContent=error.message || 'No se pudo cargar la imagen.'; showToast(elements.imageStatus.textContent);
+  }
+}
+
+function clearReferenceImage() {
+  elements.referenceCanvas.width=1; elements.referenceCanvas.height=1; elements.marker.hidden=true;
+  store.setState((state)=>({...state,reference:{...state.reference,image:null},ui:{...state.ui,lastSamplePosition:null}}));
+  elements.imageStatus.textContent='Imagen retirada. Las muestras extraÃ­das se conservaron.';
+}
+
+function captureReferenceColor(event) {
+  if(!store.getState().reference.image)return;
+  try {
+    const captured=sampleCanvasAtPointer(elements.referenceCanvas,event); const sample=createExtractedSample(captured.hex);
+    const canvasBounds=elements.referenceCanvas.getBoundingClientRect(); const stageBounds=elements.referenceStage.getBoundingClientRect();
+    elements.marker.style.left=`${((canvasBounds.left-stageBounds.left)+captured.relativeX*canvasBounds.width)/stageBounds.width*100}%`;
+    elements.marker.style.top=`${((canvasBounds.top-stageBounds.top)+captured.relativeY*canvasBounds.height)/stageBounds.height*100}%`; elements.marker.style.setProperty('--marker-color',captured.hex); elements.marker.hidden=false;
+    store.setState((state)=>{
+      const exists=state.reference.extractedColors.some((item)=>item.hex===sample.hex);
+      const extractedColors=exists?state.reference.extractedColors:[sample,...state.reference.extractedColors].slice(0,60);
+      return {...state,reference:{...state.reference,extractedColors,recentColors:addRecentColor(state.reference.recentColors,sample.hex,'eyedropper')},ui:{...state.ui,lastSamplePosition:{x:captured.x,y:captured.y}}};
+    });
+    showToast(captured.transparent?`${captured.hex} capturado Â· pÃ­xel transparente`:`${captured.hex} capturado`);
+  } catch(error) { showToast(error.message || 'No se pudo leer ese pÃ­xel.'); }
+}
+
+elements.categoryGrid.addEventListener('click',(event)=>{const button=event.target.closest('[data-category]');if(!button)return;store.setState((state)=>{const enteringHair=button.dataset.category==='hair-stylized';const next={...state,selection:{...state.selection,categoryId:button.dataset.category,previewMode:enteringHair?'hair':(state.selection.previewMode==='hair'?'sphere':state.selection.previewMode),presetId:'custom',hairTexture:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.hairTexture,undertoneId:enteringHair?(state.selection.hairTexture||state.selection.undertoneId||'1b'):state.selection.undertoneId}};return {...next,palette:paletteFrom(next,state.palette.baseHex)};});});
+elements.baseHex.addEventListener('input',()=>{const valid=Boolean(normalizeHex(elements.baseHex.value));elements.hexError.hidden=valid;elements.baseHex.setAttribute('aria-invalid',String(!valid));if(valid)elements.basePicker.value=normalizeHex(elements.baseHex.value);});
+elements.baseHex.addEventListener('keydown',(event)=>{if(event.key==='Enter')applyManualHex();}); elements.applyHex.addEventListener('click',applyManualHex);
+elements.basePicker.addEventListener('input',()=>{elements.baseHex.value=elements.basePicker.value.toUpperCase();applyManualHex();});
+document.querySelector('.parameter-list').addEventListener('input',(event)=>{const input=event.target.closest('[data-param]');if(!input)return;store.setState((state)=>{const params={...state.params,[input.dataset.param]:Number(input.value)};const next={...state,selection:{...state.selection,presetId:'custom'},params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});});
+elements.resetParams.addEventListener('click',()=>{store.setState((state)=>{const params={...DEFAULT_PARAMS};const next={...state,params};return {...next,palette:paletteFrom(next,state.palette.baseHex,params)};});showToast('Ajustes restablecidos');});
+elements.lightingEnabled.addEventListener('change',()=>{store.setState((state)=>({...state,lighting:{...state.lighting,enabled:elements.lightingEnabled.checked}}));showToast(elements.lightingEnabled.checked?'IluminaciÃ³n activada':'IluminaciÃ³n apagada');});
+elements.atmosphereScenes?.addEventListener(
+  'click',
+  (event)=>{
+    const button=
+      event.target.closest(
+        '[data-atmosphere]'
+      );
+
+    if(!button)return;
+
+    const preset=
+      atmosphereById(
+        button.dataset.atmosphere
+      );
+
+    lightsRenderSignature='';
+
+    store.setState((state)=>({
+      ...state,
+      lighting:
+        buildAtmosphereLighting(
+          preset.id
+        ),
+      ui:{
+        ...state.ui,
+        paletteView:'illuminated'
+      }
+    }));
+
+    showToast(
+      `Ambiente: ${preset.name}`
+    );
+  }
+);
+elements.creativeAtmosphereFilters
+  ?.addEventListener(
+    'click',
+    (event)=>{
+      const button=
+        event.target.closest(
+          '[data-atmo-filter]'
+        );
+
+      if(!button)return;
+
+      creativeAtmosphereFilter=
+        button.dataset.atmoFilter||
+        'all';
+
+      elements.creativeAtmosphereFilters
+        .querySelectorAll(
+          '[data-atmo-filter]'
+        )
+        .forEach((item)=>{
+          item.classList.toggle(
+            'is-active',
+            item===button
+          );
+        });
+
+      elements.creativeAtmosphereScenes
+        ?.replaceChildren();
+
+      renderLightingControls(
+        store.getState()
+      );
+    }
+  );
+
+elements.creativeAtmosphereScenes?.addEventListener(
+  'click',
+  (event)=>{
+    const favoriteToggle=
+      event.target.closest(
+        '[data-favorite-toggle]'
+      );
+
+    if(favoriteToggle){
+      event.preventDefault();
+      event.stopPropagation();
+
+      const active=
+        toggleFavoriteLightingPreset(
+          favoriteToggle.dataset
+            .favoriteToggle
+        );
+
+      showToast(
+        active
+          ?'Agregado a favoritos'
+          :'Quitado de favoritos'
+      );
+
+      kaoruRefreshCreativeAtmospheresLight();
+      return;
+    }
+
+    const deleteToggle=
+      event.target.closest(
+        '[data-user-preset-delete]'
+      );
+
+    if(deleteToggle){
+      event.preventDefault();
+      event.stopPropagation();
+
+      if(
+        confirm(
+          'Â¿Eliminar este preset personal?'
+        )
+      ){
+        deleteCustomLightingPreset(
+          deleteToggle.dataset
+            .userPresetDelete,
+          'light'
+        );
+
+        showToast(
+          'Preset personal eliminado'
+        );
+
+        kaoruRefreshCreativeAtmospheresLight();
+      }
+
+      return;
+    }
+
+    const button =
+      event.target.closest(
+        '[data-atmosphere]'
+      );
+
+    if(!button)return;
+
+    const custom=
+      customLightingPresetById(
+        button.dataset.atmosphere,
+        'light'
+      );
+
+    lightsRenderSignature='';
+
+    if(custom){
+      const snapshot=
+        structuredClone(
+          custom.snapshot
+        );
+
+      store.setState((state)=>({
+        ...state,
+        lighting:{
+          ...(snapshot.lighting||{}),
+          atmosphere:{
+            ...(snapshot.lighting
+              ?.atmosphere||{}),
+            id:custom.id,
+            name:custom.name
+          }
+        },
+        ui:{
+          ...state.ui,
+          paletteView:'illuminated'
+        }
+      }));
+
+      showToast(
+        `Mi preset: ${custom.name}`
+      );
+
+      return;
+    }
+
+    const preset =
+      atmosphereById(
+        button.dataset.atmosphere
+      );
+
+    store.setState((state)=>({
+      ...state,
+      lighting:
+        buildAtmosphereLighting(
+          preset.id
+        ),
+      ui:{
+        ...state.ui,
+        paletteView:'illuminated'
+      }
+    }));
+
+    showToast(
+      `Estilo: ${preset.name}`
+    );
+  }
+);
+
+applyAtmosphereColorInput(
+  elements.atmoTopColor,
+  elements.atmoTopHex,
+  'top'
+);
+
+applyAtmosphereColorInput(
+  elements.atmoMidColor,
+  elements.atmoMidHex,
+  'mid'
+);
+
+applyAtmosphereColorInput(
+  elements.atmoBottomColor,
+  elements.atmoBottomHex,
+  'bottom'
+);
+
+applyAtmosphereColorInput(
+  elements.atmoAccentColor,
+  elements.atmoAccentHex,
+  'accent'
+);
+
+applyEffectColorInput(
+  elements.atmoEffectAColor,
+  elements.atmoEffectAHex,
+  'colorA'
+);
+
+applyEffectColorInput(
+  elements.atmoEffectBColor,
+  elements.atmoEffectBHex,
+  'colorB'
+);
+
+elements.atmoEffectType
+  .addEventListener(
+    'change',
+    ()=>{
+      patchAtmosphereEffect({
+        type:
+          elements.atmoEffectType
+            .value
+      });
+    }
+  );
+
+elements.atmoEffectOpacity
+  .addEventListener(
+    'input',
+    ()=>{
+      const value =
+        Number(
+          elements.atmoEffectOpacity
+            .value
+        );
+
+      elements.atmoEffectOpacityOut
+        .textContent =
+          `${value}%`;
+
+      patchAtmosphereEffect({
+        opacity:value
+      });
+    }
+  );
+
+elements.atmoEffectAngle
+  .addEventListener(
+    'input',
+    ()=>{
+      const value =
+        Number(
+          elements.atmoEffectAngle
+            .value
+        );
+
+      elements.atmoEffectAngleOut
+        .textContent =
+          `${value}Â°`;
+
+      patchAtmosphereEffect({
+        angle:value
+      });
+    }
+  );
+
+elements.atmoEffectScale
+  .addEventListener(
+    'input',
+    ()=>{
+      const value =
+        Number(
+          elements.atmoEffectScale
+            .value
+        );
+
+      elements.atmoEffectScaleOut
+        .textContent =
+          `${value}%`;
+
+      patchAtmosphereEffect({
+        scale:value
+      });
+    }
+  );
+
+elements.atmoProjectorLight
+  ?.addEventListener(
+    'change',
+    ()=>{
+      patchAtmosphereEffect({
+        lightId:
+          elements.atmoProjectorLight.value
+      });
+    }
+  );
+
+[
+  [elements.atmoEffectX,elements.atmoEffectXOut,'offsetX','%'],
+  [elements.atmoEffectY,elements.atmoEffectYOut,'offsetY','%'],
+  [elements.atmoEffectBlur,elements.atmoEffectBlurOut,'blur','%'],
+  [elements.atmoEffectContrast,elements.atmoEffectContrastOut,'contrast','%'],
+  [elements.atmoEffectDensity,elements.atmoEffectDensityOut,'density','%']
+].forEach(
+  ([input,output,key,suffix])=>{
+    input?.addEventListener(
+      'input',
+      ()=>{
+        const value=
+          Number(input.value);
+
+        if(output){
+          output.textContent=
+            `${Math.round(value)}${suffix}`;
+        }
+
+        patchAtmosphereEffect({
+          [key]:value
+        });
+      }
+    );
+  }
+);
+
+elements.saveCustomAtmosphere
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const state=
+        store.getState();
+
+      const currentId=
+        state.lighting
+          .atmosphere
+          ?.id||
+        'day';
+
+      const currentName=
+        kaoruAllCreativeAtmospheresLight()
+          .find(
+            preset=>
+              preset.id===currentId
+          )?.name||
+        state.lighting
+          .atmosphere
+          ?.name||
+        atmosphereById(
+          currentId
+        )?.name||
+        'IluminaciÃ³n';
+
+      const name=
+        elements.customAtmosphereName
+          ?.value
+          .trim()||
+        `${currentName} Â· variante`;
+
+      const record=
+        saveCustomLightingPreset({
+          studio:'light',
+          name,
+          description:
+            `Variante personal de ${currentName}`,
+          snapshot:{
+            lighting:
+              structuredClone(
+                state.lighting
+              )
+          }
+        });
+
+      store.setState(current=>({
+        ...current,
+        lighting:{
+          ...current.lighting,
+          atmosphere:{
+            ...(current.lighting
+              .atmosphere||{}),
+            id:record.id,
+            name:record.name
+          }
+        }
+      }));
+
+      if(elements.customAtmosphereName){
+        elements.customAtmosphereName.value='';
+      }
+
+      showToast(
+        `Guardado: ${record.name}`
+      );
+
+      kaoruRefreshCreativeAtmospheresLight();
+    }
+  );
+elements.resetAtmosphere
+  .addEventListener(
+    'click',
+    ()=>{
+      const id =
+        store.getState()
+          .lighting
+          .atmosphere
+          ?.id || 'day';
+
+      const custom=
+        customLightingPresetById(
+          id,
+          'light'
+        );
+
+      store.setState((state)=>({
+        ...state,
+        lighting:
+          custom
+            ?{
+                ...structuredClone(
+                  custom.snapshot
+                    .lighting
+                ),
+                atmosphere:{
+                  ...structuredClone(
+                    custom.snapshot
+                      .lighting
+                      .atmosphere||{}
+                  ),
+                  id:custom.id,
+                  name:custom.name
+                }
+              }
+            :buildAtmosphereLighting(
+                id
+              ),
+        ui:{
+          ...state.ui,
+          paletteView:'illuminated'
+        }
+      }));
+
+      showToast(
+        'Estilo restablecido'
+      );
+    }
+  );
+elements.lightingScenes.addEventListener('click',(event)=>{
+  const button=event.target.closest('[data-scene]');
+  if(!button)return;
+
+  const scene=LIGHTING_SCENES.find(
+    (item)=>item.id===button.dataset.scene
+  );
+
+  lightsRenderSignature='';
+
+  store.setState((state)=>({
+    ...state,
+    lighting:sceneLighting(button.dataset.scene),
+    ui:{
+      ...state.ui,
+      paletteView:'illuminated'
+    }
+  }));
+
+  showToast(
+    `${scene?.name || 'IluminaciÃ³n'} aplicada`
+  );
+});
+elements.addLight.addEventListener('click',()=>{store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const light=createDirectLight({},state.lighting.lights.length);return {...state,lighting:{...state.lighting,enabled:true,lights:[...state.lighting.lights,light],selectedLightId:light.id},ui:{...state.ui,paletteView:'illuminated'}};});showToast('Nueva luz aÃ±adida');});
+elements.lightsList.addEventListener('click',(event)=>{const item=event.target.closest('[data-light-id]');const action=event.target.closest('[data-light-action]')?.dataset.lightAction;if(!item||!action)return;const id=item.dataset.lightId;
+  if(action==='select'){store.setState((state)=>({...state,lighting:{...state.lighting,selectedLightId:id}}));return;}
+  if(action==='duplicate'){store.setState((state)=>{if(state.lighting.lights.length>=MAX_DIRECT_LIGHTS)return state;const source=state.lighting.lights.find((light)=>light.id===id);if(!source)return state;const duplicate=createDirectLight({...source,id:null,name:`${source.name} copia`},state.lighting.lights.length);const index=state.lighting.lights.findIndex((light)=>light.id===id);const lights=[...state.lighting.lights];lights.splice(index+1,0,duplicate);return {...state,lighting:{...state.lighting,lights,selectedLightId:duplicate.id}};});showToast('Luz duplicada');return;}
+  if(action==='delete'){store.setState((state)=>{if(state.lighting.lights.length===1)return state;const lights=state.lighting.lights.filter((light)=>light.id!==id);return {...state,lighting:{...state.lighting,lights,selectedLightId:state.lighting.selectedLightId===id?lights[0].id:state.lighting.selectedLightId}};});showToast('Luz eliminada');}
+});
+elements.lightsList.addEventListener('input',(event)=>{
+  const input=event.target.closest('[data-light-field]');
+  const item=event.target.closest('[data-light-id]');
+
+  if(
+    !input ||
+    !item ||
+    input.type!=='range'
+  )return;
+
+  const value=Number(input.value);
+  const output=
+    input.closest('label')?.querySelector('output');
+
+  if(output){
+    const text=
+      formatLightControlValue(
+        input.dataset.lightField,
+        value
+      );
+
+    output.value=text;
+    output.textContent=text;
+  }
+
+  updateDirectLight(
+    item.dataset.lightId,
+    {[input.dataset.lightField]:value}
+  );
+});
+elements.lightsList.addEventListener('change',(event)=>{const input=event.target.closest('[data-light-field]');const item=event.target.closest('[data-light-id]');if(!input||!item||input.type==='range')return;const field=input.dataset.lightField;const value=input.type==='checkbox'?input.checked:field==='color'?(normalizeHex(input.value)||input.value):input.value.trim()||'Luz';updateDirectLight(item.dataset.lightId,{[field]:value});});
+elements.lightsList.addEventListener('keydown',(event)=>{const input=event.target.closest('[data-light-hex]');if(input&&event.key==='Enter'){event.preventDefault();applyLightHex(input);}});
+elements.lightsList.addEventListener('focusout',(event)=>{const input=event.target.closest('[data-light-hex]');if(input)applyLightHex(input);});
+elements.environmentControls.addEventListener('input',(event)=>{const input=event.target.closest('[data-component-field="intensity"]');const row=event.target.closest('[data-light-component]');if(!input||!row)return;const value=Number(input.value);const output=row.querySelector('[data-component-output]');output.value=String(Math.round(value));output.textContent=output.value;updateLightingComponent(row.dataset.lightComponent,{intensity:value});});
+elements.environmentControls.addEventListener('change',(event)=>{const input=event.target.closest('[data-component-field="color"]');const row=event.target.closest('[data-light-component]');if(!input||!row)return;updateLightingComponent(row.dataset.lightComponent,{color:normalizeHex(input.value)||input.value});});
+elements.environmentControls.addEventListener('keydown',(event)=>{const input=event.target.closest('[data-component-hex]');if(input&&event.key==='Enter'){event.preventDefault();applyComponentHex(input);}});
+elements.environmentControls.addEventListener('focusout',(event)=>{const input=event.target.closest('[data-component-hex]');if(input)applyComponentHex(input);});
+elements.paletteViewTabs.addEventListener('click',(event)=>{const button=event.target.closest('[data-palette-view]');if(!button)return;store.setState((state)=>({...state,ui:{...state.ui,paletteView:button.dataset.paletteView}}));});
+elements.comparisonGrid.addEventListener('click',async(event)=>{const button=event.target.closest('[data-copy-hex]');if(!button)return;await copyText(button.dataset.copyHex);showToast(`${button.dataset.copyHex} copiado`);});
+elements.previewTabs.addEventListener('click',(event)=>{const button=event.target.closest('[data-view]');if(!button)return;store.setState((state)=>({...state,selection:{...state.selection,previewMode:button.dataset.view}}));});
+elements.referenceFile.addEventListener('change',()=>{const file=elements.referenceFile.files?.[0];try{if(file)loadReferenceBlob(imageBlobFromFile(file),file.name);}catch(error){elements.imageStatus.textContent=error.message;showToast(error.message);}elements.referenceFile.value='';});
+elements.pasteImage.addEventListener('click',async()=>{try{const blob=await readImageFromClipboard();await loadReferenceBlob(blob,'imagen-pegada');}catch(error){elements.imageStatus.textContent=error.message;showToast(error.message);}});
+elements.clearImage.addEventListener('click',clearReferenceImage);
+document.addEventListener('paste',(event)=>{try{const blob=imageBlobFromPasteEvent(event);if(!blob)return;event.preventDefault();loadReferenceBlob(blob,'imagen-pegada');}catch(error){showToast(error.message);}});
+['dragenter','dragover'].forEach((type)=>elements.referenceStage.addEventListener(type,(event)=>{event.preventDefault();elements.dropOverlay.hidden=false;}));
+['dragleave','drop'].forEach((type)=>elements.referenceStage.addEventListener(type,(event)=>{event.preventDefault();elements.dropOverlay.hidden=true;}));
+elements.referenceStage.addEventListener('drop',(event)=>{const file=[...(event.dataTransfer?.files||[])].find((item)=>item.type.startsWith('image/'));if(!file){showToast('Suelta un archivo de imagen compatible.');return;}try{loadReferenceBlob(imageBlobFromFile(file),file.name);}catch(error){elements.imageStatus.textContent=error.message;showToast(error.message);}});
+elements.referenceCanvas.addEventListener('click',captureReferenceColor);
+elements.swatchGrid.addEventListener('click',async(event)=>{const swatch=event.target.closest('.swatch');if(!swatch)return;const index=Number(swatch.dataset.index);if(event.target.closest('.edit-swatch')){event.stopPropagation();openEditor(index);return;}const state=store.getState();const kind=swatch.dataset.paletteKind;const entries=kind==='original'?state.palette.entries:applyLightingToPalette(state.palette.entries,state.lighting,kind==='selected'?{onlyLightId:state.lighting.selectedLightId}:{});const color=entries[index];await copyText(color.hex);swatch.classList.add('is-copied');setTimeout(()=>swatch.classList.remove('is-copied'),650);showToast(`${color.hex} copiado Â· ${color.role}`);});
+elements.swatchGrid.addEventListener('keydown',async(event)=>{const swatch=event.target.closest('.swatch');if(!swatch||!['Enter',' '].includes(event.key))return;event.preventDefault();const state=store.getState();const kind=swatch.dataset.paletteKind;const entries=kind==='original'?state.palette.entries:applyLightingToPalette(state.palette.entries,state.lighting,kind==='selected'?{onlyLightId:state.lighting.selectedLightId}:{});const color=entries[Number(swatch.dataset.index)];await copyText(color.hex);showToast(`${color.hex} copiado`);});
+elements.editHex.addEventListener('input',()=>{const valid=Boolean(normalizeHex(elements.editHex.value));elements.editError.hidden=valid;if(valid)elements.editPicker.value=normalizeHex(elements.editHex.value);});
+elements.editPicker.addEventListener('input',()=>{elements.editHex.value=elements.editPicker.value.toUpperCase();}); elements.applyEdit.addEventListener('click',applyEditedColor);
+elements.editHex.addEventListener('keydown',(event)=>{if(event.key==='Enter')applyEditedColor();}); elements.closeEditor.addEventListener('click',()=>{elements.editor.hidden=true;editingIndex=null;});
+elements.extractedColors.addEventListener('click',async(event)=>{const item=event.target.closest('[data-sample-id]');if(!item)return;const id=item.dataset.sampleId;const sample=store.getState().reference.extractedColors.find((color)=>color.id===id);if(!sample)return;const action=event.target.closest('[data-sample-action]')?.dataset.sampleAction;if(action==='copy'){await copyText(sample.hex);showToast(`${sample.hex} copiado`);}else if(action==='base'){useExtractedAsBase(sample.hex,'extracted-base');}else if(action==='delete'){store.setState((state)=>({...state,reference:{...state.reference,extractedColors:state.reference.extractedColors.filter((color)=>color.id!==id)}}));}});
+elements.extractedColors.addEventListener('change',(event)=>{const select=event.target.closest('[data-sample-action="role"]');if(!select)return;const id=event.target.closest('[data-sample-id]')?.dataset.sampleId;const sample=store.getState().reference.extractedColors.find((item)=>item.id===id);if(!sample)return;const result=applySampleRole(sample,select.value);showToast(`${select.options[select.selectedIndex].text}: ${result}`);});
+elements.clearSamples.addEventListener('click',()=>{store.setState((state)=>({...state,reference:{...state.reference,extractedColors:[]}}));elements.marker.hidden=true;showToast('Muestras eliminadas');});
+elements.recentColors.addEventListener('click',async(event)=>{const item=event.target.closest('[data-recent-hex]');if(!item)return;const hex=item.dataset.recentHex;const action=event.target.closest('[data-recent-action]')?.dataset.recentAction;if(action==='copy'){await copyText(hex);showToast(`${hex} copiado`);}else if(action==='base')useExtractedAsBase(hex,'recent-base');});
+elements.copyAll.addEventListener('click',async()=>{const state=store.getState();const illuminated=applyLightingToPalette(state.palette.entries,state.lighting);const selected=applyLightingToPalette(state.palette.entries,state.lighting,{onlyLightId:state.lighting.selectedLightId});const view=state.ui.paletteView||'illuminated';const text=view==='compare'?[`ORIGINAL`,...state.palette.entries.map((item)=>`${item.role}: ${item.hex}`),``,`ILUMINADA`,...illuminated.map((item)=>`${item.role}: ${item.hex}`)].join('\n'):(view==='original'?state.palette.entries:view==='selected'?selected:illuminated).map((item)=>`${item.role}: ${item.hex}`).join('\n');await copyText(text);showToast(view==='compare'?'ComparaciÃ³n completa copiada':'Los 16 cÃ³digos HEX fueron copiados');});
+elements.download.addEventListener('click',()=>{downloadProjectStructure(store.getState());showToast('Proyecto Light Lab descargado');});
+document.addEventListener('studio-theme-change',()=>render(store.getState())); window.addEventListener('resize',()=>{const state=store.getState();if(state.selection.previewMode!=='reference'){const original=state.palette.entries;const selected=state.lighting.lights.find((light)=>light.id===state.lighting.selectedLightId);const entries=state.ui.paletteView==='original'?original:applyLightingToPalette(original,state.lighting,state.ui.paletteView==='selected'?{onlyLightId:selected?.id}:{});const previewLighting=state.ui.paletteView==='selected'?{...state.lighting,lights:selected?[selected]:[]}:state.lighting;renderBasicPreview(elements.canvas,entries.map((entry)=>entry.hex),state.selection.previewMode,state.ui.paletteView==='original'?null:previewLighting);}},{passive:true});
+store.subscribe(render); render(store.getState()); window.LightLab={getState:store.getState,reset:store.reset,useExtractedAsBase,applyLightingToPalette,phase:4};
+
+/* === KAORU PRESET SEARCH V4 === */
+elements.creativeAtmosphereSearch
+  ?.addEventListener(
+    'input',
+    (event)=>{
+      creativeAtmosphereSearch=
+        event.target.value||'';
+
+      elements.creativeAtmosphereScenes
+        ?.replaceChildren();
+
+      renderLightingControls(
+        store.getState()
+      );
+    }
+  );
+
+/* === KAORU PRESET SORT V7 === */
+elements.creativeAtmosphereSort
+  ?.addEventListener(
+    'change',
+    (event)=>{
+      creativeAtmosphereSort=
+        event.target.value||
+        'original';
+
+      elements.creativeAtmosphereScenes
+        ?.replaceChildren();
+
+      renderLightingControls(
+        store.getState()
+      );
+    }
+  );
+
+/* === KAORU PRESET COMPARE V8 === */
+[
+  elements.compareAtmosphereA,
+  elements.compareAtmosphereB
+].forEach((select)=>{
+  select?.addEventListener(
+    'change',
+    ()=>{
+      kaoruRenderComparatorLight();
+    }
+  );
+});
+
+elements.applyCompareAtmosphereA
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const id=
+        elements.compareAtmosphereA
+          ?.value;
+
+      if(id){
+        kaoruApplyComparePresetLight(id);
+      }
+    }
+  );
+
+elements.applyCompareAtmosphereB
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const id=
+        elements.compareAtmosphereB
+          ?.value;
+
+      if(id){
+        kaoruApplyComparePresetLight(id);
+      }
+    }
+  );
+
+/* === KAORU HISTORY LIGHTING V9 === */
+const undoHistoryButtonLight=
+  document.getElementById(
+    'undoHistoryLight'
+  );
+
+const redoHistoryButtonLight=
+  document.getElementById(
+    'redoHistoryLight'
+  );
+
+function kaoruIsTextEditingTargetLight(
+  target
+){
+  if(!target)return false;
+
+  if(target.isContentEditable){
+    return true;
+  }
+
+  if(target.tagName==='TEXTAREA'){
+    return true;
+  }
+
+  if(target.tagName!=='INPUT'){
+    return false;
+  }
+
+  return[
+    'text',
+    'search',
+    'email',
+    'url',
+    'password',
+    'number'
+  ].includes(
+    String(target.type||'text')
+      .toLowerCase()
+  );
+}
+
+studioHistoryLight.subscribe(
+  ({
+    canUndo,
+    canRedo,
+    undoCount,
+    redoCount
+  })=>{
+    if(undoHistoryButtonLight){
+      undoHistoryButtonLight.disabled=
+        !canUndo;
+
+      undoHistoryButtonLight.title=
+        canUndo
+          ?`Deshacer (Ctrl+Z) Â· ${undoCount}`
+          :'Nada que deshacer';
+    }
+
+    if(redoHistoryButtonLight){
+      redoHistoryButtonLight.disabled=
+        !canRedo;
+
+      redoHistoryButtonLight.title=
+        canRedo
+          ?`Rehacer (Ctrl+Shift+Z) Â· ${redoCount}`
+          :'Nada que rehacer';
+    }
+  }
+);
+
+undoHistoryButtonLight
+  ?.addEventListener(
+    'click',
+    ()=>{
+      if(studioHistoryLight.undo()){
+        showToast('Cambio deshecho');
+      }
+    }
+  );
+
+redoHistoryButtonLight
+  ?.addEventListener(
+    'click',
+    ()=>{
+      if(studioHistoryLight.redo()){
+        showToast('Cambio rehecho');
+      }
+    }
+  );
+
+document.addEventListener(
+  'keydown',
+  (event)=>{
+    if(
+      !(event.ctrlKey||event.metaKey)||
+      event.altKey||
+      event.key.toLowerCase()!=='z'||
+      kaoruIsTextEditingTargetLight(
+        event.target
+      )
+    ){
+      return;
+    }
+
+    event.preventDefault();
+
+    if(event.shiftKey){
+      if(studioHistoryLight.redo()){
+        showToast('Cambio rehecho');
+      }
+      return;
+    }
+
+    if(studioHistoryLight.undo()){
+      showToast('Cambio deshecho');
+    }
+  }
+);
+/* === /KAORU HISTORY LIGHTING V9 === */
+
+/* === KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+const kaoruLightPad=
+  document.getElementById(
+    'lightPositionPad'
+  );
+
+const kaoruLightHandle=
+  document.getElementById(
+    'lightPositionHandle'
+  );
+
+const kaoruLightReadout=
+  document.getElementById(
+    'lightPositionReadout'
+  );
+
+const kaoruSoloButton=
+  document.getElementById(
+    'soloSelectedLight'
+  );
+
+let kaoruSoloRestoreLight=null;
+let kaoruSoloActiveIdLight=null;
+let kaoruApplyingSoloLight=false;
+
+function kaoruClampLight(value,min,max){
+  return Math.max(
+    min,
+    Math.min(max,value)
+  );
+}
+
+function kaoruCurrentSelectedLight(
+  state=store.getState()
+){
+  return(
+    state.lighting.lights.find(
+      light=>
+        light.id===
+        state.lighting.selectedLightId
+    )||
+    state.lighting.lights[0]||
+    null
+  );
+}
+
+function kaoruSoloStillValidLight(state){
+  if(!kaoruSoloActiveIdLight){
+    return false;
+  }
+
+  const active=
+    state.lighting.lights.find(
+      light=>
+        light.id===
+        kaoruSoloActiveIdLight
+    );
+
+  if(
+    !active||
+    !active.enabled
+  ){
+    return false;
+  }
+
+  return !state.lighting.lights.some(
+    light=>
+      light.id!==kaoruSoloActiveIdLight&&
+      light.enabled
+  );
+}
+
+function kaoruSyncVisualLight(
+  state=store.getState()
+){
+  const light=
+    kaoruCurrentSelectedLight(
+      state
+    );
+
+  if(
+    kaoruSoloActiveIdLight&&
+    !kaoruApplyingSoloLight&&
+    !kaoruSoloStillValidLight(state)
+  ){
+    kaoruSoloRestoreLight=null;
+    kaoruSoloActiveIdLight=null;
+  }
+
+  if(!light){
+    if(kaoruLightPad){
+      kaoruLightPad.dataset.disabled='true';
+    }
+
+    if(kaoruSoloButton){
+      kaoruSoloButton.disabled=true;
+    }
+
+    return;
+  }
+
+  const direction=
+    kaoruClampLight(
+      Number(
+        light.direction??
+        light.azimuth??
+        0
+      ),
+      -180,
+      180
+    );
+
+  const elevation=
+    kaoruClampLight(
+      Number(light.elevation||0),
+      -85,
+      85
+    );
+
+  const left=
+    ((direction+180)/360)*100;
+
+  const top=
+    ((85-elevation)/170)*100;
+
+  if(kaoruLightHandle){
+    kaoruLightHandle.style.left=
+      `${left}%`;
+
+    kaoruLightHandle.style.top=
+      `${top}%`;
+
+    kaoruLightHandle.style
+      .setProperty(
+        '--light-handle-color',
+        light.color||'#FFFFFF'
+      );
+  }
+
+  if(kaoruLightReadout){
+    kaoruLightReadout.textContent=
+      `${Math.round(direction)}Â° Â· ${Math.round(elevation)}Â°`;
+  }
+
+  if(kaoruLightPad){
+    delete kaoruLightPad
+      .dataset.disabled;
+  }
+
+  if(kaoruSoloButton){
+    kaoruSoloButton.disabled=false;
+
+    const soloActive=
+      Boolean(
+        kaoruSoloRestoreLight
+      );
+
+    kaoruSoloButton.textContent=
+      soloActive
+        ?'Restaurar todas las luces'
+        :'Solo seleccionado';
+
+    kaoruSoloButton.classList.toggle(
+      'is-active',
+      soloActive
+    );
+
+    kaoruSoloButton.setAttribute(
+      'aria-pressed',
+      String(soloActive)
+    );
+  }
+}
+
+function kaoruMoveSelectedLight(
+  event
+){
+  if(!kaoruLightPad)return;
+
+  const light=
+    kaoruCurrentSelectedLight();
+
+  if(!light)return;
+
+  const rect=
+    kaoruLightPad
+      .getBoundingClientRect();
+
+  if(
+    !rect.width||
+    !rect.height
+  ){
+    return;
+  }
+
+  const x=
+    kaoruClampLight(
+      (event.clientX-rect.left)/
+      rect.width,
+      0,
+      1
+    );
+
+  const y=
+    kaoruClampLight(
+      (event.clientY-rect.top)/
+      rect.height,
+      0,
+      1
+    );
+
+  const direction=
+    Math.round(
+      x*360-180
+    );
+
+  const elevation=
+    Math.round(
+      85-y*170
+    );
+
+  updateDirectLight(
+    light.id,
+    {
+      direction,
+      elevation
+    }
+  );
+}
+
+kaoruLightPad
+  ?.addEventListener(
+    'pointerdown',
+    (event)=>{
+      if(
+        event.button!==0&&
+        event.pointerType==='mouse'
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      kaoruLightPad
+        .setPointerCapture(
+          event.pointerId
+        );
+
+      kaoruMoveSelectedLight(
+        event
+      );
+    }
+  );
+
+kaoruLightPad
+  ?.addEventListener(
+    'pointermove',
+    (event)=>{
+      if(
+        !kaoruLightPad
+          .hasPointerCapture(
+            event.pointerId
+          )
+      ){
+        return;
+      }
+
+      event.preventDefault();
+
+      kaoruMoveSelectedLight(
+        event
+      );
+    }
+  );
+
+kaoruLightPad
+  ?.addEventListener(
+    'pointerup',
+    (event)=>{
+      if(
+        kaoruLightPad
+          .hasPointerCapture(
+            event.pointerId
+          )
+      ){
+        kaoruLightPad
+          .releasePointerCapture(
+            event.pointerId
+          );
+      }
+    }
+  );
+
+kaoruSoloButton
+  ?.addEventListener(
+    'click',
+    ()=>{
+      const state=
+        store.getState();
+
+      if(kaoruSoloRestoreLight){
+        const restore=
+          new Map(
+            kaoruSoloRestoreLight
+          );
+
+        kaoruApplyingSoloLight=true;
+
+        try{
+          store.setState(current=>({
+            ...current,
+            lighting:{
+              ...current.lighting,
+              lights:
+                current.lighting.lights
+                  .map(light=>({
+                    ...light,
+                    enabled:
+                      restore.has(light.id)
+                        ?restore.get(light.id)
+                        :light.enabled
+                  }))
+            },
+            ui:{
+              ...current.ui,
+              paletteView:'illuminated'
+            }
+          }));
+        }finally{
+          kaoruApplyingSoloLight=false;
+          kaoruSoloRestoreLight=null;
+          kaoruSoloActiveIdLight=null;
+        }
+
+        showToast(
+          'Todas las luces restauradas'
+        );
+
+        kaoruSyncVisualLight();
+        return;
+      }
+
+      const selected=
+        kaoruCurrentSelectedLight(
+          state
+        );
+
+      if(!selected)return;
+
+      kaoruSoloRestoreLight=
+        state.lighting.lights.map(
+          light=>[
+            light.id,
+            Boolean(light.enabled)
+          ]
+        );
+
+      kaoruSoloActiveIdLight=
+        selected.id;
+
+      kaoruApplyingSoloLight=true;
+
+      try{
+        store.setState(current=>({
+          ...current,
+          lighting:{
+            ...current.lighting,
+            enabled:true,
+            sceneId:'custom',
+            lights:
+              current.lighting.lights
+                .map(light=>({
+                  ...light,
+                  enabled:
+                    light.id===
+                    selected.id
+                }))
+          },
+          ui:{
+            ...current.ui,
+            paletteView:'illuminated'
+          }
+        }));
+      }finally{
+        kaoruApplyingSoloLight=false;
+      }
+
+      showToast(
+        `Solo: ${selected.name||'Luz'}`
+      );
+
+      kaoruSyncVisualLight();
+    }
+  );
+
+store.subscribe(
+  kaoruSyncVisualLight
+);
+
+kaoruSyncVisualLight();
+/* === /KAORU VISUAL LIGHT CONTROL + SOLO V10 === */
+
+/* === KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+const kaoruBeforeButtonLight=
+  document.getElementById(
+    'beforeLightingLight'
+  );
+
+const kaoruExportPresetsLight=
+  document.getElementById(
+    'exportLightingPresetsLight'
+  );
+
+const kaoruImportPresetsLight=
+  document.getElementById(
+    'importLightingPresetsLight'
+  );
+
+const kaoruImportPresetsFileLight=
+  document.getElementById(
+    'importLightingPresetsFileLight'
+  );
+
+let kaoruBeforeLightingLight=null;
+
+function kaoruEnterBeforeLight(){
+  if(kaoruBeforeLightingLight){
+    return;
+  }
+
+  kaoruBeforeLightingLight=
+    structuredClone(
+      store.getState()
+        .lighting
+    );
+
+  studioHistoryLight.withoutRecording(
+    ()=>{
+      store.setState(state=>({
+        ...state,
+        lighting:{
+          ...state.lighting,
+          enabled:false
+        }
+      }));
+    }
+  );
+
+  kaoruBeforeButtonLight
+    ?.classList.add(
+      'is-before'
+    );
+
+  if(kaoruBeforeButtonLight){
+    kaoruBeforeButtonLight.textContent=
+      'ANTES Â· sin iluminaciÃ³n';
+  }
+}
+
+function kaoruExitBeforeLight(){
+  if(!kaoruBeforeLightingLight){
+    return;
+  }
+
+  const restore=
+    structuredClone(
+      kaoruBeforeLightingLight
+    );
+
+  kaoruBeforeLightingLight=null;
+
+  studioHistoryLight.withoutRecording(
+    ()=>{
+      store.setState(state=>({
+        ...state,
+        lighting:restore
+      }));
+    }
+  );
+
+  kaoruBeforeButtonLight
+    ?.classList.remove(
+      'is-before'
+    );
+
+  if(kaoruBeforeButtonLight){
+    kaoruBeforeButtonLight.textContent=
+      'â— MantÃ©n para ver Antes';
+  }
+}
+
+function kaoruBindBeforeHoldLight(){
+  if(!kaoruBeforeButtonLight)return;
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'pointerdown',
+      (event)=>{
+        event.preventDefault();
+
+        kaoruBeforeButtonLight
+          .setPointerCapture(
+            event.pointerId
+          );
+
+        kaoruEnterBeforeLight();
+      }
+    );
+
+  [
+    'pointerup',
+    'pointercancel'
+  ].forEach(type=>{
+    kaoruBeforeButtonLight
+      .addEventListener(
+        type,
+        (event)=>{
+          if(
+            kaoruBeforeButtonLight
+              .hasPointerCapture(
+                event.pointerId
+              )
+          ){
+            kaoruBeforeButtonLight
+              .releasePointerCapture(
+                event.pointerId
+              );
+          }
+
+          kaoruExitBeforeLight();
+        }
+      );
+  });
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'keydown',
+      (event)=>{
+        if(
+          event.repeat||
+          !(
+            event.key===' '||
+            event.key==='Enter'
+          )
+        ){
+          return;
+        }
+
+        event.preventDefault();
+        kaoruEnterBeforeLight();
+      }
+    );
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'keyup',
+      (event)=>{
+        if(
+          !(
+            event.key===' '||
+            event.key==='Enter'
+          )
+        ){
+          return;
+        }
+
+        event.preventDefault();
+        kaoruExitBeforeLight();
+      }
+    );
+
+  kaoruBeforeButtonLight
+    .addEventListener(
+      'blur',
+      kaoruExitBeforeLight
+    );
+}
+
+function kaoruPresetLibraryFilenameLight(){
+  const date=
+    new Date()
+      .toISOString()
+      .slice(0,10);
+
+  return(
+    `KAORU-LIGHTING-PRESETS-${date}.json`
+  );
+}
+
+function kaoruDownloadPresetLibraryLight(){
+  const data=
+    exportLightingPresetLibraryData();
+
+  const blob=
+    new Blob(
+      [
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      ],
+      {
+        type:'application/json'
+      }
+    );
+
+  const url=
+    URL.createObjectURL(blob);
+
+  const link=
+    document.createElement('a');
+
+  link.href=url;
+  link.download=
+    kaoruPresetLibraryFilenameLight();
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(
+    ()=>URL.revokeObjectURL(url),
+    1000
+  );
+
+  showToast(
+    `${data.presets.length} presets exportados`
+  );
+}
+
+async function kaoruImportPresetLibraryLight(
+  file
+){
+  if(!file)return;
+
+  const text=
+    await file.text();
+
+  const data=
+    JSON.parse(text);
+
+  const result=
+    importLightingPresetLibraryData(
+      data
+    );
+
+  elements.creativeAtmosphereScenes
+    ?.replaceChildren();
+
+  renderLightingControls(
+    store.getState()
+  );
+
+  showToast(
+    `${result.imported} presets importados`
+  );
+}
+
+kaoruExportPresetsLight
+  ?.addEventListener(
+    'click',
+    kaoruDownloadPresetLibraryLight
+  );
+
+kaoruImportPresetsLight
+  ?.addEventListener(
+    'click',
+    ()=>{
+      kaoruImportPresetsFileLight
+        ?.click();
+    }
+  );
+
+kaoruImportPresetsFileLight
+  ?.addEventListener(
+    'change',
+    async()=>{
+      const file=
+        kaoruImportPresetsFileLight
+          .files?.[0];
+
+      try{
+        await kaoruImportPresetLibraryLight(
+          file
+        );
+      }catch(error){
+        console.error(error);
+
+        showToast(
+          error?.message||
+          'No se pudo importar'
+        );
+      }finally{
+        kaoruImportPresetsFileLight.value='';
+      }
+    }
+  );
+
+kaoruBindBeforeHoldLight();
+/* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */

@@ -7,7 +7,26 @@ import { applyPaletteToMaterials } from './paletteBridge3d.js?v=6.0';
 import { createCustomModel } from './customModel.js?v=6.0';
 import { createCubeModel, createExternalSubject } from './extraModels3d.js?cache=male-body-fbx';
 
+import { createHairModel } from './hairModels3d.js?cache=hair-models-v11-1-20260912';
+
 export const SCENE3D_PHASE = 6;
+
+const HAIR_FEMALE_MODEL_URL = new URL(
+  '../assets/models/hair/female_hair_3d_model_free.glb?cache=hair-models-v11-1-20260912',
+  import.meta.url
+).href;
+
+const HAIR_PACK_2_MODEL_URL = new URL(
+  '../assets/models/hair/hair_pack_part_2.glb?cache=hair-models-v11-1-20260912',
+  import.meta.url
+).href;
+
+const HAIR_WOLF_MODEL_URL = new URL(
+  '../assets/models/hair/wolf_haircut_with_bones=hair-models-v11-1-20260912',
+  import.meta.url
+).href;
+
+const HAIR_WOLF_MODEL_FORMAT = 'glb';
 
 const ASARO_GLB_URL = new URL(
   '../assets/models/head_planes_reference.glb?v=3.3',
@@ -571,6 +590,57 @@ export async function create3dScene(
       }
 
       registerAsset(cube);
+      currentLoadError = null;
+    } else if (kind === 'hair-female-free') {
+      const hairModel = await createHairModel(
+        THREE,
+        {
+          url: HAIR_FEMALE_MODEL_URL,
+          format: 'glb',
+          source: 'female-hair-3d-model-free',
+          name: 'kaoru-hair-female-free',
+          floorY: -1.05,
+          targetHeight: 3.35
+        },
+        color
+      );
+
+      if (disposed || version !== loadVersion) return;
+      registerAsset(hairModel);
+      currentLoadError = null;
+    } else if (kind === 'hair-pack-2') {
+      const hairModel = await createHairModel(
+        THREE,
+        {
+          url: HAIR_PACK_2_MODEL_URL,
+          format: 'glb',
+          source: 'hair-pack-part-2',
+          name: 'kaoru-hair-pack-2',
+          floorY: -1.05,
+          targetHeight: 3.55
+        },
+        color
+      );
+
+      if (disposed || version !== loadVersion) return;
+      registerAsset(hairModel);
+      currentLoadError = null;
+    } else if (kind === 'hair-wolf-bones') {
+      const hairModel = await createHairModel(
+        THREE,
+        {
+          url: HAIR_WOLF_MODEL_URL,
+          format: HAIR_WOLF_MODEL_FORMAT,
+          source: 'wolf-haircut-with-bones',
+          name: 'kaoru-hair-wolf-bones',
+          floorY: -1.05,
+          targetHeight: 3.35
+        },
+        color
+      );
+
+      if (disposed || version !== loadVersion) return;
+      registerAsset(hairModel);
       currentLoadError = null;
     } else if (kind === 'asaro') {
       try {

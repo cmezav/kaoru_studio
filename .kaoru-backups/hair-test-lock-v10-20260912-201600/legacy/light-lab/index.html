@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
+  <title>Kaoru's Studio — Light Lab</title>
+  <link rel="icon" href="../../logo.png" type="image/png">
+  <link rel="stylesheet" href="../shared/studioBridge.css?cache=current">
+  <link rel="stylesheet" href="./styles.css?cache=theme-hair-polish-v3-1-20260912">
+  <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
+</head>
+<body class="studio-light" data-studio="light">
+  <header class="light-topbar">
+    <a class="light-brand" href="../../index.html#light"><img src="../../logo.png" alt="" onerror="this.hidden=true"><span>Kaoru's Studio</span><b>Light Lab</b></a>
+    <nav class="studio-switcher" aria-label="Cambiar de Studio">
+      <a class="studio-link" data-studio-link="silhouette" href="../index.html" title="Silueta Studio · Alt+1">◆ <span class="studio-link-label">Silueta</span><kbd>Alt+1</kbd></a>
+      <a class="studio-link" data-studio-link="text" href="../text-studio/index.html" title="Text Studio · Alt+2">Tt <span class="studio-link-label">Texto</span><kbd>Alt+2</kbd></a>
+      <a class="studio-link" data-studio-link="image" href="../image-studio/index.html" title="Image Studio · Alt+3">◫ <span class="studio-link-label">Imagen</span><kbd>Alt+3</kbd></a>
+      <a class="studio-link" data-studio-link="light" href="./index.html" title="Light Lab · Alt+4">✦ <span class="studio-link-label">Light Lab</span><kbd>Alt+4</kbd></a>
+      <a class="studio-link" data-studio-link="3d" href="../3d-lighting/index.html" title="3D Lighting Studio - Alt+5">3D <span class="studio-link-label">3D</span><kbd>Alt+5</kbd></a>
+        <a class="studio-link" data-studio-link="gallery" href="../gallery/index.html" title="Galería · Alt+6">▦ <span class="studio-link-label">Galería</span><kbd>Alt+6</kbd></a>
+    </nav>
+    <div class="lighting-history-actions" aria-label="Historial de edición">
+      <button id="undoHistoryLight" type="button" title="Nada que deshacer" disabled aria-label="Deshacer">↶</button>
+      <button id="redoHistoryLight" type="button" title="Nada que rehacer" disabled aria-label="Rehacer">↷</button>
+    </div>
+  </header>
+
+
+  <main class="lab-shell">
+    <aside class="panel controls-panel" aria-label="Configuración de Light Lab">
+      <section class="lab-intro">
+        <div class="eyebrow">LIGHT LAB</div>
+        <h1>Tu color bajo cualquier luz</h1>
+        <p>Elige la base y decide exactamente qué luces y sombras la afectan.</p>
+      </section>
+
+      <section class="control-section">
+        <div class="section-heading"><span>01</span><h2>¿Qué vas a colorear?</h2></div>
+        <div id="categoryGrid" class="category-grid" role="list"></div>
+      </section>
+
+      <section class="control-section base-control-section">
+        <div class="section-heading"><span>02</span><h2>Elige el color base</h2></div>
+        <div class="hex-row active-hex">
+          <input id="baseColorPicker" class="base-color-picker" type="color" value="#F1C9B6" aria-label="Selector de color base">
+          <input id="baseHexInput" type="text" value="#F1C9B6" maxlength="7" spellcheck="false" aria-label="HEX base">
+          <button id="applyHexBtn" type="button">Usar</button>
+        </div>
+        <p id="hexError" class="input-error" hidden>Usa #RGB o #RRGGBB.</p>
+        <p class="base-help">Puedes escribir o pegar cualquier HEX. La paleta se actualiza al instante.</p>
+      </section>
+
+      <section class="control-section lighting-section lighting-simple-section">
+        <div class="section-heading lighting-heading">
+          <span>03</span>
+          <div>
+            <h2>Elige el ambiente</h2>
+            <small>Empieza con un estilo y luego cambia sus colores y fuerza.</small>
+          </div>
+          <label class="master-switch" title="Activar o apagar la iluminación">
+            <input id="lightingEnabled" type="checkbox" checked>
+            <i></i>
+          </label>
+        </div>
+
+        <p class="lighting-simple-help">
+          No necesitas configurar todo desde cero. Elige el aspecto que más se parezca
+          a lo que buscas y después ajústalo.
+        </p>
+
+        <div class="atmosphere-simple-block">
+          <div class="atmosphere-simple-head">
+            <div>
+              <strong>Ambiente</strong>
+              <small>El fondo y la luz cambian juntos.</small>
+            </div>
+            <span id="atmosphereLabel">Dia</span>
+          </div>
+          <div id="atmosphereScenes" class="atmosphere-grid" aria-label="Ambientes"></div>
+        </div>
+
+                <details class="lighting-creative-atmospheres" open>
+          <summary>
+            <span>
+              <strong>Estilos creativos</strong>
+              <small>Los mismos del 3D</small>
+            </span>
+            <b>⌄</b>
+          </summary>
+
+          <div class="atmosphere-search-row">
+            <input id="creativeAtmosphereSearch" type="search" autocomplete="off" placeholder="Buscar preset por nombre, efecto o descripción..." aria-label="Buscar estilos creativos">
+            <select id="creativeAtmosphereSort" class="atmosphere-sort-select" aria-label="Ordenar estilos creativos">
+              <option value="original">Orden original</option>
+              <option value="favorite">★ Favoritos primero</option>
+              <option value="name">Nombre A–Z</option>
+              <option value="intensity-desc">Más intensa primero</option>
+              <option value="intensity-asc">Más suave primero</option>
+              <option value="warm">Más cálida primero</option>
+              <option value="cool">Más fría primero</option>
+              <option value="hard">Más dura primero</option>
+              <option value="diffuse">Más difusa primero</option>
+              <option value="type">Tipo / patrón</option>
+              <option value="direction">Dirección de luz</option>
+            </select>
+          </div>
+
+          <div class="atmosphere-filterbar" id="creativeAtmosphereFilters" aria-label="Filtrar estilos creativos">
+            <button type="button" class="is-active" data-atmo-filter="all">Todos</button>
+            <button type="button" data-atmo-filter="new">Nuevos</button>
+            <button type="button" data-atmo-filter="classic">Anteriores</button>
+            <button type="button" data-atmo-filter="favorite">★ Favoritos</button>
+            <button type="button" data-atmo-filter="custom">Mis presets</button>
+            <button type="button" data-atmo-filter="natural">Natural</button>
+            <button type="button" data-atmo-filter="color">Color</button>
+            <button type="button" data-atmo-filter="pattern">Patrones</button>
+            <button type="button" data-atmo-filter="dramatic">Dramático</button>
+            <button type="button" data-atmo-filter="fantasy">Fantasía</button>
+            <span id="creativeAtmosphereCount" class="atmosphere-filter-count"></span>
+          </div>
+
+          <div id="creativeAtmosphereScenes" class="atmosphere-creative-strip" aria-label="Estilos creativos"></div>
+
+          <details class="preset-compare" open>
+            <summary>Comparar 2 presets</summary>
+            <div class="preset-compare-body">
+              <p class="base-help">Mira dos configuraciones a la vez y aplica la que prefieras sin perder los presets originales.</p>
+              <div class="preset-compare-grid">
+                <section>
+                  <label class="preset-compare-select-label">
+                    <span>Preset A</span>
+                    <select id="compareAtmosphereA"></select>
+                  </label>
+                  <div id="compareAtmosphereCardA" class="preset-compare-card atmosphere-card atmosphere-3d-card"></div>
+                  <button id="applyCompareAtmosphereA" class="preset-compare-apply" type="button">Aplicar A</button>
+                </section>
+                <section>
+                  <label class="preset-compare-select-label">
+                    <span>Preset B</span>
+                    <select id="compareAtmosphereB"></select>
+                  </label>
+                  <div id="compareAtmosphereCardB" class="preset-compare-card atmosphere-card atmosphere-3d-card"></div>
+                  <button id="applyCompareAtmosphereB" class="preset-compare-apply" type="button">Aplicar B</button>
+                </section>
+              </div>
+            </div>
+          </details>
+
+          <div class="preset-library-save">
+
+            <input id="customAtmosphereName" type="text" maxlength="60" placeholder="Nombre para esta variante..." aria-label="Nombre del preset personal">
+            <button id="saveCustomAtmosphere" type="button">Guardar variante</button>
+          </div>
+
+
+          <div class="preset-transfer-actions">
+            <button id="exportLightingPresetsLight" type="button">Exportar Mis presets</button>
+            <button id="importLightingPresetsLight" type="button">Importar presets</button>
+            <input id="importLightingPresetsFileLight" type="file" accept=".json,application/json" hidden>
+          </div>
+          <details class="light-atmosphere-editor">
+            <summary>Editar ambiente seleccionado</summary>
+
+            <div class="light-atmosphere-editor-body">
+              <div class="light-atmosphere-colors">
+                <label>
+                  <span>Fondo superior</span>
+                  <div>
+                    <input id="atmoTopColor" type="color" value="#82C9F4">
+                    <input id="atmoTopHex" type="text" maxlength="7" value="#82C9F4">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Fondo medio</span>
+                  <div>
+                    <input id="atmoMidColor" type="color" value="#DDF2FF">
+                    <input id="atmoMidHex" type="text" maxlength="7" value="#DDF2FF">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Fondo inferior</span>
+                  <div>
+                    <input id="atmoBottomColor" type="color" value="#F4E7BF">
+                    <input id="atmoBottomHex" type="text" maxlength="7" value="#F4E7BF">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Brillo ambiental</span>
+                  <div>
+                    <input id="atmoAccentColor" type="color" value="#FFF2B3">
+                    <input id="atmoAccentHex" type="text" maxlength="7" value="#FFF2B3">
+                  </div>
+                </label>
+              </div>
+
+              <div class="light-atmosphere-effect-grid">
+                <label>
+                  <span>Patrón de luz proyectada</span>
+                  <select id="atmoEffectType">
+                    <option value="none">Ninguno</option>
+                    <option value="glow">Resplandor</option>
+                    <option value="split">Dos colores</option>
+                    <option value="stripe">Franja</option>
+                    <option value="window">Ventana</option>
+                    <option value="leaves">Hojas</option>
+                    <option value="blinds">Persianas</option>
+                  <option value="grid">Rejilla</option>
+                    <option value="neon">Neón</option>
+                    <option value="rim">Contraluz</option>
+                    <option value="iridescent">Iridiscente</option>
+                    <option value="rainbow">Arcoíris</option>
+                    <option value="bokeh">Círculos / bokeh</option>
+                    <option value="sparkles">Brillos</option>
+                  <option value="blacklight">Blacklight / pintura neon</option>
+                    <option value="flash">Flash</option>
+                    <option value="caustics">Caústicas</option>
+                    <option value="underwater">Bajo el mar</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>Color A</span>
+                  <div>
+                    <input id="atmoEffectAColor" type="color" value="#FFFFFF">
+                    <input id="atmoEffectAHex" type="text" maxlength="7" value="#FFFFFF">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Color B</span>
+                  <div>
+                    <input id="atmoEffectBColor" type="color" value="#7C3AED">
+                    <input id="atmoEffectBHex" type="text" maxlength="7" value="#7C3AED">
+                  </div>
+                </label>
+
+                <label>
+                  <span>Luz que proyecta</span>
+                  <select id="atmoProjectorLight"></select>
+                </label>
+              </div>
+
+              <label class="light-atmo-range">
+                <span>Intensidad <output id="atmoEffectOpacityOut">0%</output></span>
+                <input id="atmoEffectOpacity" type="range" min="0" max="100" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Rotación <output id="atmoEffectAngleOut">0°</output></span>
+                <input id="atmoEffectAngle" type="range" min="-180" max="180" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Escala <output id="atmoEffectScaleOut">100%</output></span>
+                <input id="atmoEffectScale" type="range" min="20" max="300" value="100">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Posición X <output id="atmoEffectXOut">0%</output></span>
+                <input id="atmoEffectX" type="range" min="-100" max="100" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Posición Y <output id="atmoEffectYOut">0%</output></span>
+                <input id="atmoEffectY" type="range" min="-100" max="100" value="0">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Desenfoque <output id="atmoEffectBlurOut">8%</output></span>
+                <input id="atmoEffectBlur" type="range" min="0" max="100" value="8">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Contraste <output id="atmoEffectContrastOut">70%</output></span>
+                <input id="atmoEffectContrast" type="range" min="0" max="100" value="70">
+              </label>
+
+              <label class="light-atmo-range">
+                <span>Densidad <output id="atmoEffectDensityOut">50%</output></span>
+                <input id="atmoEffectDensity" type="range" min="0" max="100" value="50">
+              </label>
+
+              <p class="base-help">
+                Las luces del preset siguen editándose normalmente abajo: color, fuerza, posición, altura y suavidad.
+              </p>
+
+              <button id="resetAtmosphereBtn" type="button">Restablecer estilo</button>
+            </div>
+          </details>
+        </details>
+<details class="lighting-other-presets">
+          <summary>Otros estilos de luz</summary>
+          <div id="lightingScenes" class="lighting-scenes lighting-preset-grid" aria-label="Tipos de iluminacion"></div>
+        </details>
+
+        <div class="simple-light-editor-heading">
+          <div>
+            <strong>Ajusta las luces a tu gusto</strong>
+            <small id="activeLightsLabel">1 luz activa</small>
+          </div>
+        </div>
+
+        <div id="lightsList" class="lights-list simple-lights-list"></div>
+
+        <button id="beforeLightingLight" class="before-lighting-btn" type="button">◐ Mantén para ver Antes</button>
+
+        <div class="light-position-tools">
+          <div class="light-position-head">
+            <div>
+              <strong>Posición visual de la luz</strong>
+              <small>Selecciona una luz y arrastra el punto para moverla.</small>
+            </div>
+            <output id="lightPositionReadout">0° · 0°</output>
+          </div>
+          <div id="lightPositionPad" class="light-position-pad" aria-label="Mover luz seleccionada por dirección y elevación">
+            <span class="light-pad-label is-top">Arriba</span>
+            <span class="light-pad-label is-left">Izq.</span>
+            <span class="light-pad-label is-right">Der.</span>
+            <span class="light-pad-label is-bottom">Abajo</span>
+            <button id="lightPositionHandle" class="light-position-handle" type="button" tabindex="-1" aria-hidden="true"></button>
+          </div>
+          <button id="soloSelectedLight" class="light-solo-btn" type="button">Solo seleccionado</button>
+        </div>
+
+        <details class="environment-controls simple-more-lighting">
+          <summary>
+            <span>
+              <strong>Más ajustes de iluminación</strong>
+              <small>Luz general, sombras, contorno y luces adicionales</small>
+            </span>
+            <b>⌄</b>
+          </summary>
+
+          <div class="add-light-row">
+            <div>
+              <strong>¿Quieres otra luz?</strong>
+              <small>Puedes añadir hasta 8 y editar cada una por separado.</small>
+            </div>
+            <button id="addLightBtn" type="button">＋ Añadir otra luz</button>
+          </div>
+
+          <div id="environmentControls" class="lighting-components friendly-lighting-components">
+            <label class="lighting-component" data-light-component="ambient">
+              <span><strong>Luz general</strong><small>Ilumina suavemente toda la escena.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de la luz general">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de la luz general">
+              <output data-component-output>12</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de la luz general">
+            </label>
+
+            <label class="lighting-component" data-light-component="shadow">
+              <span><strong>Sombras</strong><small>Color y fuerza de las zonas oscuras.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de las sombras">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de las sombras">
+              <output data-component-output>30</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de las sombras">
+            </label>
+
+            <label class="lighting-component" data-light-component="bounce">
+              <span><strong>Luz rebotada</strong><small>Aclara un poco las partes que quedarían muy oscuras.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de la luz rebotada">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de la luz rebotada">
+              <output data-component-output>10</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de la luz rebotada">
+            </label>
+
+            <label class="lighting-component" data-light-component="rim">
+              <span><strong>Luz de contorno</strong><small>Marca el borde de la figura desde atrás o un costado.</small></span>
+              <input type="color" data-component-field="color" aria-label="Color de la luz de contorno">
+              <input type="text" maxlength="7" data-component-hex aria-label="HEX de la luz de contorno">
+              <output data-component-output>0</output>
+              <input type="range" min="0" max="100" data-component-field="intensity" aria-label="Fuerza de la luz de contorno">
+            </label>
+          </div>
+        </details>
+      </section>
+      <section class="control-section extraction-controls">
+        <div class="section-heading"><span>04</span><h2>O tómalo de una imagen</h2></div>
+        <label class="upload-reference-button" for="referenceFileInput"><input id="referenceFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden><span>＋</span><strong>Subir imagen</strong><small>PNG · JPG · WEBP · GIF</small></label>
+        <div class="reference-actions"><button id="pasteImageBtn" type="button">Pegar imagen</button><button id="clearImageBtn" type="button" hidden>Quitar</button></div>
+        <p id="imageStatus" class="field-help">También puedes usar Ctrl+V. La imagen se abrirá en el visor central.</p>
+      </section>
+
+      <details class="control-section advanced-controls">
+        <summary><span>05</span><span><strong>Ajustes de paleta</strong><small>Calidez, contraste y acabado</small></span><b>⌄</b></summary>
+        <div class="parameter-list">
+          <label><span>Calidez <output data-output="warmth">0</output></span><input data-param="warmth" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Saturación <output data-output="saturation">0</output></span><input data-param="saturation" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Contraste <output data-output="contrast">0</output></span><input data-param="contrast" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Profundidad de sombras <output data-output="shadowDepth">0</output></span><input data-param="shadowDepth" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Intensidad de luces <output data-output="lightStrength">0</output></span><input data-param="lightStrength" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Brillos fuertes <output data-output="specular">0</output></span><input data-param="specular" type="range" min="-50" max="50" value="0"></label>
+          <label><span>Suavidad <output data-output="softness">0</output></span><input data-param="softness" type="range" min="-50" max="50" value="0"></label>
+        </div>
+        <button id="resetParamsBtn" class="reset-params-button" type="button">Restablecer ajustes</button>
+      </details>
+    </aside>
+
+    <section class="preview-column" aria-label="Previsualización">
+      <div class="preview-toolbar">
+        <div><span class="eyebrow">PREVIEW 2D</span><h2 id="previewTitle">Piel natural</h2></div>
+        <div id="previewTabs" class="view-tabs" role="tablist" aria-label="Tipo de preview">
+          <button type="button" class="is-active" data-view="sphere" role="tab" aria-selected="true">Esfera</button>
+          <button type="button" data-view="band" role="tab" aria-selected="false">Banda</button>
+          <button type="button" data-view="plane" role="tab" aria-selected="false">Plano</button>
+          <button type="button" data-view="reference" role="tab" aria-selected="false">Imagen / Cuentagotas</button>
+        </div>
+      </div>
+      <div class="canvas-card">
+        <canvas id="previewCanvas" width="960" height="560" aria-label="Vista previa de la paleta"></canvas>
+        <div id="referenceStage" class="reference-stage" hidden>
+          <div id="referenceEmpty" class="reference-empty"><span>⌁</span><strong>Sube o pega una imagen</strong><small>Después haz clic sobre cualquier píxel para extraer su HEX.</small></div>
+          <canvas id="referenceCanvas" width="1" height="1" aria-label="Imagen de referencia con cuentagotas" hidden></canvas>
+          <div id="eyedropperMarker" class="eyedropper-marker" hidden></div>
+          <div id="dropOverlay" class="drop-overlay" hidden>Suelta la imagen aquí</div>
+        </div>
+        <div class="canvas-caption"><span id="previewModeLabel">Estudio de volumen · esfera</span><span id="canvasHint">Actualización en tiempo real</span></div>
+      </div>
+      <section class="palette-card">
+        <div class="palette-heading">
+          <div><span class="eyebrow">PALETA DETALLADA · 16 COLORES</span><h2 id="paletteName">Muy clara cálida</h2></div>
+          <div id="paletteViewTabs" class="palette-view-tabs" role="tablist" aria-label="Comparar iluminación">
+            <button type="button" data-palette-view="original" role="tab">Sin iluminación</button>
+            <button type="button" class="is-active" data-palette-view="illuminated" role="tab">Con iluminación</button>
+            <button type="button" data-palette-view="selected" role="tab">Solo esta luz</button>
+            <button type="button" data-palette-view="compare" role="tab">Comparar</button>
+          </div>
+        </div>
+        <div id="swatchGrid" class="swatch-grid"></div>
+        <div id="comparisonGrid" class="comparison-grid" hidden></div>
+        <p class="palette-tip">Clic en cualquier color = copiar HEX · La edición individual está disponible en Original.</p>
+      </section>
+    </section>
+
+    <aside class="panel status-panel" aria-label="Estado y edición">
+      <section class="status-head"><div class="status-orb" aria-hidden="true">✦</div><div><span class="eyebrow">ILUMINACIÓN ACTIVA</span><h2>Color bajo varias luces</h2></div></section>
+      <ol class="quick-guide">
+        <li>Elige el tipo de iluminación que más se parece a lo que buscas.</li>
+        <li>Cambia el color y la fuerza de cada luz.</li>
+        <li>Compara Sin iluminación y Con iluminación.</li>
+      </ol>
+      <dl class="state-list">
+        <div><dt>Tipo</dt><dd id="stateCategory">Piel natural</dd></div>
+        <div><dt>Base</dt><dd id="stateBase">#F1C9B6</dd></div>
+        <div><dt>Iluminación</dt><dd id="stateLighting">1 luz activa</dd></div>
+        <div><dt>Paleta</dt><dd id="stateColors">16 colores</dd></div>
+      </dl>
+
+      <section id="swatchEditor" class="swatch-editor" hidden>
+        <div class="editor-title"><div><span class="eyebrow">EDITAR COLOR</span><h3 id="editRole">Base principal</h3></div><button id="closeEditorBtn" type="button" aria-label="Cerrar">×</button></div>
+        <div class="hex-row active-hex"><input id="editColorPicker" class="base-color-picker" type="color" value="#000000"><input id="editHexInput" type="text" maxlength="7"><button id="applyEditBtn" type="button">Guardar</button></div>
+        <p id="editHexError" class="input-error" hidden>HEX inválido.</p>
+      </section>
+
+      <section class="extracted-section">
+        <div class="side-section-heading"><div><span class="eyebrow">COLORES EXTRAÍDOS</span><h3 id="extractedCount">0 muestras</h3></div><button id="clearSamplesBtn" type="button" hidden>Limpiar</button></div>
+        <p id="extractedEmpty" class="side-empty">Abre la vista Imagen y haz clic para usar el cuentagotas.</p>
+        <div id="extractedColors" class="extracted-colors"></div>
+      </section>
+
+      <section class="recent-section">
+        <div class="side-section-heading"><div><span class="eyebrow">RECIENTES</span><h3>Colores reutilizables</h3></div></div>
+        <p id="recentEmpty" class="side-empty">Los colores que extraigas o uses aparecerán aquí.</p>
+        <div id="recentColors" class="recent-colors"></div>
+      </section>
+
+      <button id="copyAllBtn" class="copy-all-button" type="button">Copiar los 16 HEX</button>
+      <button id="downloadStructureBtn" class="primary-button" type="button">Descargar proyecto .lls.json</button>
+      <p class="button-help">Todos los colores individuales se copian con un clic.</p>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <button class="theme-fab" type="button" aria-label="Cambiar a modo noche" aria-pressed="false" title="Modo noche"><span class="theme-icon-wrap" aria-hidden="true"><svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.1 5.1l1.7 1.7m10.4 10.4 1.7 1.7M5.1 18.9l1.7-1.7M17.2 6.8l1.7-1.7"></path></svg><svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.6 15.4A9 9 0 1 1 8.6 3.4a7 7 0 1 0 12 12z"></path></svg></span></button>
+  <script src="../shared/studioBridge.js?cache=current"></script>
+  <script src="../shared/studioGallery.js?cache=current"></script>
+  <script type="module" src="./js/main.js?cache=hair-balanced-v9-2-20260913"></script>
+  <script type="module" src="./js/advancedTools.js?cache=current"></script>
+  
+  <script type="module" src="./js/bridge3d.js?cache=current"></script>
+  <script src="../shared/precisionControls.js?cache=controls"></script>
+</body>
+</html>

@@ -446,6 +446,71 @@ function drawStudyMap(ctx, placement){
   ctx.restore();
 }
 
+function drawKaoruBoostedLightPass(ctx, w, h, lighting){
+  // KAORU_LIGHT_BOOST_V11_1
+  const lights = activeLights(lighting || {});
+  if(!lights.length) return;
+
+  ctx.save();
+
+  lights.slice(0, 6).forEach((light, index) => {
+    const intensity = Math.max(0, Number(light.intensity ?? 1));
+    const px = clamp((light.position?.x ?? 0) * 0.5 + 0.5, 0.03, 0.97);
+    const py = clamp((light.position?.y ?? -0.5) * 0.5 + 0.5, 0.03, 0.97);
+    const softness = clamp(Number(light.softness ?? 0.4), 0, 1);
+    const spread = Math.max(w, h) * (0.30 + softness * 0.52 + index * 0.025);
+    const color = light.color || '#ffffff';
+
+    const hot = ctx.createRadialGradient(
+      w * px, h * py, 0,
+      w * px, h * py, spread * 0.72
+    );
+    hot.addColorStop(0, rgba(color, Math.min(0.96, 0.78 * intensity)));
+    hot.addColorStop(0.18, rgba(color, Math.min(0.82, 0.54 * intensity)));
+    hot.addColorStop(0.48, rgba(color, Math.min(0.58, 0.30 * intensity)));
+    hot.addColorStop(1, rgba(color, 0));
+
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = hot;
+    ctx.fillRect(0, 0, w, h);
+
+    const bloom = ctx.createRadialGradient(
+      w * px, h * py, spread * 0.10,
+      w * px, h * py, spread * 1.35
+    );
+    bloom.addColorStop(0, rgba(color, Math.min(0.52, 0.28 * intensity)));
+    bloom.addColorStop(0.52, rgba(color, Math.min(0.34, 0.16 * intensity)));
+    bloom.addColorStop(1, rgba(color, 0));
+
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = bloom;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.translate(w * px, h * py);
+    const angle = Math.atan2(
+      Number(light.position?.y ?? -0.5),
+      Number(light.position?.x ?? 0.01)
+    ) + Math.PI * 0.5;
+    ctx.rotate(angle);
+    ctx.scale(1.9, 0.42);
+
+    const sheen = ctx.createRadialGradient(
+      0, 0, 0,
+      0, 0, spread * 0.52
+    );
+    sheen.addColorStop(0, rgba(color, Math.min(0.72, 0.42 * intensity)));
+    sheen.addColorStop(0.36, rgba(color, Math.min(0.38, 0.20 * intensity)));
+    sheen.addColorStop(1, rgba(color, 0));
+
+    ctx.fillStyle = sheen;
+    ctx.fillRect(-spread, -spread, spread * 2, spread * 2);
+    ctx.restore();
+  });
+
+  ctx.restore();
+}
+
 export function renderCompleteHairAsset(ctx, width, height, colors, lighting, textureId = '1b', studyMode = 'render', hairView = 'front', baseHex = null){
   const typeId = normalizeType(textureId);
   const viewId = normalizeView(hairView);

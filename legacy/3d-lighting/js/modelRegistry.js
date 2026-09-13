@@ -1,5 +1,26 @@
 export const MODEL_REGISTRY = [
+
   {
+    id: 'hair-female-free',
+    name: 'Female Hair 3D',
+    description: 'Cabello femenino detallado para probar color, brillo, sombras y luces de color.',
+    ready: true,
+    source: 'female-hair-3d-model-free'
+  },
+  {
+    id: 'hair-pack-2',
+    name: 'Hair Pack - Part 2',
+    description: 'Pack de peinados para estudiar respuesta de diferentes mechones y siluetas a la luz.',
+    ready: true,
+    source: 'hair-pack-part-2'
+  },
+  {
+    id: 'hair-wolf-bones',
+    name: 'Wolf Haircut with Bones',
+    description: 'Peinado wolf con accesorios para probar contraste, rim light y luces intensas.',
+    ready: true,
+    source: 'wolf-haircut-with-bones'
+  },{
     id: 'asaro',
     name: 'Asaro / Planos',
     description: 'Cabeza por planos GLB para estudiar cortes claros de luz y sombra.',

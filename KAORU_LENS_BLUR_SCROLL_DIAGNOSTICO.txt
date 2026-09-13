@@ -1,0 +1,3524 @@
+﻿===== GIT =====
+?? KAORU_LENS_BLUR_SCROLL_DIAGNOSTICO.txt
+fc34559 fix: estabilizar importacion y preview de Image Studio
+3fd4cc8 fix: corregir Image Studio con controles de precision
+c98947d fix: reparar Image Studio y excluir tareas generales de pendientes
+
+==================================================
+===== IMAGE INDEX =====
+===== .\legacy\image-studio\index.html =====
+==================================================
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('siluetaStudioTheme')==='night'?'night':'day'}catch(_){document.documentElement.dataset.theme='day'}if(window.parent!==window)document.documentElement.classList.add('kaoru-embedded');</script>
+  <title>Kaoru's Studio â€” Image Studio</title>
+  <link rel="icon" href="../../logo.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css?cache=current">
+  <link rel="stylesheet" href="../shared/precisionControls.css?cache=controls">
+</head>
+<body data-studio="image">
+  <div class="image-app">
+    <header class="standalone-header">
+      <a class="brand" href="../index.html"><img src="../../logo.png" alt="" onerror="this.hidden=true"><span>Kaoru's Studio</span><b>Image Studio</b></a>
+      <nav class="standalone-nav" aria-label="Cambiar de Studio">
+        <a data-studio-link="silhouette" href="../index.html">Silueta</a>
+        <a data-studio-link="text" href="../text-studio/index.html">Texto</a>
+        <a data-studio-link="image" href="./index.html">Imagen</a>
+        <a data-studio-link="light" href="../light-lab/index.html">Light Lab</a>
+        <a data-studio-link="3d" href="../3d-lighting/index.html">3D</a>
+        <a data-studio-link="gallery" href="../gallery/index.html">GalerÃ­a</a>
+      </nav>
+    </header>
+
+    <main class="workspace">
+      <aside class="properties" id="propertiesPanel">
+        <section class="panel-intro">
+          <div class="eyebrow">IMAGE STUDIO Â· REBUILD V2</div>
+          <h1>EdiciÃ³n no destructiva</h1>
+          <p>Preview ligera y exportaciÃ³n independiente desde la imagen original.</p>
+        </section>
+
+        <label class="drop-zone" id="dropZone" for="fileInput">
+          <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+          <span class="drop-icon">ï¼‹</span>
+          <strong>Importar imagen</strong>
+          <small>PNG Â· JPG/JPEG Â· WEBP</small>
+        </label>
+
+        <div class="controls disabled" id="editorControls">
+          <details open data-section="adjustments">
+            <summary>Ajustes de luz y color</summary>
+            <div class="details-body">
+              <div id="adjustmentControls"></div>
+              <label class="color-row"><span>Color monocromÃ¡tico</span><input id="monochromeColor" type="color" value="#7c3aed"></label>
+            </div>
+          </details>
+
+          <details data-section="filters">
+            <summary>Nitidez y filtros</summary>
+            <div class="details-body"><div id="filterControls"></div></div>
+          </details>
+
+          <details data-section="grain">
+            <summary>Grano</summary>
+            <div class="details-body">
+              <div id="grainControls"></div>
+              <p class="helper">Grano monocromÃ¡tico Ãºnicamente.</p>
+            </div>
+          </details>
+
+          <details class="lens-panel" data-section="lens">
+            <summary>Lens Blur <span class="pill">V2</span></summary>
+            <div class="details-body">
+              <label class="switch-row"><span>Activar Lens Blur</span><input id="lensEnabled" type="checkbox"><i></i></label>
+              <p class="helper">Mantiene una zona enfocada y genera bokeh a partir de luces reales de la imagen.</p>
+              <div id="lensControls"></div>
+              <label class="select-row"><span>Forma de apertura</span><select id="lensShape"><option value="circle">CÃ­rculo</option><option value="octagon">OctÃ¡gono</option><option value="diamond">Rombo</option><option value="triangle">TriÃ¡ngulo</option></select></label>
+              <label class="switch-row"><span>Preview en vivo</span><input id="liveLensPreview" type="checkbox"><i></i></label>
+              <p class="helper">Recomendado: dÃ©jalo apagado. Ajusta los sliders y pulsa â€œAplicar previewâ€.</p>
+              <div class="button-grid"><button class="secondary" id="applyLensPreviewBtn" type="button">Aplicar preview</button><button class="secondary" id="focusModeBtn" type="button">&#9678; Elegir foco</button></div>
+              <div class="lens-manual-tools">
+                <label class="compact"><span>Radio del foco %</span><input id="lensFocusRadiusNumber" type="number" min="3" max="70" step="1" value="24"></label>
+                <div class="button-grid lens-brush-buttons">
+                  <button class="secondary" id="lensBrushBlurBtn" type="button">Pincel desenfoque</button>
+                  <button class="secondary" id="lensBrushRestoreBtn" type="button">Pincel restaurador</button>
+                </div>
+                <label class="range-row lens-tool-range"><span>Radio pincel</span><input id="lensBrushRadius" type="range" min="1" max="40" step="1" value="8"><output id="lensBrushRadiusOut">8%</output></label>
+                <label class="range-row lens-tool-range"><span>Dureza</span><input id="lensBrushHardness" type="range" min="0" max="100" step="1" value="65"><output id="lensBrushHardnessOut">65%</output></label>
+                <label class="range-row lens-tool-range"><span>Fuerza</span><input id="lensBrushStrength" type="range" min="1" max="100" step="1" value="100"><output id="lensBrushStrengthOut">100%</output></label>
+                <button class="secondary full lens-clear-brush" id="clearLensBrushBtn" type="button">Limpiar pinceladas Lens Blur</button>
+                <p class="helper">Desenfoque pinta blur dentro o fuera del foco. Restaurador devuelve nitidez y evita bokeh en la zona pintada. El tirador del circulo permite cambiar su radio directamente.</p>
+              </div>
+            </div>
+          </details>
+
+          <details data-section="transform">
+            <summary>Transformar</summary>
+            <div class="details-body">
+              <div class="grid2">
+                <label class="compact"><span>X</span><input id="transformX" type="number" step="1" value="0"></label>
+                <label class="compact"><span>Y</span><input id="transformY" type="number" step="1" value="0"></label>
+                <label class="compact"><span>Ancho %</span><input id="scaleX" type="number" min="1" max="500" step="1" value="100"></label>
+                <label class="compact"><span>Alto %</span><input id="scaleY" type="number" min="1" max="500" step="1" value="100"></label>
+                <label class="compact"><span>RotaciÃ³n Â°</span><input id="rotation" type="number" min="-360" max="360" step="1" value="0"></label>
+                <label class="compact"><span>Opacidad %</span><input id="imageOpacity" type="number" min="0" max="100" step="1" value="100"></label>
+              </div>
+              <label class="switch-row"><span>Bloquear proporciÃ³n</span><input id="aspectLock" type="checkbox" checked><i></i></label>
+              <div class="button-grid"><button class="secondary" id="flipXBtn" type="button">â†” Voltear X</button><button class="secondary" id="flipYBtn" type="button">â†• Voltear Y</button><button class="secondary" id="resetTransformBtn" type="button">Restablecer</button></div>
+            </div>
+          </details>
+
+          <details data-section="crop">
+            <summary>Recorte</summary>
+            <div class="details-body">
+              <div class="grid2">
+                <label class="compact"><span>X</span><input id="cropX" type="number" min="0" step="1"></label>
+                <label class="compact"><span>Y</span><input id="cropY" type="number" min="0" step="1"></label>
+                <label class="compact"><span>Ancho</span><input id="cropWidth" type="number" min="1" step="1"></label>
+                <label class="compact"><span>Alto</span><input id="cropHeight" type="number" min="1" step="1"></label>
+              </div>
+              <div class="button-grid"><button class="primary" id="applyCropBtn" type="button">Aplicar recorte</button><button class="secondary" id="resetCropBtn" type="button">Imagen completa</button></div>
+            </div>
+          </details>
+
+          <details open data-section="export">
+            <summary>ExportaciÃ³n</summary>
+            <div class="details-body">
+              <div class="grid2">
+                <label class="compact"><span>Formato</span><select id="exportFormat"><option value="png">PNG</option><option value="jpeg">JPG</option><option value="webp">WEBP</option></select></label>
+                <label class="compact"><span>Escala</span><select id="exportScale"><option value="0.5">0.5Ã—</option><option value="1" selected>1Ã—</option><option value="2">2Ã—</option><option value="3">3Ã—</option><option value="4">4Ã—</option></select></label>
+                <label class="compact"><span>Ancho px</span><input id="exportWidth" type="number" min="1" step="1"></label>
+                <label class="compact"><span>Alto px</span><input id="exportHeight" type="number" min="1" step="1"></label>
+              </div>
+              <label class="range-row quality-row" id="qualityRow"><span>Calidad</span><input id="exportQuality" type="range" min="10" max="100" value="92"><output>92%</output></label>
+              <label class="switch-row"><span>Fondo transparente</span><input id="transparentBg" type="checkbox" checked><i></i></label>
+              <label class="color-row" id="backgroundRow"><span>Color de fondo</span><input id="backgroundColor" type="color" value="#ffffff"></label>
+              <p class="helper" id="exportInfo"></p>
+              <button class="primary full" id="exportBtn" type="button">Exportar imagen</button>
+            </div>
+          </details>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div class="stage-toolbar">
+          <div class="file-info"><strong id="fileName">Sin imagen</strong><span id="imageMeta">Importa una imagen para comenzar</span></div>
+          <div class="toolbar-actions">
+            <button class="ghost text-btn repair-preview" id="repairPreviewBtn" type="button" disabled title="Si la preview se congela o queda procesando, fuerza un refresco del lienzo">â†» Reparar preview</button>
+            <button class="ghost" id="undoBtn" type="button" disabled title="Ctrl+Z">â†¶</button>
+            <button class="ghost" id="redoBtn" type="button" disabled title="Ctrl+Shift+Z">â†·</button>
+            <button class="ghost text-btn" id="saveProjectBtn" type="button" disabled>Guardar</button>
+            <button class="ghost text-btn" id="saveTemplateBtn" type="button" disabled>Plantilla</button>
+            <button class="primary text-btn" id="exportTopBtn" type="button" disabled>Exportar</button>
+          </div>
+        </div>
+
+        <div class="viewport" id="canvasViewport">
+          <div class="empty-state" id="emptyState"><div class="empty-icon">â—«</div><h2>Tu imagen aparecerÃ¡ aquÃ­</h2><p>Arrastra una imagen o impÃ³rtala desde el panel.</p></div>
+          <div class="canvas-wrap" id="canvasWrap" hidden>
+            <canvas id="previewCanvas"></canvas>
+            <div class="focus-ring" id="focusRing" hidden><button class="focus-radius-handle" id="focusRadiusHandle" type="button" aria-label="Cambiar radio del foco" title="Arrastra para cambiar el radio"></button></div><div class="lens-brush-cursor" id="lensBrushCursor" hidden></div>
+          </div>
+          <div class="render-badge" id="renderBadge" hidden><span></span><b>Renderizando previewâ€¦</b></div>
+        </div>
+
+        <div class="statusbar">
+          <span id="statusText">Listo</span>
+          <div class="zoom-controls"><button id="zoomOut" type="button">âˆ’</button><output id="zoomValue">100%</output><button id="zoomIn" type="button">ï¼‹</button><button id="fitView" type="button">Ajustar</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="recoveryModal" hidden>
+    <div class="modal-card"><div class="modal-icon">â†»</div><h2>EncontrÃ© una sesiÃ³n anterior</h2><p>Puedes recuperar tu imagen y todos sus ajustes, o iniciar un proyecto nuevo.</p><div class="recovery-meta" id="recoveryMeta"></div><div class="modal-actions"><button class="primary" id="recoverBtn">Recuperar progreso</button><button class="secondary" id="newBtn">Crear proyecto nuevo</button></div></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="../shared/studioGallery.js?cache=current"></script>
+  <script src="../shared/namingSystem.js?cache=current"></script>
+  <script src="../shared/studioBridge.js?cache=current"></script>
+  <script src="./js/state.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/history.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/filters.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/lensBlur.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/renderer.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/previewPipeline.js?cache=image-import-recovery-v4-20260907"></script>
+  <script src="./js/exportPipeline.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/storage.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="./js/ui.js?cache=image-import-recovery-v4-20260907"></script>
+  <script src="./js/main.js?cache=image-import-recovery-v4-20260907"></script>
+  <script src="./js/lensBrushTools.js?cache=image-preview-recovery-v1-20260906"></script>
+  <script src="../shared/precisionControls.js?cache=controls"></script>
+</body>
+</html>
+
+
+==================================================
+===== IMAGE STYLES =====
+===== .\legacy\image-studio\styles.css =====
+==================================================
+:root{font-family:Inter,"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif;--bg:#f4f2f7;--panel:#fff;--surface:#fbfafd;--surface2:#f2eff6;--text:#29252f;--muted:#7e7687;--line:#e0dbe7;--accent:#7c3aed;--accent2:#6d28d9;--shadow:0 18px 50px rgba(37,27,52,.10);color-scheme:light}
+html[data-theme=night]{--bg:#0f0d13;--panel:#17141d;--surface:#1d1924;--surface2:#25202d;--text:#f6f2fa;--muted:#aaa1b4;--line:#393240;--accent:#a78bfa;--accent2:#8b5cf6;--shadow:0 20px 60px rgba(0,0,0,.38);color-scheme:dark}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0}body{overflow:hidden;background:var(--bg);color:var(--text)}button,input,select{font:inherit;color:inherit}button{cursor:pointer}.image-app{height:100%;min-height:0;display:grid;grid-template-rows:56px minmax(0,1fr)}
+.standalone-header{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}.brand{display:flex;align-items:center;gap:9px;color:inherit;text-decoration:none}.brand img{width:31px;height:31px;object-fit:contain;border-radius:9px}.brand span{font:italic 700 17px Georgia,serif}.brand b{font-size:11px;color:var(--muted)}.standalone-nav{display:flex;gap:5px}.standalone-nav a{padding:7px 9px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:750}.standalone-nav a[aria-current=page]{background:var(--surface2);color:var(--accent)}
+html.kaoru-embedded .image-app{grid-template-rows:minmax(0,1fr)}html.kaoru-embedded .standalone-header{display:none}
+.workspace{min-width:0;min-height:0;height:100%;display:grid;grid-template-columns:minmax(320px,360px) minmax(0,1fr);gap:12px;padding:12px}.properties{min-height:0;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:15px;scrollbar-gutter:stable}.panel-intro{padding:2px 3px 13px}.eyebrow{font-size:9px;font-weight:850;letter-spacing:.13em;color:var(--accent)}.panel-intro h1{font-size:21px;margin:5px 0}.panel-intro p{font-size:12px;line-height:1.45;color:var(--muted);margin:0}
+.drop-zone{min-height:96px;border:1.5px dashed #bfb5cc;border-radius:13px;background:var(--surface);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;margin-bottom:13px;cursor:pointer;transition:.18s}.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface))}.drop-icon{font-size:23px;color:var(--accent)}.drop-zone strong{font-size:12px}.drop-zone small{font-size:10px;color:var(--muted)}
+.controls.disabled{pointer-events:none;opacity:.45;filter:saturate(.5)}details{border:1px solid var(--line);background:var(--surface);border-radius:12px;margin:9px 0;overflow:hidden}summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:12px 13px;font-size:12px;font-weight:800;cursor:pointer}summary::-webkit-details-marker{display:none}summary:after{content:"ï¼‹";color:var(--muted);font-weight:400}details[open]>summary:after{content:"âˆ’"}.details-body{border-top:1px solid var(--line);padding:12px}.pill{font-size:8px;letter-spacing:.08em;padding:3px 5px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);margin-left:auto;margin-right:8px}
+.range-row{display:grid;grid-template-columns:86px minmax(0,1fr) 46px;gap:7px;align-items:center;margin:8px 0}.range-row>span,.select-row>span,.compact>span,.color-row>span{font-size:10px;color:var(--muted)}.range-row input[type=range]{width:100%;accent-color:var(--accent)}.range-row output{text-align:right;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}.color-row,.select-row,.switch-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0}.color-row input[type=color]{width:48px;height:32px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}select,input[type=number]{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:7px 8px;outline:none}select:focus,input[type=number]:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 15%,transparent)}.select-row select{width:145px}.switch-row{font-size:11px}.switch-row input{position:absolute;opacity:0;pointer-events:none}.switch-row i{position:relative;width:38px;height:21px;border-radius:999px;background:#c9c2d0;transition:.18s;flex:0 0 auto}.switch-row i:after{content:"";position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:white;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.18)}.switch-row input:checked+i{background:var(--accent)}.switch-row input:checked+i:after{transform:translateX(17px)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.compact{display:flex;flex-direction:column;gap:4px}.button-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}.button-grid:has(>button:nth-child(3)){grid-template-columns:repeat(3,minmax(0,1fr))}.helper{font-size:10px;line-height:1.4;color:var(--muted);margin:8px 0}.quality-row{display:none}.quality-row.visible{display:grid}#backgroundRow{display:none}#backgroundRow.visible{display:flex}
+.primary,.secondary,.ghost{border-radius:9px;border:1px solid var(--line);min-height:35px;padding:7px 10px;font-weight:750;font-size:11px}.primary{border-color:transparent;background:linear-gradient(135deg,var(--accent),var(--accent2));color:white;box-shadow:0 6px 17px color-mix(in srgb,var(--accent) 23%,transparent)}.secondary,.ghost{background:var(--panel)}.secondary:hover,.ghost:hover{background:var(--surface2)}button:disabled{opacity:.4;cursor:not-allowed}.full{width:100%}
+.stage{min-width:0;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:15px;background:var(--panel);display:grid;grid-template-rows:52px minmax(0,1fr) 34px;box-shadow:var(--shadow)}.stage-toolbar{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 13px;border-bottom:1px solid var(--line)}.file-info{min-width:0;display:flex;flex-direction:column}.file-info strong{font-size:11px;max-width:38vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.file-info span{font-size:9px;color:var(--muted);margin-top:2px}.toolbar-actions{display:flex;align-items:center;gap:5px}.ghost{min-width:34px;padding-inline:9px}.text-btn{white-space:nowrap}.viewport{position:relative;min-width:0;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;padding:40px;background-color:color-mix(in srgb,var(--bg) 90%,#fff);background-image:radial-gradient(color-mix(in srgb,var(--muted) 25%,transparent) 1px,transparent 1px);background-size:18px 18px}.empty-state{text-align:center;color:var(--muted)}.empty-icon{width:92px;height:92px;border:1px dashed var(--line);border-radius:23px;display:grid;place-items:center;margin:auto;font-size:36px}.empty-state h2{font-size:16px;color:var(--text);margin:15px 0 5px}.empty-state p{font-size:11px}.canvas-wrap{position:relative;flex:0 0 auto;line-height:0;box-shadow:0 18px 50px rgba(0,0,0,.22)}#previewCanvas{display:block;max-width:none;background-color:#eee;background-image:linear-gradient(45deg,#bbb 25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;cursor:grab}#previewCanvas:active{cursor:grabbing}.focus-ring{position:absolute;border:1.5px dashed rgba(255,255,255,.95);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25)}.focus-ring:after{content:"";position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:#a78bfa;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff}.render-badge{position:absolute;right:12px;bottom:12px;background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:999px;padding:7px 10px;display:flex;align-items:center;gap:7px;font-size:9px;box-shadow:var(--shadow)}.render-badge span{width:9px;height:9px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.statusbar{display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-top:1px solid var(--line);font-size:9px;color:var(--muted)}.zoom-controls{display:flex;align-items:center;gap:4px}.zoom-controls button{height:25px;min-width:27px;border:1px solid var(--line);border-radius:7px;background:var(--surface);font-size:10px}.zoom-controls output{width:42px;text-align:center;font-size:9px}
+.modal[hidden]{display:none}.modal{position:fixed;inset:0;z-index:1000;background:rgba(15,10,20,.62);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px}.modal-card{width:min(500px,100%);background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 25px 80px rgba(0,0,0,.35)}.modal-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-size:21px}.modal-card h2{font-size:18px;margin:13px 0 6px}.modal-card p{font-size:11px;line-height:1.5;color:var(--muted)}.recovery-meta{font-size:10px;color:var(--muted);padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);margin:12px 0}.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.toast{position:fixed;right:18px;bottom:18px;z-index:1200;padding:10px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);font-size:11px;opacity:0;transform:translateY(18px);pointer-events:none;transition:.18s}.toast.show{opacity:1;transform:none}
+@media(max-width:900px){body{overflow:auto}.image-app{height:auto;min-height:100%;grid-template-rows:56px auto}.workspace{display:block;height:auto}.properties{max-height:none;overflow:visible;margin-bottom:10px}.stage{min-height:70vh}.viewport{min-height:55vh}.toolbar-actions .text-btn:not(.primary){display:none}}@media(max-width:650px){.standalone-nav{display:none}.workspace{padding:7px}.stage-toolbar{padding-inline:8px}.text-btn{font-size:0}.text-btn:before{font-size:12px}.toolbar-actions #exportTopBtn:before{content:"â‡©"}.grid2{grid-template-columns:1fr}.button-grid,.button-grid:has(>button:nth-child(3)){grid-template-columns:1fr 1fr}}
+
+/* Fase 14.3 â€” controles de estabilidad */
+.repair-preview{border-color:color-mix(in srgb,var(--accent) 30%,var(--line))!important;color:var(--accent)!important}
+.repair-preview:hover{background:color-mix(in srgb,var(--accent) 9%,var(--surface))!important}
+#previewCanvas{backface-visibility:hidden;transform:translateZ(0)}
+
+/* Lens Blur V3 - foco redimensionable + pinceles */
+.lens-manual-tools{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.lens-manual-tools>.compact{margin-bottom:8px}
+.lens-brush-buttons{grid-template-columns:1fr 1fr!important}
+.lens-brush-buttons .active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 25%,transparent)}
+.lens-tool-range{grid-template-columns:86px minmax(0,1fr) 46px}
+.lens-clear-brush{margin-top:8px}
+.focus-ring{pointer-events:none}
+.focus-radius-handle{position:absolute;right:-9px;top:50%;width:18px;height:18px;padding:0;transform:translateY(-50%);border:2px solid #fff;border-radius:50%;background:var(--accent);box-shadow:0 1px 5px rgba(0,0,0,.4);pointer-events:auto;cursor:ew-resize}
+.focus-radius-handle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.lens-brush-cursor{position:absolute;z-index:8;border:1.5px solid rgba(255,255,255,.95);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.42),inset 0 0 0 1px rgba(0,0,0,.18)}
+.lens-brush-cursor[data-mode=blur]{background:rgba(108,92,231,.08)}
+.lens-brush-cursor[data-mode=restore]{background:rgba(255,255,255,.08);border-style:dashed}
+#previewCanvas.lens-brush-active{cursor:crosshair}
+
+==================================================
+===== IMAGE MAIN =====
+===== .\legacy\image-studio\js\main.js =====
+==================================================
+(function(){'use strict';
+  const $=s=>document.querySelector(s),clone=ImageState.clone;
+  let state=ImageState.defaults(),source=null,sourceBlob=null,sourceName='',sourceWidth=0,sourceHeight=0,currentProjectId=null,zoom=1,focusMode=false,liveLensPreview=false,drag=null,recoveryTimer=0,toastTimer=0;
+  const history=new ImageHistory.History(90);
+  const preview=new ImagePreviewPipeline.PreviewPipeline(
+    $('#previewCanvas'),
+    busy=>{
+      const badge=$('#renderBadge');
+      if(badge)badge.hidden=!busy
+    },
+    text=>{
+      const status=$('#statusText');
+      if(status)status.textContent=text
+    }
+  );
+
+  window.ImageStudioLensBridge={
+    getState:()=>state,
+    getCanvas:()=>$('#previewCanvas'),
+    getLiveLensPreview:()=>liveLensPreview,
+    getFocusMode:()=>focusMode,
+    setFocusMode(value){focusMode=!!value;syncAll()},
+    notify:null,
+    sync(){syncAll()},
+    updateFocusRing(){updateFocusRing()},
+    renderFast(){preview.setState(state);preview.schedule('fast',0);updateFocusRing()},
+    renderFull(){preview.setState(state);preview.schedule('full',0);scheduleRecovery();updateFocusRing()},
+    commit(label){history.push(state);preview.setState(state);preview.schedule('full',0);scheduleRecovery();updateFocusRing();$('#statusText').textContent=label||'Lens Blur actualizado'},
+    toast(text){toast(text)}
+  };
+
+  function toast(text){
+    clearTimeout(toastTimer);
+    const el=$('#toast');
+    if(!el){
+      console.warn('Image Studio toast:',text);
+      return
+    }
+    el.textContent=String(text||'');
+    el.classList.add('show');
+    toastTimer=setTimeout(
+      ()=>el.classList.remove('show'),
+      2300
+    )
+  }
+  function setEnabled(enabled){$('#editorControls').classList.toggle('disabled',!enabled);['#saveProjectBtn','#saveTemplateBtn','#exportTopBtn','#repairPreviewBtn'].forEach(s=>$(s).disabled=!enabled)}
+  function dimensionsLabel(){return source?`${sourceWidth.toLocaleString('es-ES')} Ã— ${sourceHeight.toLocaleString('es-ES')} px`:''}
+  function setSourceMeta(){
+    if(!source)return;
+    const fileName=$('#fileName');
+    const imageMeta=$('#imageMeta');
+    const emptyState=$('#emptyState');
+    const canvasWrap=$('#canvasWrap');
+    if(fileName)fileName.textContent=sourceName||'Imagen';
+    if(imageMeta)imageMeta.textContent=dimensionsLabel();
+    if(emptyState)emptyState.hidden=true;
+    if(canvasWrap)canvasWrap.hidden=false;
+    setEnabled(true)
+  }
+  function getExportConfig(){return{format:$('#exportFormat').value,scale:Number($('#exportScale').value)||1,width:Number($('#exportWidth').value)||1,height:Number($('#exportHeight').value)||1,quality:Number($('#exportQuality').value)||92,transparent:$('#transparentBg').checked,background:$('#backgroundColor').value}}
+  function projectPayload(){return{schema:'kaoru-image-studio-project',version:14.4,state:clone(state),zoom,focusMode:false,liveLensPreview,export:getExportConfig(),fileName:sourceName}}
+  function scheduleRecovery(){if(!sourceBlob)return;clearTimeout(recoveryTimer);recoveryTimer=setTimeout(()=>ImageStorage.save({payload:projectPayload(),source:sourceBlob,fileName:sourceName}).catch(console.warn),180)}
+
+  function updateFocusRing(){const ring=$('#focusRing'),canvas=$('#previewCanvas');if(!source||!focusMode||!state.lens.enabled){ring.hidden=true;return}ring.hidden=false;const w=canvas.offsetWidth,h=canvas.offsetHeight,r=state.lens.focusRadius*Math.min(w,h);ring.style.width=`${r*2}px`;ring.style.height=`${r*2}px`;ring.style.left=`${state.lens.focusX*w-r}px`;ring.style.top=`${state.lens.focusY*h-r}px`}
+  function applyZoom(){const c=$('#previewCanvas');if(!source)return;c.style.width=`${Math.max(1,Math.round(c.width*zoom))}px`;c.style.height=`${Math.max(1,Math.round(c.height*zoom))}px`;$('#zoomValue').textContent=`${Math.round(zoom*100)}%`;requestAnimationFrame(updateFocusRing)}
+  function fitView(){if(!source)return;const vp=$('#canvasViewport'),c=$('#previewCanvas'),availableW=Math.max(80,vp.clientWidth-70),availableH=Math.max(80,vp.clientHeight-70);zoom=Math.max(.08,Math.min(1,availableW/c.width,availableH/c.height));applyZoom()}
+
+  function previewFast(){preview.setState(state);if(state.lens.enabled&&!liveLensPreview){$('#statusText').textContent='Lens Blur pendiente Â· pulsa Aplicar preview';updateFocusRing();return}preview.schedule('fast');updateFocusRing()}
+  function previewFull(){preview.setState(state);preview.schedule('full');scheduleRecovery();updateFocusRing()}
+  function commit(label){history.push(state);previewFull();scheduleRecovery();$('#statusText').textContent=label||'Cambio guardado'}
+  function applyHistory(next){if(!next)return;state=ImageState.merge(next);syncAll();preview.setState(state);preview.schedule('full',0);scheduleRecovery()}
+  history.onChange=({canUndo,canRedo})=>{$('#undoBtn').disabled=!canUndo;$('#redoBtn').disabled=!canRedo};
+
+  function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterControls','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const el=$(selector);el.dataset.group=group;ImageUI.build(el,state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
+  function syncAll(){
+    try{
+      ImageUI.sync(state)
+    }catch(error){
+      console.warn('Image Studio UI sync',error)
+    }
+
+    const value=(selector,next)=>{
+      const el=$(selector);
+      if(el)el.value=String(next??'')
+    };
+
+    const checked=(selector,next)=>{
+      const el=$(selector);
+      if(el)el.checked=!!next
+    };
+
+    value('#monochromeColor',state.filters.monochromeColor);
+    checked('#lensEnabled',state.lens.enabled);
+    value('#lensShape',state.lens.shape);
+    checked('#liveLensPreview',liveLensPreview);
+    value('#transformX',Math.round(state.transform.x));
+    value('#transformY',Math.round(state.transform.y));
+    value('#scaleX',Math.round(state.transform.scaleX*100));
+    value('#scaleY',Math.round(state.transform.scaleY*100));
+    value('#rotation',state.transform.rotation);
+    value('#imageOpacity',Math.round(state.adjustments.opacity*100));
+    checked('#aspectLock',state.transform.aspectLock);
+    value('#cropX',Math.round(state.crop.x));
+    value('#cropY',Math.round(state.crop.y));
+    value('#cropWidth',Math.round(state.crop.width));
+    value('#cropHeight',Math.round(state.crop.height));
+
+    const focusButton=$('#focusModeBtn');
+    if(focusButton){
+      focusButton.classList.toggle(
+        'active',
+        focusMode
+      )
+    }
+
+    try{
+      updateFocusRing()
+    }catch(error){
+      console.warn('Image Studio focus sync',error)
+    }
+
+    try{
+      updateExportInfo()
+    }catch(error){
+      console.warn('Image Studio export sync',error)
+    }
+
+    try{
+      window.ImageStudioLensBridge?.notify?.(state)
+    }catch(error){
+      console.warn('Image Studio Lens tools sync',error)
+    }
+  }
+
+  async function blobToSource(blob,name){if(source&&typeof source.close==='function')try{source.close()}catch(_){};let drawable;try{drawable=await createImageBitmap(blob,{imageOrientation:'from-image'})}catch(_){drawable=await new Promise((resolve,reject)=>{const url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('No se pudo decodificar la imagen.'))};img.src=url})}source=drawable;sourceBlob=blob;sourceName=name||blob.name||'imagen';sourceWidth=drawable.width||drawable.naturalWidth;sourceHeight=drawable.height||drawable.naturalHeight}
+  function clampCrop(){state.crop.x=Math.max(0,Math.min(sourceWidth-1,Number(state.crop.x)||0));state.crop.y=Math.max(0,Math.min(sourceHeight-1,Number(state.crop.y)||0));state.crop.width=Math.max(1,Math.min(sourceWidth-state.crop.x,Number(state.crop.width)||sourceWidth));state.crop.height=Math.max(1,Math.min(sourceHeight-state.crop.y,Number(state.crop.height)||sourceHeight))}
+  async function openBlob(blob,name,payload=null,projectId=null,asTemplate=false){
+    await blobToSource(blob,name);
+
+    state=payload
+      ?ImageState.normalizeProject(payload)
+      :ImageState.defaults();
+
+    if(!payload){
+      state.crop={
+        x:0,
+        y:0,
+        width:sourceWidth,
+        height:sourceHeight
+      }
+    }
+
+    clampCrop();
+
+    currentProjectId=
+      asTemplate
+        ?null
+        :projectId;
+
+    zoom=Math.max(
+      .08,
+      Math.min(
+        4,
+        Number(payload&&payload.zoom)||1
+      )
+    );
+
+    focusMode=false;
+    liveLensPreview=!!(
+      payload&&payload.liveLensPreview
+    );
+
+    /*
+      MUY IMPORTANTE:
+      pintamos primero la imagen base. La UI ya no puede impedir
+      que una imagen importada aparezca en el canvas.
+    */
+    preview.setSource(
+      source,
+      state
+    );
+
+    setSourceMeta();
+
+    syncAll();
+
+    history.reset(state);
+
+    try{
+      restoreExport(
+        payload&&payload.export
+      )
+    }catch(error){
+      console.warn(
+        'Image Studio restore export',
+        error
+      )
+    }
+
+    preview.schedule(
+      'full',
+      80
+    );
+
+    setTimeout(
+      ()=>{
+        try{
+          payload&&payload.zoom
+            ?applyZoom()
+            :fitView()
+        }catch(error){
+          console.warn(
+            'Image Studio fit preview',
+            error
+          )
+        }
+      },
+      80
+    );
+
+    scheduleRecovery()
+  }
+  async function loadFile(file){
+    if(
+      !file||
+      !/^image\/(png|jpeg|webp)$/i.test(file.type)
+    ){
+      toast(
+        'Selecciona PNG, JPG/JPEG o WEBP.'
+      );
+      return
+    }
+
+    try{
+      await openBlob(
+        file,
+        file.name
+      );
+
+      currentProjectId=null;
+
+      toast(
+        'Imagen importada. Image Studio listo.'
+      )
+    }catch(error){
+      console.error(
+        'Image Studio import',
+        error
+      );
+
+      try{
+        preview.cancel('');
+        if(source){
+          preview.setState(state);
+          preview.paintFallback(
+            'Imagen base restaurada'
+          )
+        }
+      }catch(recoveryError){
+        console.warn(
+          'Image Studio import recovery',
+          recoveryError
+        )
+      }
+
+      const badge=$('#renderBadge');
+      if(badge)badge.hidden=true;
+
+      toast(
+        error?.message||
+        'No se pudo abrir la imagen.'
+      )
+    }
+  }
+
+  function restoreExport(exp){
+    if(!source)return;
+
+    const e=exp||{};
+
+    const format=$('#exportFormat');
+    const scale=$('#exportScale');
+    const quality=$('#exportQuality');
+    const transparent=$('#transparentBg');
+    const background=$('#backgroundColor');
+    const width=$('#exportWidth');
+    const height=$('#exportHeight');
+
+    if(format)format.value=e.format||'png';
+    if(scale)scale.value=String(e.scale||1);
+    if(quality)quality.value=e.quality||92;
+
+    const qualityOut=$('#qualityRow output');
+    if(qualityOut){
+      qualityOut.textContent=`${e.quality||92}%`
+    }
+
+    if(transparent){
+      transparent.checked=e.transparent!==false
+    }
+
+    if(background){
+      background.value=e.background||'#ffffff'
+    }
+
+    if(
+      e.width&&
+      e.height
+    ){
+      if(width)width.value=e.width;
+      if(height)height.value=e.height
+    }else{
+      updateExportDimensions(true)
+    }
+
+    syncExportVisibility();
+    updateExportInfo()
+  }
+  function updateExportDimensions(fromScale=true){if(!source)return;if(fromScale){const scale=Number($('#exportScale').value)||1;$('#exportWidth').value=Math.max(1,Math.round(state.crop.width*scale));$('#exportHeight').value=Math.max(1,Math.round(state.crop.height*scale))}updateExportInfo()}
+  function updateExportInfo(){if(!source){$('#exportInfo').textContent='';return}const w=Number($('#exportWidth').value)||0,h=Number($('#exportHeight').value)||0;$('#exportInfo').textContent=`${w.toLocaleString('es-ES')} Ã— ${h.toLocaleString('es-ES')} px Â· render desde la fuente original`}
+  function syncExportVisibility(){const format=$('#exportFormat').value;$('#qualityRow').classList.toggle('visible',format!=='png');if(format==='jpeg')$('#transparentBg').checked=false;$('#backgroundRow').classList.toggle('visible',!$('#transparentBg').checked||format==='jpeg')}
+
+  async function exportImage(){if(!source)return;const cfg=getExportConfig(),pixels=cfg.width*cfg.height;if(cfg.width<1||cfg.height<1||pixels>50000000){toast('La exportaciÃ³n admite hasta 50 megapÃ­xeles.');return}const buttons=[$('#exportBtn'),$('#exportTopBtn')];buttons.forEach(b=>b.disabled=true);try{const background=cfg.transparent&&cfg.format!=='jpeg'?null:cfg.background,canvas=await ImageExportPipeline.render(source,state,{width:cfg.width,height:cfg.height,background},t=>$('#statusText').textContent=t),blob=await ImageExportPipeline.blob(canvas,cfg.format,cfg.quality/100),url=URL.createObjectURL(blob),a=document.createElement('a'),ext=cfg.format==='jpeg'?'jpg':cfg.format;a.href=url;a.download=window.StudioNaming?StudioNaming.file('IMG',ext):`IMG-${Date.now().toString(36).toUpperCase()}.${ext}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500);$('#statusText').textContent=`Exportada Â· ${cfg.width} Ã— ${cfg.height}px`;toast('Imagen exportada correctamente.')}catch(error){console.error(error);toast('No se pudo exportar la imagen.');$('#statusText').textContent='Error de exportaciÃ³n'}finally{buttons.forEach(b=>b.disabled=false)}}
+
+  function thumbnail(){try{return $('#previewCanvas').toDataURL('image/jpeg',.72)}catch(_){return null}}
+  async function saveGallery(kind){if(!sourceBlob||!window.StudioGallery)return;const base=(sourceName||'Imagen').replace(/\.[^.]+$/,''),suggested=kind==='template'?`${base} Â· plantilla`:base,name=(prompt(kind==='template'?'Nombre de la plantilla:':'Nombre del diseÃ±o:',suggested)||'').trim();if(!name)return;try{const record=await StudioGallery.save({id:kind==='project'?currentProjectId:null,studio:'image',kind,name,payload:projectPayload(),assets:{source:sourceBlob,fileName:sourceName},thumbnail:thumbnail()});if(kind==='project')currentProjectId=record.id;toast(kind==='template'?'Plantilla guardada.':'DiseÃ±o guardado.')}catch(error){console.error(error);toast('No se pudo guardar en la GalerÃ­a.')}}
+  async function galleryLaunch(){if(!window.StudioGallery)return false;try{const record=await StudioGallery.consumeLaunchIntent('image');if(!record)return false;const blob=record.assets&&record.assets.source;if(!(blob instanceof Blob))throw new Error('El proyecto no contiene su imagen fuente.');await openBlob(blob,record.assets.fileName||record.name,record.payload,record.id,record.kind==='template');toast(record.kind==='template'?'Plantilla abierta como diseÃ±o nuevo.':'Proyecto abierto desde GalerÃ­a.');return true}catch(error){console.error(error);toast(error.message||'No se pudo abrir el proyecto.');return false}}
+
+  async function recoveryPrompt(){try{const saved=await ImageStorage.load();if(!saved||!(saved.source instanceof Blob)||!saved.payload)return;const date=new Date(saved.savedAt||Date.now());$('#recoveryMeta').textContent=`${saved.fileName||saved.payload.fileName||'Imagen'} Â· ${date.toLocaleString('es-PE')}`;$('#recoveryModal').hidden=false;$('#recoverBtn').onclick=async()=>{try{await openBlob(saved.source,saved.fileName||'Imagen recuperada',saved.payload);$('#recoveryModal').hidden=true;toast('Progreso recuperado.')}catch(error){console.error(error);toast('No se pudo recuperar la sesiÃ³n.')}};$('#newBtn').onclick=async()=>{await ImageStorage.clear();$('#recoveryModal').hidden=true;toast('Proyecto nuevo listo.')}}catch(error){console.warn(error)}}
+
+  function bind(){const input=$('#fileInput'),drop=$('#dropZone'),viewport=$('#canvasViewport');input.addEventListener('change',e=>loadFile(e.target.files[0]));['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('dragover')}));['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('dragover')}));drop.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));viewport.addEventListener('dragover',e=>e.preventDefault());viewport.addEventListener('drop',e=>{e.preventDefault();loadFile(e.dataTransfer.files[0])});
+    $('#monochromeColor').addEventListener('input',e=>{state.filters.monochromeColor=e.target.value;previewFast()});$('#monochromeColor').addEventListener('change',()=>commit('Color monocromÃ¡tico'));
+    $('#lensEnabled').addEventListener('change',e=>{state.lens.enabled=e.target.checked;if(!state.lens.enabled)focusMode=false;syncAll();commit('Lens Blur')});$('#lensShape').addEventListener('change',e=>{state.lens.shape=e.target.value;if(liveLensPreview)commit('Forma de apertura');else{$('#statusText').textContent='Lens Blur pendiente Â· pulsa Aplicar preview';history.push(state);scheduleRecovery()}});$('#liveLensPreview').addEventListener('change',e=>{liveLensPreview=e.target.checked;if(liveLensPreview&&state.lens.enabled)previewFull();scheduleRecovery()});$('#applyLensPreviewBtn').addEventListener('click',()=>{if(!source)return;preview.setState(state);preview.schedule('full',0);history.push(state);scheduleRecovery();toast('Preview de Lens Blur actualizada.')});$('#focusModeBtn').addEventListener('click',()=>{focusMode=!focusMode;if(focusMode&&!state.lens.enabled){state.lens.enabled=true;$('#lensEnabled').checked=true;history.push(state)}syncAll();toast(focusMode?'Haz clic donde debe quedar el foco.':'Modo de foco desactivado.')});
+    const transformIds=['transformX','transformY','scaleX','scaleY','rotation','imageOpacity'];transformIds.forEach(id=>{$(`#${id}`).addEventListener('input',()=>{const lock=state.transform.aspectLock,active=id;state.transform.x=Number($('#transformX').value)||0;state.transform.y=Number($('#transformY').value)||0;if(active==='scaleX'){state.transform.scaleX=Math.max(.01,(Number($('#scaleX').value)||100)/100);if(lock){state.transform.scaleY=state.transform.scaleX;$('#scaleY').value=$('#scaleX').value}}else if(active==='scaleY'){state.transform.scaleY=Math.max(.01,(Number($('#scaleY').value)||100)/100);if(lock){state.transform.scaleX=state.transform.scaleY;$('#scaleX').value=$('#scaleY').value}}state.transform.rotation=Number($('#rotation').value)||0;state.adjustments.opacity=Math.max(0,Math.min(1,(Number($('#imageOpacity').value)||0)/100));previewFast()});$(`#${id}`).addEventListener('change',()=>commit('TransformaciÃ³n'))});
+    $('#aspectLock').addEventListener('change',e=>{state.transform.aspectLock=e.target.checked;commit('Bloqueo de proporciÃ³n')});$('#flipXBtn').addEventListener('click',()=>{state.transform.flipX=!state.transform.flipX;commit('Voltear horizontal')});$('#flipYBtn').addEventListener('click',()=>{state.transform.flipY=!state.transform.flipY;commit('Voltear vertical')});$('#resetTransformBtn').addEventListener('click',()=>{state.transform=ImageState.defaults().transform;state.adjustments.opacity=1;syncAll();commit('Restablecer transformaciÃ³n')});
+    $('#applyCropBtn').addEventListener('click',()=>{if(!source)return;state.crop={x:Number($('#cropX').value)||0,y:Number($('#cropY').value)||0,width:Number($('#cropWidth').value)||1,height:Number($('#cropHeight').value)||1};clampCrop();syncAll();preview.updateDimensions(true);preview.setState(state);preview.schedule('full',0);updateExportDimensions(true);history.push(state);setTimeout(fitView,60);scheduleRecovery()});$('#resetCropBtn').addEventListener('click',()=>{if(!source)return;state.crop={x:0,y:0,width:sourceWidth,height:sourceHeight};syncAll();preview.updateDimensions(true);preview.schedule('full',0);updateExportDimensions(true);history.push(state);setTimeout(fitView,60);scheduleRecovery()});
+    const c=$('#previewCanvas');c.addEventListener('pointerdown',e=>{if(!source)return;const rect=c.getBoundingClientRect();if(focusMode){state.lens.focusX=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));state.lens.focusY=Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height));updateFocusRing();previewFast();history.push(state);previewFull();return}drag={id:e.pointerId,startX:e.clientX,startY:e.clientY,x:state.transform.x,y:state.transform.y,rect};c.setPointerCapture(e.pointerId)});c.addEventListener('pointermove',e=>{if(!drag)return;state.transform.x=drag.x+(e.clientX-drag.startX)*state.crop.width/drag.rect.width;state.transform.y=drag.y+(e.clientY-drag.startY)*state.crop.height/drag.rect.height;$('#transformX').value=Math.round(state.transform.x);$('#transformY').value=Math.round(state.transform.y);previewFast()});const finishDrag=()=>{if(drag){drag=null;commit('Mover imagen')}};c.addEventListener('pointerup',finishDrag);c.addEventListener('pointercancel',finishDrag);
+    $('#undoBtn').addEventListener('click',()=>applyHistory(history.undo()));$('#redoBtn').addEventListener('click',()=>applyHistory(history.redo()));document.addEventListener('keydown',e=>{const mod=e.ctrlKey||e.metaKey;if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();applyHistory(e.shiftKey?history.redo():history.undo())}});
+    $('#repairPreviewBtn').addEventListener('click',()=>{if(!source)return;$('#renderBadge').hidden=true;preview.setState(state);preview.repair();requestAnimationFrame(()=>{const saved=zoom;zoom=Math.max(.08,saved*.985);applyZoom();requestAnimationFrame(()=>{zoom=saved;applyZoom();fitView();toast('Preview refrescada.');})})});
+    $('#zoomOut').addEventListener('click',()=>{zoom=Math.max(.08,zoom/1.2);applyZoom()});$('#zoomIn').addEventListener('click',()=>{zoom=Math.min(4,zoom*1.2);applyZoom()});$('#fitView').addEventListener('click',fitView);window.addEventListener('resize',()=>{if(source){applyZoom();updateFocusRing()}});
+    $('#exportScale').addEventListener('change',()=>updateExportDimensions(true));$('#exportWidth').addEventListener('input',()=>{if(!source)return;const w=Number($('#exportWidth').value)||1;$('#exportHeight').value=Math.max(1,Math.round(w*state.crop.height/state.crop.width));updateExportInfo()});$('#exportHeight').addEventListener('input',()=>{if(!source)return;const h=Number($('#exportHeight').value)||1;$('#exportWidth').value=Math.max(1,Math.round(h*state.crop.width/state.crop.height));updateExportInfo()});$('#exportFormat').addEventListener('change',()=>{syncExportVisibility();scheduleRecovery()});$('#transparentBg').addEventListener('change',()=>{syncExportVisibility();scheduleRecovery()});$('#exportQuality').addEventListener('input',e=>{const output=$('#qualityRow output');if(output)output.textContent=`${e.target.value}%`});['exportWidth','exportHeight','exportScale','exportQuality','backgroundColor'].forEach(id=>$(`#${id}`).addEventListener('change',scheduleRecovery));
+    $('#exportBtn').addEventListener('click',exportImage);$('#exportTopBtn').addEventListener('click',exportImage);$('#saveProjectBtn').addEventListener('click',()=>saveGallery('project'));$('#saveTemplateBtn').addEventListener('click',()=>saveGallery('template'));document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')scheduleRecovery()});
+  }
+
+  async function init(){buildDynamicControls();bind();syncExportVisibility();history.reset(state);setEnabled(false);const launched=await galleryLaunch();if(!launched)await recoveryPrompt()}
+  init();
+}());
+
+
+==================================================
+===== PREVIEW PIPELINE =====
+===== .\legacy\image-studio\js\previewPipeline.js =====
+==================================================
+(function(){
+'use strict';
+
+class PreviewPipeline{
+  constructor(
+    canvas,
+    onBusy,
+    onStatus
+  ){
+    this.canvas=canvas;
+    this.onBusy=
+      onBusy||
+      (()=>{});
+    this.onStatus=
+      onStatus||
+      (()=>{});
+
+    this.source=null;
+    this.state=null;
+    this.timer=0;
+    this.requestId=0;
+    this.activeRequest=0;
+    this.display={
+      width:1,
+      height:1
+    };
+    this.back=
+      document.createElement(
+        'canvas'
+      );
+    this.lastRendered=null;
+    this.watchdog=0;
+  }
+
+  setSource(
+    source,
+    state
+  ){
+    this.cancel('');
+    this.source=source;
+    this.state=state;
+    this.updateDimensions(
+      true
+    );
+
+    /*
+      Primera pintura inmediata:
+      la imagen debe aparecer antes de ejecutar filtros.
+      Asi un filtro lento nunca deja la pantalla vacia.
+    */
+    this.paintFallback(
+      'Imagen cargada Â· preparando preview'
+    );
+  }
+
+  setState(state){
+    this.state=state;
+  }
+
+  updateDimensions(
+    force=false
+  ){
+    if(!this.state)return;
+
+    const crop=
+      this.state.crop||{};
+
+    const cropWidth=
+      Math.max(
+        1,
+        Number(
+          crop.width
+        )||1
+      );
+
+    const cropHeight=
+      Math.max(
+        1,
+        Number(
+          crop.height
+        )||1
+      );
+
+    const ratio=
+      Math.min(
+        1,
+        1200/
+        Math.max(
+          cropWidth,
+          cropHeight
+        )
+      );
+
+    const width=
+      Math.max(
+        1,
+        Math.round(
+          cropWidth*
+          ratio
+        )
+      );
+
+    const height=
+      Math.max(
+        1,
+        Math.round(
+          cropHeight*
+          ratio
+        )
+      );
+
+    if(
+      force||
+      width!==
+        this.display.width||
+      height!==
+        this.display.height
+    ){
+      this.display={
+        width,
+        height
+      };
+
+      this.canvas.width=
+        width;
+
+      this.canvas.height=
+        height;
+
+      this.back.width=
+        width;
+
+      this.back.height=
+        height;
+    }
+  }
+
+  schedule(
+    mode='fast',
+    delay
+  ){
+    clearTimeout(
+      this.timer
+    );
+
+    const request=
+      ++this.requestId;
+
+    this.timer=
+      setTimeout(
+        ()=>{
+          this.timer=0;
+
+          this.render(
+            mode,
+            request
+          );
+        },
+        delay==null
+          ?(
+            mode==='fast'
+              ?70
+              :20
+          )
+          :delay
+      );
+
+    return request;
+  }
+
+  cancel(
+    status='Preview cancelada'
+  ){
+    clearTimeout(
+      this.timer
+    );
+
+    this.timer=0;
+    ++this.requestId;
+
+    clearTimeout(
+      this.watchdog
+    );
+
+    this.watchdog=0;
+    this.activeRequest=0;
+    this.onBusy(
+      false
+    );
+
+    if(status){
+      this.onStatus(
+        status
+      );
+    }
+  }
+
+  safeCrop(){
+    if(
+      !this.source||
+      !this.state
+    ){
+      return null;
+    }
+
+    const sourceWidth=
+      Math.max(
+        1,
+        Number(
+          this.source.width||
+          this.source.naturalWidth
+        )||1
+      );
+
+    const sourceHeight=
+      Math.max(
+        1,
+        Number(
+          this.source.height||
+          this.source.naturalHeight
+        )||1
+      );
+
+    const crop=
+      this.state.crop||{};
+
+    const x=
+      Math.max(
+        0,
+        Math.min(
+          sourceWidth-1,
+          Number(
+            crop.x
+          )||0
+        )
+      );
+
+    const y=
+      Math.max(
+        0,
+        Math.min(
+          sourceHeight-1,
+          Number(
+            crop.y
+          )||0
+        )
+      );
+
+    const width=
+      Math.max(
+        1,
+        Math.min(
+          sourceWidth-x,
+          Number(
+            crop.width
+          )||
+          sourceWidth-x
+        )
+      );
+
+    const height=
+      Math.max(
+        1,
+        Math.min(
+          sourceHeight-y,
+          Number(
+            crop.height
+          )||
+          sourceHeight-y
+        )
+      );
+
+    return{
+      x,
+      y,
+      width,
+      height
+    };
+  }
+
+  paintFallback(
+    status=''
+  ){
+    if(
+      !this.source||
+      !this.state
+    ){
+      return false;
+    }
+
+    try{
+      this.updateDimensions();
+
+      const crop=
+        this.safeCrop();
+
+      if(!crop){
+        return false;
+      }
+
+      const ctx=
+        this.canvas.getContext(
+          '2d',
+          {alpha:true}
+        );
+
+      const bctx=
+        this.back.getContext(
+          '2d',
+          {alpha:true}
+        );
+
+      if(
+        !ctx||
+        !bctx
+      ){
+        return false;
+      }
+
+      ctx.clearRect(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+
+      ctx.imageSmoothingEnabled=
+        true;
+
+      ctx.imageSmoothingQuality=
+        'high';
+
+      ctx.drawImage(
+        this.source,
+        crop.x,
+        crop.y,
+        crop.width,
+        crop.height,
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+
+      bctx.clearRect(
+        0,
+        0,
+        this.back.width,
+        this.back.height
+      );
+
+      bctx.drawImage(
+        this.canvas,
+        0,
+        0,
+        this.back.width,
+        this.back.height
+      );
+
+      this.lastRendered=
+        Date.now();
+
+      if(status){
+        this.onStatus(
+          status
+        );
+      }
+
+      return true;
+    }catch(error){
+      console.error(
+        'Image Studio fallback preview',
+        error
+      );
+
+      return false;
+    }
+  }
+
+  async render(
+    mode='full',
+    request=this.requestId
+  ){
+    if(
+      !this.source||
+      !this.state||
+      request!==
+        this.requestId
+    ){
+      return;
+    }
+
+    this.activeRequest=
+      request;
+
+    this.updateDimensions();
+
+    const heavy=
+      Boolean(
+        this.state.lens?.enabled||
+        Number(
+          this.state.grain?.amount
+        )>0||
+        Number(
+          this.state.filters?.motionBlur
+        )>0||
+        Number(
+          this.state.sharpness?.amount
+        )>0
+      );
+
+    /*
+      Preview deliberadamente limitada.
+      Exportar sigue usando la fuente original y su resolucion real.
+    */
+    const max=
+      mode==='fast'&&heavy
+        ?480
+        :mode==='fast'
+          ?720
+          :900;
+
+    const cropWidth=
+      Math.max(
+        1,
+        Number(
+          this.state.crop?.width
+        )||1
+      );
+
+    const cropHeight=
+      Math.max(
+        1,
+        Number(
+          this.state.crop?.height
+        )||1
+      );
+
+    const ratio=
+      Math.min(
+        1,
+        max/
+        Math.max(
+          cropWidth,
+          cropHeight
+        )
+      );
+
+    const previewWidth=
+      Math.max(
+        1,
+        Math.round(
+          cropWidth*
+          ratio
+        )
+      );
+
+    const previewHeight=
+      Math.max(
+        1,
+        Math.round(
+          cropHeight*
+          ratio
+        )
+      );
+
+    this.onBusy(
+      true
+    );
+
+    this.onStatus(
+      mode==='fast'
+        ?'Vista previa rapida...'
+        :'Procesando vista previa...'
+    );
+
+    clearTimeout(
+      this.watchdog
+    );
+
+    this.watchdog=
+      setTimeout(
+        ()=>{
+          if(
+            request===
+              this.requestId&&
+            this.activeRequest===
+              request
+          ){
+            this.onBusy(
+              false
+            );
+
+            this.onStatus(
+              'La preview esta tardando. La imagen base sigue disponible.'
+            );
+          }
+        },
+        8000
+      );
+
+    try{
+      await new Promise(
+        resolve=>
+          requestAnimationFrame(
+            resolve
+          )
+      );
+
+      if(
+        request!==
+          this.requestId
+      ){
+        return;
+      }
+
+      const rendered=
+        ImageRenderer.render(
+          this.source,
+          this.state,
+          {
+            width:
+              previewWidth,
+            height:
+              previewHeight,
+            quality:
+              mode
+          }
+        );
+
+      if(
+        request!==
+          this.requestId
+      ){
+        return;
+      }
+
+      if(
+        !rendered||
+        !rendered.width||
+        !rendered.height
+      ){
+        throw new Error(
+          'El renderer devolvio un lienzo vacio.'
+        );
+      }
+
+      const bctx=
+        this.back.getContext(
+          '2d',
+          {alpha:true}
+        );
+
+      const ctx=
+        this.canvas.getContext(
+          '2d',
+          {alpha:true}
+        );
+
+      if(
+        !bctx||
+        !ctx
+      ){
+        throw new Error(
+          'No se pudo acceder al canvas de preview.'
+        );
+      }
+
+      bctx.clearRect(
+        0,
+        0,
+        this.back.width,
+        this.back.height
+      );
+
+      bctx.imageSmoothingEnabled=
+        true;
+
+      bctx.imageSmoothingQuality=
+        'high';
+
+      bctx.drawImage(
+        rendered,
+        0,
+        0,
+        this.back.width,
+        this.back.height
+      );
+
+      if(
+        request!==
+          this.requestId
+      ){
+        return;
+      }
+
+      ctx.clearRect(
+        0,
+        0,
+        this.canvas.width,
+        this.canvas.height
+      );
+
+      ctx.imageSmoothingEnabled=
+        true;
+
+      ctx.imageSmoothingQuality=
+        'high';
+
+      ctx.drawImage(
+        this.back,
+        0,
+        0
+      );
+
+      this.lastRendered=
+        Date.now();
+
+      this.onStatus(
+        `${
+          mode==='fast'
+            ?'Preview rapida'
+            :'Preview completa'
+        } Â· ${
+          this.canvas.width
+        } Ã— ${
+          this.canvas.height
+        }px`
+      );
+    }catch(error){
+      console.error(
+        'Image Studio preview',
+        error
+      );
+
+      if(
+        request===
+          this.requestId
+      ){
+        const recovered=
+          this.paintFallback();
+
+        this.onStatus(
+          recovered
+            ?'Preview segura Â· se mostro la imagen base porque un efecto fallo'
+            :'Error al procesar la vista previa'
+        );
+      }
+    }finally{
+      clearTimeout(
+        this.watchdog
+      );
+
+      this.watchdog=0;
+
+      if(
+        this.activeRequest===
+          request
+      ){
+        this.activeRequest=0;
+        this.onBusy(
+          false
+        );
+      }
+    }
+  }
+
+  redrawLast(){
+    if(
+      !this.back.width||
+      !this.back.height
+    ){
+      this.paintFallback();
+      return;
+    }
+
+    const ctx=
+      this.canvas.getContext(
+        '2d',
+        {alpha:true}
+      );
+
+    if(!ctx)return;
+
+    ctx.clearRect(
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height
+    );
+
+    ctx.drawImage(
+      this.back,
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height
+    );
+  }
+
+  repair(){
+    this.cancel(
+      'Reparando preview...'
+    );
+
+    this.updateDimensions(
+      true
+    );
+
+    this.paintFallback(
+      'Imagen base restaurada Â· recalculando efectos'
+    );
+
+    this.schedule(
+      'full',
+      60
+    );
+  }
+}
+
+window.ImagePreviewPipeline={
+  PreviewPipeline
+};
+
+}());
+
+
+==================================================
+===== RENDERER =====
+===== .\legacy\image-studio\js\renderer.js =====
+==================================================
+(function(){
+'use strict';
+
+const F=ImageFilters;
+
+const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
+
+function number(value,fallback=0){
+  const parsed=Number(value);
+  return Number.isFinite(parsed)?parsed:fallback;
+}
+
+function validCanvas(value){
+  return Boolean(
+    value&&
+    Number.isFinite(value.width)&&
+    Number.isFinite(value.height)&&
+    value.width>0&&
+    value.height>0
+  );
+}
+
+function safeStage(label,current,callback){
+  try{
+    const next=callback();
+
+    if(validCanvas(next)){
+      return next;
+    }
+
+    console.warn(
+      `Image Studio: ${label} devolvio un resultado invalido. Se conserva la etapa anterior.`
+    );
+  }catch(error){
+    console.warn(
+      `Image Studio: fallo ${label}. Se conserva la etapa anterior.`,
+      error
+    );
+  }
+
+  return current;
+}
+
+function normalizedCrop(source,state){
+  const sourceWidth=Math.max(
+    1,
+    number(
+      source?.width||
+      source?.naturalWidth,
+      1
+    )
+  );
+
+  const sourceHeight=Math.max(
+    1,
+    number(
+      source?.height||
+      source?.naturalHeight,
+      1
+    )
+  );
+
+  const incoming=state?.crop||{};
+
+  const x=clamp(
+    number(incoming.x,0),
+    0,
+    Math.max(0,sourceWidth-1)
+  );
+
+  const y=clamp(
+    number(incoming.y,0),
+    0,
+    Math.max(0,sourceHeight-1)
+  );
+
+  const width=clamp(
+    number(
+      incoming.width,
+      sourceWidth-x
+    ),
+    1,
+    Math.max(1,sourceWidth-x)
+  );
+
+  const height=clamp(
+    number(
+      incoming.height,
+      sourceHeight-y
+    ),
+    1,
+    Math.max(1,sourceHeight-y)
+  );
+
+  return{
+    x,
+    y,
+    width,
+    height
+  };
+}
+
+function hasColorAdjustments(state){
+  const a=state?.adjustments||{};
+  const f=state?.filters||{};
+
+  return Boolean(
+    number(a.brightness)!==0||
+    number(a.contrast)!==0||
+    number(a.saturation)!==0||
+    number(a.exposure)!==0||
+    number(a.temperature)!==0||
+    number(a.hue)!==0||
+    number(a.vibrance)!==0||
+    number(a.gamma,1)!==1||
+    number(a.shadows)!==0||
+    number(a.highlights)!==0||
+    number(a.whites)!==0||
+    number(a.blacks)!==0||
+    number(f.grayscale)!==0||
+    number(f.monochrome)!==0||
+    number(f.sepia)!==0||
+    number(f.invert)!==0
+  );
+}
+
+function render(source,state={},options={}){
+  if(!source){
+    throw new Error(
+      'Image Studio no recibio una imagen fuente.'
+    );
+  }
+
+  const crop=normalizedCrop(
+    source,
+    state
+  );
+
+  const width=Math.max(
+    1,
+    Math.round(
+      number(
+        options.width,
+        crop.width
+      )
+    )
+  );
+
+  const height=Math.max(
+    1,
+    Math.round(
+      number(
+        options.height,
+        crop.height
+      )
+    )
+  );
+
+  const scaleX=
+    width/
+    Math.max(
+      1,
+      crop.width
+    );
+
+  const scaleY=
+    height/
+    Math.max(
+      1,
+      crop.height
+    );
+
+  const quality=
+    options.quality||
+    'full';
+
+  let work=F.canvas(
+    width,
+    height
+  );
+
+  const ctx=
+    work.getContext(
+      '2d',
+      {alpha:true}
+    );
+
+  if(!ctx){
+    throw new Error(
+      'No se pudo crear el contexto 2D.'
+    );
+  }
+
+  ctx.clearRect(
+    0,
+    0,
+    width,
+    height
+  );
+
+  ctx.imageSmoothingEnabled=true;
+  ctx.imageSmoothingQuality='high';
+
+  ctx.drawImage(
+    source,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    width,
+    height
+  );
+
+  /*
+    El preview base ya esta dibujado.
+    Solo ejecutamos etapas que realmente estan activas.
+    Si una etapa falla, conservamos la imagen anterior en vez de
+    devolver un lienzo transparente.
+  */
+  if(
+    hasColorAdjustments(
+      state
+    )
+  ){
+    work=safeStage(
+      'ajustes de color',
+      work,
+      ()=>F.colorAdjust(
+        work,
+        state
+      )
+    );
+  }
+
+  const sharpness=
+    state?.sharpness||{};
+
+  if(
+    number(
+      sharpness.amount
+    )>0
+  ){
+    work=safeStage(
+      'nitidez',
+      work,
+      ()=>F.sharpen(
+        work,
+        sharpness,
+        Math.min(
+          scaleX,
+          scaleY
+        )
+      )
+    );
+  }
+
+  const filters=
+    state?.filters||{};
+
+  if(
+    number(
+      filters.pixelate,
+      1
+    )>1
+  ){
+    work=safeStage(
+      'pixelado',
+      work,
+      ()=>F.pixelate(
+        work,
+        Math.max(
+          1,
+          number(
+            filters.pixelate,
+            1
+          )*
+          Math.min(
+            scaleX,
+            scaleY
+          )
+        )
+      )
+    );
+  }
+
+  if(
+    number(
+      filters.motionBlur
+    )>0
+  ){
+    work=safeStage(
+      'motion blur',
+      work,
+      ()=>F.motionBlur(
+        work,
+        number(
+          filters.motionBlur
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        ),
+        number(
+          filters.motionAngle
+        )
+      )
+    );
+  }
+
+  if(
+    number(
+      filters.gaussianBlur
+    )>0
+  ){
+    work=safeStage(
+      'blur gaussiano',
+      work,
+      ()=>F.cssBlur(
+        work,
+        number(
+          filters.gaussianBlur
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        )
+      )
+    );
+  }
+
+  if(
+    number(
+      filters.blur
+    )>0
+  ){
+    work=safeStage(
+      'desenfoque',
+      work,
+      ()=>F.cssBlur(
+        work,
+        number(
+          filters.blur
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        )*
+        .55
+      )
+    );
+  }
+
+  if(
+    state?.lens?.enabled&&
+    number(
+      state.lens.radius
+    )>0
+  ){
+    const lens={
+      ...state.lens,
+      radius:
+        number(
+          state.lens.radius
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        ),
+      size:
+        number(
+          state.lens.size,
+          18
+        )*
+        Math.min(
+          scaleX,
+          scaleY
+        )
+    };
+
+    work=safeStage(
+      'Lens Blur',
+      work,
+      ()=>ImageLensBlur.apply(
+        work,
+        lens,
+        quality
+      )
+    );
+  }
+
+  const grain=
+    state?.grain||{};
+
+  if(
+    number(
+      filters.vignette
+    )>0||
+    number(
+      grain.amount
+    )>0
+  ){
+    work=safeStage(
+      'vineta/grano',
+      work,
+      ()=>F.vignetteAndGrain(
+        work,
+        state,
+        quality
+      )
+    );
+  }
+
+  const out=F.canvas(
+    width,
+    height
+  );
+
+  const octx=
+    out.getContext(
+      '2d',
+      {alpha:true}
+    );
+
+  if(!octx){
+    throw new Error(
+      'No se pudo crear el lienzo final.'
+    );
+  }
+
+  if(
+    options.background
+  ){
+    octx.fillStyle=
+      options.background;
+
+    octx.fillRect(
+      0,
+      0,
+      width,
+      height
+    );
+  }else{
+    octx.clearRect(
+      0,
+      0,
+      width,
+      height
+    );
+  }
+
+  const transform=
+    state?.transform||{};
+
+  const rawOpacity=
+    number(
+      state?.adjustments?.opacity,
+      1
+    );
+
+  const opacity=
+    Number.isFinite(
+      rawOpacity
+    )
+      ?clamp(
+          rawOpacity,
+          0,
+          1
+        )
+      :1;
+
+  const transformScaleX=
+    Math.max(
+      .01,
+      Math.abs(
+        number(
+          transform.scaleX,
+          1
+        )
+      )
+    )*
+    (
+      transform.flipX
+        ?-1
+        :1
+    );
+
+  const transformScaleY=
+    Math.max(
+      .01,
+      Math.abs(
+        number(
+          transform.scaleY,
+          1
+        )
+      )
+    )*
+    (
+      transform.flipY
+        ?-1
+        :1
+    );
+
+  octx.save();
+
+  octx.globalAlpha=
+    opacity;
+
+  octx.translate(
+    width/2+
+      number(
+        transform.x
+      )*
+      scaleX,
+    height/2+
+      number(
+        transform.y
+      )*
+      scaleY
+  );
+
+  octx.rotate(
+    number(
+      transform.rotation
+    )*
+    Math.PI/
+    180
+  );
+
+  octx.scale(
+    transformScaleX,
+    transformScaleY
+  );
+
+  octx.drawImage(
+    work,
+    -width/2,
+    -height/2,
+    width,
+    height
+  );
+
+  octx.restore();
+
+  return out;
+}
+
+window.ImageRenderer={
+  render
+};
+
+}());
+
+
+==================================================
+===== LENS BLUR =====
+===== .\legacy\image-studio\js\lensBlur.js =====
+==================================================
+(function(){'use strict';
+  const {canvas}=ImageFilters;
+
+  function aperture(ctx,shape,x,y,r,rotation){
+    const sides=shape==='octagon'?8:shape==='diamond'?4:shape==='triangle'?3:0;
+    ctx.beginPath();
+    if(!sides){ctx.arc(x,y,r,0,Math.PI*2);return}
+    const start=rotation*Math.PI/180-Math.PI/2;
+    for(let i=0;i<sides;i++){
+      const a=start+i*Math.PI*2/sides;
+      const px=x+Math.cos(a)*r;
+      const py=y+Math.sin(a)*r;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py)
+    }
+    ctx.closePath()
+  }
+
+  function saturate(r,g,b,amount){
+    const gray=.299*r+.587*g+.114*b;
+    const f=Math.max(0,amount)/100;
+    return[
+      gray+(r-gray)*f,
+      gray+(g-gray)*f,
+      gray+(b-gray)*f
+    ]
+  }
+
+  function clamp01(value){
+    return Math.max(0,Math.min(1,Number(value)||0))
+  }
+
+  function strokeWeight(stroke,x,y,w,h){
+    const short=Math.min(w,h);
+    const cx=clamp01(stroke.x)*w;
+    const cy=clamp01(stroke.y)*h;
+    const radius=Math.max(.002,Number(stroke.radius)||.08)*short;
+    const hardness=clamp01(stroke.hardness==null ? 0.65 : stroke.hardness);
+    const strength=clamp01(stroke.strength==null ? 1 : stroke.strength);
+    const d=Math.hypot(x-cx,y-cy);
+
+    if(d>=radius)return 0;
+
+    const core=radius*Math.min(.995,hardness);
+    if(d<=core)return strength;
+
+    const feather=Math.max(.001,radius-core);
+    return strength*(1-(d-core)/feather)
+  }
+
+  function sharpAt(opt,x,y,w,h){
+    const short=Math.min(w,h);
+    const fx=(Number(opt.focusX)||.5)*w;
+    const fy=(Number(opt.focusY)||.5)*h;
+    const focusR=Math.max(.01,Number(opt.focusRadius)||.24)*short;
+    const transition=Math.max(.01,Number(opt.transition)||.18)*short;
+    const d=Math.hypot(x-fx,y-fy);
+    const inner=Math.max(0,focusR-transition);
+    const outer=focusR+transition;
+
+    let sharp=d<=inner?1:d>=outer?0:1-(d-inner)/Math.max(1,outer-inner);
+
+    const strokes=Array.isArray(opt.strokes)?opt.strokes:[];
+    for(const stroke of strokes){
+      const weight=strokeWeight(stroke,x,y,w,h);
+      if(weight<=0)continue;
+
+      if(stroke.mode==='blur'){
+        sharp*=1-weight;
+      }else if(stroke.mode==='restore'){
+        sharp=sharp+(1-sharp)*weight;
+      }
+    }
+
+    return clamp01(sharp)
+  }
+
+  function paintStroke(ctx,stroke,w,h){
+    const short=Math.min(w,h);
+    const x=clamp01(stroke.x)*w;
+    const y=clamp01(stroke.y)*h;
+    const radius=Math.max(.002,Number(stroke.radius)||.08)*short;
+    const hardness=clamp01(stroke.hardness==null ? 0.65 : stroke.hardness);
+    const strength=clamp01(stroke.strength==null ? 1 : stroke.strength);
+    const inner=Math.min(radius-.001,radius*hardness);
+    const gradient=ctx.createRadialGradient(x,y,Math.max(0,inner),x,y,radius);
+
+    if(stroke.mode==='blur'){
+      ctx.globalCompositeOperation='destination-out';
+      gradient.addColorStop(0,`rgba(0,0,0,${strength})`);
+      gradient.addColorStop(1,'rgba(0,0,0,0)');
+    }else{
+      ctx.globalCompositeOperation='source-over';
+      gradient.addColorStop(0,`rgba(255,255,255,${strength})`);
+      gradient.addColorStop(1,'rgba(255,255,255,0)');
+    }
+
+    ctx.fillStyle=gradient;
+    ctx.fillRect(x-radius,y-radius,radius*2,radius*2)
+  }
+
+  function buildSharpMask(opt,w,h){
+    const short=Math.min(w,h);
+    const fx=(Number(opt.focusX)||.5)*w;
+    const fy=(Number(opt.focusY)||.5)*h;
+    const focusR=Math.max(.01,Number(opt.focusRadius)||.24)*short;
+    const transition=Math.max(.01,Number(opt.transition)||.18)*short;
+    const maskCanvas=canvas(w,h);
+    const ctx=maskCanvas.getContext('2d');
+
+    const radial=ctx.createRadialGradient(
+      fx,fy,Math.max(0,focusR-transition),
+      fx,fy,focusR+transition
+    );
+
+    radial.addColorStop(0,'rgba(255,255,255,1)');
+    radial.addColorStop(.48,'rgba(255,255,255,.98)');
+    radial.addColorStop(1,'rgba(255,255,255,0)');
+
+    ctx.fillStyle=radial;
+    ctx.fillRect(0,0,w,h);
+
+    const strokes=Array.isArray(opt.strokes)?opt.strokes:[];
+    for(const stroke of strokes){
+      if(stroke&&(
+        stroke.mode==='blur'||
+        stroke.mode==='restore'
+      )){
+        paintStroke(ctx,stroke,w,h)
+      }
+    }
+
+    ctx.globalCompositeOperation='source-over';
+    return maskCanvas
+  }
+
+  function apply(source,opt,quality='full'){
+    if(!opt||!opt.enabled||Number(opt.radius)<=0)return source;
+
+    const w=source.width;
+    const h=source.height;
+    const radius=Math.max(.1,Number(opt.radius)||1);
+
+    const blurred=canvas(w,h);
+    const bctx=blurred.getContext('2d');
+    bctx.filter=`blur(${Math.min(60,radius)}px)`;
+    bctx.drawImage(source,0,0);
+    bctx.filter='none';
+
+    const out=canvas(w,h);
+    const ctx=out.getContext('2d');
+    ctx.drawImage(blurred,0,0);
+
+    const sharpMask=buildSharpMask(opt,w,h);
+    const focus=canvas(w,h);
+    const fctx=focus.getContext('2d');
+    fctx.drawImage(source,0,0);
+    fctx.globalCompositeOperation='destination-in';
+    fctx.drawImage(sharpMask,0,0);
+    fctx.globalCompositeOperation='source-over';
+    ctx.drawImage(focus,0,0);
+
+    const opacity=Math.max(0,Math.min(1,Number(opt.opacity)||0));
+    const density=Math.max(1,Math.min(100,Number(opt.density)||1));
+    const threshold=Math.max(0,Math.min(1,(Number(opt.threshold)||0)/100));
+
+    if(opacity<=0)return out;
+
+    const sampleMax=quality==='fast'?170:260;
+    const scale=Math.min(1,sampleMax/Math.max(w,h));
+    const sw=Math.max(1,Math.round(w*scale));
+    const sh=Math.max(1,Math.round(h*scale));
+    const sample=canvas(sw,sh);
+    const sctx=sample.getContext('2d',{willReadFrequently:true});
+    sctx.drawImage(source,0,0,sw,sh);
+    const data=sctx.getImageData(0,0,sw,sh).data;
+    const step=Math.max(1,Math.round(Math.sqrt(sw*sh/(quality==='fast'?6000:14000))));
+    const points=[];
+
+    for(let sy=0;sy<sh;sy+=step){
+      for(let sx=0;sx<sw;sx+=step){
+        const x=sx/sw*w;
+        const y=sy/sh*h;
+
+        if(sharpAt(opt,x,y,w,h)>.28)continue;
+
+        const i=(sy*sw+sx)*4;
+        const r=data[i];
+        const g=data[i+1];
+        const b=data[i+2];
+        const lum=(.2126*r+.7152*g+.0722*b)/255;
+
+        if(lum<threshold)continue;
+
+        const hash=(((sx*73856093)^(sy*19349663))>>>0)%100;
+        if(hash>density)continue;
+
+        points.push({x,y,r,g,b,lum})
+      }
+    }
+
+    points.sort((a,b)=>b.lum-a.lum);
+
+    const limit=Math.min(
+      points.length,
+      Math.round(
+        (quality==='fast'?55:110)+
+        density*(quality==='fast'?1.7:3.2)
+      )
+    );
+
+    const layer=canvas(w,h);
+    const lctx=layer.getContext('2d');
+    const size=Math.max(1,Number(opt.size)||radius*1.5);
+    const light=Math.max(0,Number(opt.lightness)||0)/100;
+    const soft=Math.max(0,Number(opt.softness)||0)/100;
+    const rotation=Number(opt.rotation)||0;
+    const saturation=Number(opt.saturation)||100;
+    const shape=opt.shape||'circle';
+
+    for(let i=0;i<limit;i++){
+      const p=points[i];
+      const strength=Math.min(
+        1,
+        (p.lum-threshold)/
+        Math.max(.05,1-threshold)
+      );
+
+      const [r,g,b]=saturate(
+        p.r,p.g,p.b,saturation
+      );
+
+      const alpha=opacity*strength*(.18+light*.7);
+      const rr=size*(.5+strength*.7);
+
+      lctx.fillStyle=
+        `rgba(${r|0},${g|0},${b|0},${alpha*.62})`;
+
+      aperture(
+        lctx,
+        shape,
+        p.x,
+        p.y,
+        rr,
+        rotation
+      );
+
+      lctx.fill()
+    }
+
+    let softLayer=layer;
+
+    if(soft>.02){
+      softLayer=canvas(w,h);
+      const sl=softLayer.getContext('2d');
+      sl.filter=`blur(${Math.min(30,size*soft*.4)}px)`;
+      sl.drawImage(layer,0,0);
+      sl.filter='none'
+    }
+
+    ctx.save();
+    ctx.globalCompositeOperation='lighter';
+
+    if(softLayer!==layer){
+      ctx.globalAlpha=.78;
+      ctx.drawImage(softLayer,0,0)
+    }
+
+    ctx.globalAlpha=.72;
+    ctx.drawImage(layer,0,0);
+    ctx.restore();
+
+    return out
+  }
+
+  window.ImageLensBlur={
+    apply,
+    sharpAt
+  };
+}());
+
+==================================================
+===== LENS BRUSH TOOLS =====
+===== .\legacy\image-studio\js\lensBrushTools.js =====
+==================================================
+(function(){'use strict';
+  const bridge=window.ImageStudioLensBridge;
+  if(!bridge)return;
+
+  const $=id=>document.getElementById(id);
+  const canvas=bridge.getCanvas();
+
+  let mode='none';
+  let painting=null;
+  let radiusDrag=null;
+  let renderTimer=0;
+
+  const blurBtn=$('lensBrushBlurBtn');
+  const restoreBtn=$('lensBrushRestoreBtn');
+  const clearBtn=$('clearLensBrushBtn');
+  const focusNumber=$('lensFocusRadiusNumber');
+  const brushRadius=$('lensBrushRadius');
+  const brushRadiusOut=$('lensBrushRadiusOut');
+  const hardness=$('lensBrushHardness');
+  const hardnessOut=$('lensBrushHardnessOut');
+  const strength=$('lensBrushStrength');
+  const strengthOut=$('lensBrushStrengthOut');
+  const handle=$('focusRadiusHandle');
+  const cursor=$('lensBrushCursor');
+
+  if(!canvas||!blurBtn||!restoreBtn)return;
+
+  function state(){
+    return bridge.getState()
+  }
+
+  function lens(){
+    return state().lens
+  }
+
+  function clamp(value,min,max){
+    return Math.max(min,Math.min(max,Number(value)||0))
+  }
+
+  function ensureLens(){
+    const l=lens();
+
+    if(!l.enabled){
+      l.enabled=true;
+      const box=$('lensEnabled');
+      if(box)box.checked=true
+    }
+  }
+
+  function syncButtons(){
+    blurBtn.classList.toggle('active',mode==='blur');
+    restoreBtn.classList.toggle('active',mode==='restore');
+
+    if(cursor){
+      cursor.hidden=mode==='none'||!state().lens.enabled
+    }
+
+    canvas.classList.toggle(
+      'lens-brush-active',
+      mode!=='none'
+    )
+  }
+
+  function syncControls(current){
+    const l=current&&current.lens;
+    if(!l)return;
+
+    if(focusNumber&&document.activeElement!==focusNumber){
+      focusNumber.value=String(
+        Math.round(clamp(l.focusRadius,.03,.7)*100)
+      )
+    }
+
+    if(brushRadius&&document.activeElement!==brushRadius){
+      brushRadius.value=String(
+        Math.round(clamp(l.brushRadius,.01,.4)*100)
+      )
+    }
+
+    if(hardness&&document.activeElement!==hardness){
+      hardness.value=String(
+        Math.round(clamp(l.brushHardness,0,1)*100)
+      )
+    }
+
+    if(strength&&document.activeElement!==strength){
+      strength.value=String(
+        Math.round(clamp(l.brushStrength,.01,1)*100)
+      )
+    }
+
+    if(brushRadiusOut){
+      brushRadiusOut.textContent=
+        `${Math.round(clamp(l.brushRadius,.01,.4)*100)}%`
+    }
+
+    if(hardnessOut){
+      hardnessOut.textContent=
+        `${Math.round(clamp(l.brushHardness,0,1)*100)}%`
+    }
+
+    if(strengthOut){
+      strengthOut.textContent=
+        `${Math.round(clamp(l.brushStrength,.01,1)*100)}%`
+    }
+
+    syncButtons()
+  }
+
+  function setMode(next){
+    mode=mode===next?'none':next;
+
+    if(mode!=='none'){
+      ensureLens();
+      bridge.setFocusMode(false)
+    }
+
+    syncControls(state());
+
+    bridge.toast(
+      mode==='blur'
+        ? 'Pincel de desenfoque activo.'
+        : mode==='restore'
+          ? 'Pincel restaurador activo.'
+          : 'Pinceles Lens Blur desactivados.'
+    )
+  }
+
+  function pointFromEvent(event){
+    const rect=canvas.getBoundingClientRect();
+
+    return{
+      x:clamp((event.clientX-rect.left)/Math.max(1,rect.width),0,1),
+      y:clamp((event.clientY-rect.top)/Math.max(1,rect.height),0,1),
+      rect
+    }
+  }
+
+  function currentStroke(point){
+    const l=lens();
+
+    return{
+      mode,
+      x:point.x,
+      y:point.y,
+      radius:clamp(l.brushRadius,.01,.4),
+      hardness:clamp(l.brushHardness,0,1),
+      strength:clamp(l.brushStrength,.01,1)
+    }
+  }
+
+  function shouldAddStroke(stroke){
+    const strokes=lens().strokes;
+    const last=strokes[strokes.length-1];
+
+    if(!last||last.mode!==stroke.mode)return true;
+
+    const distance=Math.hypot(
+      stroke.x-last.x,
+      stroke.y-last.y
+    );
+
+    return distance>=Math.max(.003,stroke.radius*.20)
+  }
+
+  function queuePreview(){
+    clearTimeout(renderTimer);
+
+    renderTimer=setTimeout(
+      ()=>bridge.renderFast(),
+      42
+    )
+  }
+
+  function addStroke(event){
+    const point=pointFromEvent(event);
+    const stroke=currentStroke(point);
+
+    if(!Array.isArray(lens().strokes)){
+      lens().strokes=[]
+    }
+
+    if(shouldAddStroke(stroke)){
+      lens().strokes.push(stroke);
+
+      if(lens().strokes.length>2400){
+        lens().strokes=lens().strokes.slice(-2400)
+      }
+
+      queuePreview()
+    }
+
+    updateCursor(event)
+  }
+
+  function updateCursor(event){
+    if(!cursor||mode==='none'){
+      if(cursor)cursor.hidden=true;
+      return
+    }
+
+    const rect=canvas.getBoundingClientRect();
+    const short=Math.min(rect.width,rect.height);
+    const size=clamp(lens().brushRadius,.01,.4)*short*2;
+    const wrap=canvas.parentElement.getBoundingClientRect();
+
+    cursor.hidden=false;
+    cursor.style.width=`${size}px`;
+    cursor.style.height=`${size}px`;
+    cursor.style.left=`${event.clientX-wrap.left-size/2}px`;
+    cursor.style.top=`${event.clientY-wrap.top-size/2}px`;
+    cursor.dataset.mode=mode
+  }
+
+  blurBtn.addEventListener(
+    'click',
+    ()=>setMode('blur')
+  );
+
+  restoreBtn.addEventListener(
+    'click',
+    ()=>setMode('restore')
+  );
+
+  $('focusModeBtn')?.addEventListener(
+    'click',
+    ()=>{
+      mode='none';
+      syncButtons()
+    }
+  );
+
+  clearBtn?.addEventListener(
+    'click',
+    ()=>{
+      if(!lens().strokes.length){
+        bridge.toast('No hay pinceladas Lens Blur.')
+        return
+      }
+
+      lens().strokes=[];
+      bridge.commit('Pinceladas Lens Blur eliminadas');
+      syncControls(state())
+    }
+  );
+
+  focusNumber?.addEventListener(
+    'input',
+    ()=>{
+      ensureLens();
+      lens().focusRadius=
+        clamp(focusNumber.value,3,70)/100;
+
+      bridge.updateFocusRing();
+      bridge.renderFast()
+    }
+  );
+
+  focusNumber?.addEventListener(
+    'change',
+    ()=>{
+      bridge.commit('Radio de foco')
+    }
+  );
+
+  brushRadius?.addEventListener(
+    'input',
+    ()=>{
+      lens().brushRadius=
+        clamp(brushRadius.value,1,40)/100;
+
+      syncControls(state())
+    }
+  );
+
+  brushRadius?.addEventListener(
+    'change',
+    ()=>bridge.commit('Radio del pincel Lens Blur')
+  );
+
+  hardness?.addEventListener(
+    'input',
+    ()=>{
+      lens().brushHardness=
+        clamp(hardness.value,0,100)/100;
+
+      syncControls(state())
+    }
+  );
+
+  hardness?.addEventListener(
+    'change',
+    ()=>bridge.commit('Dureza del pincel Lens Blur')
+  );
+
+  strength?.addEventListener(
+    'input',
+    ()=>{
+      lens().brushStrength=
+        clamp(strength.value,1,100)/100;
+
+      syncControls(state())
+    }
+  );
+
+  strength?.addEventListener(
+    'change',
+    ()=>bridge.commit('Fuerza del pincel Lens Blur')
+  );
+
+  canvas.addEventListener(
+    'pointermove',
+    (event)=>{
+      updateCursor(event);
+
+      if(!painting||painting.id!==event.pointerId)return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      addStroke(event)
+    },
+    {capture:true}
+  );
+
+  canvas.addEventListener(
+    'pointerleave',
+    ()=>{
+      if(cursor&&!painting)cursor.hidden=true
+    },
+    {capture:true}
+  );
+
+  canvas.addEventListener(
+    'pointerdown',
+    (event)=>{
+      if(mode==='none')return;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+
+      ensureLens();
+
+      painting={
+        id:event.pointerId,
+        count:lens().strokes.length
+      };
+
+      canvas.setPointerCapture(event.pointerId);
+      addStroke(event)
+    },
+    {capture:true}
+  );
+
+  function finishPaint(event){
+    if(!painting||painting.id!==event.pointerId)return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const changed=
+      lens().strokes.length!==painting.count;
+
+    painting=null;
+
+    try{
+      canvas.releasePointerCapture(event.pointerId)
+    }catch(_){}
+
+    clearTimeout(renderTimer);
+
+    if(changed){
+      bridge.commit(
+        mode==='restore'
+          ? 'Pincel restaurador Lens Blur'
+          : 'Pincel desenfoque Lens Blur'
+      )
+    }
+  }
+
+  canvas.addEventListener(
+    'pointerup',
+    finishPaint,
+    {capture:true}
+  );
+
+  canvas.addEventListener(
+    'pointercancel',
+    finishPaint,
+    {capture:true}
+  );
+
+  handle?.addEventListener(
+    'pointerdown',
+    (event)=>{
+      event.preventDefault();
+      event.stopPropagation();
+
+      ensureLens();
+      mode='none';
+      syncButtons();
+
+      radiusDrag={
+        id:event.pointerId
+      };
+
+      handle.setPointerCapture(
+        event.pointerId
+      )
+    }
+  );
+
+  handle?.addEventListener(
+    'pointermove',
+    (event)=>{
+      if(!radiusDrag||radiusDrag.id!==event.pointerId)return;
+
+      event.preventDefault();
+
+      const rect=canvas.getBoundingClientRect();
+      const cx=rect.left+lens().focusX*rect.width;
+      const cy=rect.top+lens().focusY*rect.height;
+      const distance=Math.hypot(
+        event.clientX-cx,
+        event.clientY-cy
+      );
+
+      lens().focusRadius=clamp(
+        distance/Math.max(1,Math.min(rect.width,rect.height)),
+        .03,
+        .7
+      );
+
+      syncControls(state());
+      bridge.updateFocusRing();
+      bridge.renderFast()
+    }
+  );
+
+  function finishRadius(event){
+    if(!radiusDrag||radiusDrag.id!==event.pointerId)return;
+
+    radiusDrag=null;
+
+    try{
+      handle.releasePointerCapture(event.pointerId)
+    }catch(_){}
+
+    bridge.commit('Radio del foco Lens Blur')
+  }
+
+  handle?.addEventListener(
+    'pointerup',
+    finishRadius
+  );
+
+  handle?.addEventListener(
+    'pointercancel',
+    finishRadius
+  );
+
+  bridge.notify=syncControls;
+  syncControls(state())
+}());
+
+==================================================
+===== PRECISION CONTROLS =====
+===== .\legacy\shared\precisionControls.js =====
+==================================================
+(function(){
+  'use strict';
+
+  function decimals(step){
+    const text=String(step||'1');
+    if(text==='any') return 8;
+    const index=text.indexOf('.');
+    return index<0?0:Math.min(8,text.length-index-1);
+  }
+
+  function finite(value,fallback){
+    const number=Number(value);
+    return Number.isFinite(number)?number:fallback;
+  }
+
+  function clampToRange(range,value){
+    let next=finite(value,finite(range.value,0));
+    const hasMin=range.min!=='' && Number.isFinite(Number(range.min));
+    const hasMax=range.max!=='' && Number.isFinite(Number(range.max));
+    const min=hasMin?Number(range.min):-Infinity;
+    const max=hasMax?Number(range.max):Infinity;
+
+    next=Math.max(min,Math.min(max,next));
+
+    if(range.step && range.step!=='any'){
+      const step=Number(range.step);
+      if(Number.isFinite(step) && step>0){
+        const base=hasMin?min:0;
+        next=base+Math.round((next-base)/step)*step;
+        next=Number(next.toFixed(decimals(range.step)));
+      }
+    }
+
+    return next;
+  }
+
+  function findNativeNumber(range){
+    const scope=
+      range.closest(
+        '.range-field,.slider-row,.control-row,.slider-control,.parameter-list label,.control-section label,.effect-card,label'
+      ) || range.parentElement;
+
+    if(!scope) return null;
+
+    return Array.from(
+      scope.querySelectorAll('input[type="number"]')
+    ).find(input=>!input.classList.contains('kaoru-exact-number'))||null;
+  }
+
+  function enhance(range){
+    if(!(range instanceof HTMLInputElement)) return;
+    if(range.type!=='range') return;
+
+    if(range.dataset.kaoruExact==='native') return;
+
+    if(range.dataset.kaoruExact==='ready'){
+      const box=range.parentElement?.querySelector('.kaoru-exact-number');
+      if(box){
+        box.min=range.min;
+        box.max=range.max;
+        box.step=range.step||'1';
+        box.disabled=range.disabled;
+        if(document.activeElement!==box) box.value=range.value;
+      }
+      return;
+    }
+
+    if(
+      range.dataset.noExactNumber==='true' ||
+      range.dataset.kaoruNoNumber==='true'
+    ){
+      return;
+    }
+
+    if(findNativeNumber(range)){
+      range.dataset.kaoruExact='native';
+      return;
+    }
+
+    const parent=range.parentNode;
+    if(!parent) return;
+
+    const pair=document.createElement('span');
+    pair.className='kaoru-range-pair';
+
+    parent.insertBefore(pair,range);
+    pair.appendChild(range);
+
+    const box=document.createElement('input');
+    box.type='number';
+    box.className='kaoru-exact-number';
+    box.setAttribute('aria-label','Valor exacto');
+    box.title='Escribe un valor exacto';
+    pair.appendChild(box);
+
+    function syncMeta(){
+      box.min=range.min;
+      box.max=range.max;
+      box.step=range.step||'1';
+      box.disabled=range.disabled;
+    }
+
+    function syncFromRange(){
+      syncMeta();
+      if(document.activeElement!==box){
+        box.value=range.value;
+      }
+    }
+
+    function pushToRange(type){
+      if(box.value==='') return;
+      const next=clampToRange(range,box.valueAsNumber);
+      range.value=String(next);
+      range.dispatchEvent(new Event(type,{bubbles:true}));
+      if(type==='change') box.value=range.value;
+    }
+
+    range.addEventListener('input',syncFromRange);
+    range.addEventListener('change',syncFromRange);
+
+    box.addEventListener('input',()=>{
+      if(Number.isFinite(box.valueAsNumber)){
+        pushToRange('input');
+      }
+    });
+
+    box.addEventListener('change',()=>{
+      if(!Number.isFinite(box.valueAsNumber)){
+        box.value=range.value;
+        return;
+      }
+      pushToRange('change');
+    });
+
+    box.addEventListener('keydown',event=>{
+      if(event.key==='Enter') box.blur();
+    });
+
+    range.dataset.kaoruExact='ready';
+    syncFromRange();
+  }
+
+  function scan(root){
+    if(!root) return;
+
+    if(root instanceof HTMLInputElement && root.type==='range'){
+      enhance(root);
+    }
+
+    if(root.querySelectorAll){
+      root.querySelectorAll('input[type="range"]').forEach(enhance);
+    }
+  }
+
+  function init(){
+    scan(document);
+
+    const observer=new MutationObserver(mutations=>{
+      mutations.forEach(mutation=>{
+        if(mutation.type==='childList'){
+          mutation.addedNodes.forEach(node=>{
+            if(node.nodeType===1) scan(node);
+          });
+        }
+
+        if(
+          mutation.type==='attributes' &&
+          mutation.target instanceof HTMLInputElement &&
+          mutation.target.type==='range'
+        ){
+          enhance(mutation.target);
+        }
+      });
+    });
+
+    observer.observe(document.body,{
+      subtree:true,
+      childList:true,
+      attributes:true,
+      attributeFilter:['min','max','step','disabled','value']
+    });
+
+    window.KaoruPrecisionControls={
+      refresh(){
+        scan(document);
+      }
+    };
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',init,{once:true});
+  }else{
+    init();
+  }
+}());
+
+===== BUSQUEDA ESPECIFICA =====
+
+  legacy\image-studio\index.html:62:          </details>
+  legacy\image-studio\index.html:63:
+  legacy\image-studio\index.html:64:          <details class="lens-panel" data-section="lens">
+> legacy\image-studio\index.html:65:            <summary>Lens Blur <span class="pill">V2</span></summary>
+  legacy\image-studio\index.html:66:            <div class="details-body">
+> legacy\image-studio\index.html:67:              <label class="switch-row"><span>Activar Lens Blur</span><input 
+id="lensEnabled" type="checkbox"><i></i></label>
+  legacy\image-studio\index.html:68:              <p class="helper">Mantiene una zona enfocada y genera bokeh a partir 
+de luces reales de la imagen.</p>
+  legacy\image-studio\index.html:69:              <div id="lensControls"></div>
+  legacy\image-studio\index.html:70:              <label class="select-row"><span>Forma de apertura</span><select 
+id="lensShape"><option value="circle">Círculo</option><option value="octagon">Octágono</option><option 
+value="diamond">Rombo</option><option value="triangle">Triángulo</option></select></label>
+  legacy\image-studio\index.html:71:              <label class="switch-row"><span>Preview en vivo</span><input 
+id="liveLensPreview" type="checkbox"><i></i></label>
+  legacy\image-studio\index.html:72:              <p class="helper">Recomendado: déjalo apagado. Ajusta los sliders y 
+pulsa “Aplicar preview”.</p>
+> legacy\image-studio\index.html:73:              <div class="button-grid"><button class="secondary" 
+id="applyLensPreviewBtn" type="button">Aplicar preview</button><button class="secondary" id="focusModeBtn" 
+type="button">&#9678; Elegir foco</button></div>
+  legacy\image-studio\index.html:74:              <div class="lens-manual-tools">
+> legacy\image-studio\index.html:75:                <label class="compact"><span>Radio del foco %</span><input 
+id="lensFocusRadiusNumber" type="number" min="3" max="70" step="1" value="24"></label>
+  legacy\image-studio\index.html:76:                <div class="button-grid lens-brush-buttons">
+  legacy\image-studio\index.html:77:                  <button class="secondary" id="lensBrushBlurBtn" 
+type="button">Pincel desenfoque</button>
+  legacy\image-studio\index.html:78:                  <button class="secondary" id="lensBrushRestoreBtn" 
+type="button">Pincel restaurador</button>
+  legacy\image-studio\index.html:80:                <label class="range-row lens-tool-range"><span>Radio 
+pincel</span><input id="lensBrushRadius" type="range" min="1" max="40" step="1" value="8"><output 
+id="lensBrushRadiusOut">8%</output></label>
+  legacy\image-studio\index.html:81:                <label class="range-row lens-tool-range"><span>Dureza</span><input 
+id="lensBrushHardness" type="range" min="0" max="100" step="1" value="65"><output 
+id="lensBrushHardnessOut">65%</output></label>
+  legacy\image-studio\index.html:82:                <label class="range-row lens-tool-range"><span>Fuerza</span><input 
+id="lensBrushStrength" type="range" min="1" max="100" step="1" value="100"><output 
+id="lensBrushStrengthOut">100%</output></label>
+> legacy\image-studio\index.html:83:                <button class="secondary full lens-clear-brush" 
+id="clearLensBrushBtn" type="button">Limpiar pinceladas Lens Blur</button>
+  legacy\image-studio\index.html:84:                <p class="helper">Desenfoque pinta blur dentro o fuera del foco. 
+Restaurador devuelve nitidez y evita bokeh en la zona pintada. El tirador del circulo permite cambiar su radio 
+directamente.</p>
+  legacy\image-studio\index.html:85:              </div>
+  legacy\image-studio\index.html:86:            </div>
+  legacy\image-studio\index.html:151:          <div class="empty-state" id="emptyState"><div 
+class="empty-icon">◫</div><h2>Tu imagen aparecerá aquí</h2><p>Arrastra una imagen o impórtala desde el panel.</p></div>
+  legacy\image-studio\index.html:152:          <div class="canvas-wrap" id="canvasWrap" hidden>
+  legacy\image-studio\index.html:153:            <canvas id="previewCanvas"></canvas>
+> legacy\image-studio\index.html:154:            <div class="focus-ring" id="focusRing" hidden><button 
+class="focus-radius-handle" id="focusRadiusHandle" type="button" aria-label="Cambiar radio del foco" title="Arrastra 
+para cambiar el radio"></button></div><div class="lens-brush-cursor" id="lensBrushCursor" hidden></div>
+  legacy\image-studio\index.html:155:          </div>
+> legacy\image-studio\index.html:156:          <div class="render-badge" id="renderBadge" 
+hidden><span></span><b>Renderizando preview…</b></div>
+  legacy\image-studio\index.html:157:        </div>
+  legacy\image-studio\index.html:158:
+  legacy\image-studio\index.html:159:        <div class="statusbar">
+  legacy\image-studio\index.html:160:          <span id="statusText">Listo</span>
+> legacy\image-studio\index.html:161:          <div class="zoom-controls"><button id="zoomOut" 
+type="button">−</button><output id="zoomValue">100%</output><button id="zoomIn" type="button">＋</button><button 
+id="fitView" type="button">Ajustar</button></div>
+  legacy\image-studio\index.html:162:        </div>
+  legacy\image-studio\index.html:163:      </section>
+  legacy\image-studio\index.html:164:    </main>
+  legacy\image-studio\styles.css:3:*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0}body{overflow:hidd
+en;background:var(--bg);color:var(--text)}button,input,select{font:inherit;color:inherit}button{cursor:pointer}.image-a
+pp{height:100%;min-height:0;display:grid;grid-template-rows:56px minmax(0,1fr)}
+  legacy\image-studio\styles.css:4:.standalone-header{height:56px;display:flex;align-items:center;justify-content:space
+-between;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel)}.brand{display:flex;align-items:cen
+ter;gap:9px;color:inherit;text-decoration:none}.brand 
+img{width:31px;height:31px;object-fit:contain;border-radius:9px}.brand span{font:italic 700 17px Georgia,serif}.brand 
+b{font-size:11px;color:var(--muted)}.standalone-nav{display:flex;gap:5px}.standalone-nav a{padding:7px 
+9px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:11px;font-weight:750}.standalone-nav 
+a[aria-current=page]{background:var(--surface2);color:var(--accent)}
+  legacy\image-studio\styles.css:5:html.kaoru-embedded .image-app{grid-template-rows:minmax(0,1fr)}html.kaoru-embedded 
+.standalone-header{display:none}
+> legacy\image-studio\styles.css:6:.workspace{min-width:0;min-height:0;height:100%;display:grid;grid-template-columns:m
+inmax(320px,360px) 
+minmax(0,1fr);gap:12px;padding:12px}.properties{min-height:0;overflow:auto;background:var(--panel);border:1px solid 
+var(--line);border-radius:15px;padding:15px;scrollbar-gutter:stable}.panel-intro{padding:2px 3px 
+13px}.eyebrow{font-size:9px;font-weight:850;letter-spacing:.13em;color:var(--accent)}.panel-intro 
+h1{font-size:21px;margin:5px 0}.panel-intro p{font-size:12px;line-height:1.45;color:var(--muted);margin:0}
+  legacy\image-studio\styles.css:7:.drop-zone{min-height:96px;border:1.5px dashed #bfb5cc;border-radius:13px;background
+:var(--surface);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;margin-bottom:13px
+;cursor:pointer;transition:.18s}.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:color-mix(in
+ srgb,var(--accent) 6%,var(--surface))}.drop-icon{font-size:23px;color:var(--accent)}.drop-zone 
+strong{font-size:12px}.drop-zone small{font-size:10px;color:var(--muted)}
+  legacy\image-studio\styles.css:8:.controls.disabled{pointer-events:none;opacity:.45;filter:saturate(.5)}details{borde
+r:1px solid var(--line);background:var(--surface);border-radius:12px;margin:9px 
+0;overflow:hidden}summary{list-style:none;display:flex;align-items:center;justify-content:space-between;padding:12px 13
+px;font-size:12px;font-weight:800;cursor:pointer}summary::-webkit-details-marker{display:none}summary:after{content:"＋"
+;color:var(--muted);font-weight:400}details[open]>summary:after{content:"−"}.details-body{border-top:1px solid 
+var(--line);padding:12px}.pill{font-size:8px;letter-spacing:.08em;padding:3px 
+5px;border-radius:999px;background:color-mix(in srgb,var(--accent) 
+14%,transparent);color:var(--accent);margin-left:auto;margin-right:8px}
+> legacy\image-studio\styles.css:9:.range-row{display:grid;grid-template-columns:86px minmax(0,1fr) 
+46px;gap:7px;align-items:center;margin:8px 
+0}.range-row>span,.select-row>span,.compact>span,.color-row>span{font-size:10px;color:var(--muted)}.range-row 
+input[type=range]{width:100%;accent-color:var(--accent)}.range-row output{text-align:right;font-size:10px;color:var(--m
+uted);font-variant-numeric:tabular-nums}.color-row,.select-row,.switch-row{display:flex;align-items:center;justify-cont
+ent:space-between;gap:10px;margin:10px 0}.color-row input[type=color]{width:48px;height:32px;padding:2px;border:1px 
+solid var(--line);border-radius:8px;background:var(--panel)}select,input[type=number]{width:100%;border:1px solid 
+var(--line);border-radius:8px;background:var(--panel);padding:7px 
+8px;outline:none}select:focus,input[type=number]:focus{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in 
+srgb,var(--accent) 15%,transparent)}.select-row select{width:145px}.switch-row{font-size:11px}.switch-row 
+input{position:absolute;opacity:0;pointer-events:none}.switch-row 
+i{position:relative;width:38px;height:21px;border-radius:999px;background:#c9c2d0;transition:.18s;flex:0 0 
+auto}.switch-row i:after{content:"";position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;backgro
+und:white;transition:.18s;box-shadow:0 1px 3px rgba(0,0,0,.18)}.switch-row 
+input:checked+i{background:var(--accent)}.switch-row 
+input:checked+i:after{transform:translateX(17px)}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.compact{dis
+play:flex;flex-direction:column;gap:4px}.button-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px
+;margin-top:9px}.button-grid:has(>button:nth-child(3)){grid-template-columns:repeat(3,minmax(0,1fr))}.helper{font-size:
+10px;line-height:1.4;color:var(--muted);margin:8px 0}.quality-row{display:none}.quality-row.visible{display:grid}#backg
+roundRow{display:none}#backgroundRow.visible{display:flex}
+  legacy\image-studio\styles.css:10:.primary,.secondary,.ghost{border-radius:9px;border:1px solid 
+var(--line);min-height:35px;padding:7px 10px;font-weight:750;font-size:11px}.primary{border-color:transparent;backgroun
+d:linear-gradient(135deg,var(--accent),var(--accent2));color:white;box-shadow:0 6px 17px color-mix(in 
+srgb,var(--accent) 23%,transparent)}.secondary,.ghost{background:var(--panel)}.secondary:hover,.ghost:hover{background:
+var(--surface2)}button:disabled{opacity:.4;cursor:not-allowed}.full{width:100%}
+> legacy\image-studio\styles.css:11:.stage{min-width:0;min-height:0;overflow:hidden;border:1px solid 
+var(--line);border-radius:15px;background:var(--panel);display:grid;grid-template-rows:52px minmax(0,1fr) 34px;box-shad
+ow:var(--shadow)}.stage-toolbar{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padd
+ing:0 13px;border-bottom:1px solid var(--line)}.file-info{min-width:0;display:flex;flex-direction:column}.file-info 
+strong{font-size:11px;max-width:38vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.file-info span{font-siz
+e:9px;color:var(--muted);margin-top:2px}.toolbar-actions{display:flex;align-items:center;gap:5px}.ghost{min-width:34px;
+padding-inline:9px}.text-btn{white-space:nowrap}.viewport{position:relative;min-width:0;min-height:0;overflow:auto;disp
+lay:flex;align-items:center;justify-content:center;padding:40px;background-color:color-mix(in srgb,var(--bg) 
+90%,#fff);background-image:radial-gradient(color-mix(in srgb,var(--muted) 25%,transparent) 1px,transparent 
+1px);background-size:18px 
+18px}.empty-state{text-align:center;color:var(--muted)}.empty-icon{width:92px;height:92px;border:1px dashed 
+var(--line);border-radius:23px;display:grid;place-items:center;margin:auto;font-size:36px}.empty-state 
+h2{font-size:16px;color:var(--text);margin:15px 0 5px}.empty-state 
+p{font-size:11px}.canvas-wrap{position:relative;flex:0 0 auto;line-height:0;box-shadow:0 18px 50px rgba(0,0,0,.22)}#pre
+viewCanvas{display:block;max-width:none;background-color:#eee;background-image:linear-gradient(45deg,#bbb 
+25%,transparent 25%),linear-gradient(-45deg,#bbb 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#bbb 
+75%),linear-gradient(-45deg,transparent 75%,#bbb 75%);background-size:20px 20px;background-position:0 0,0 10px,10px 
+-10px,-10px 0;cursor:grab}#previewCanvas:active{cursor:grabbing}.focus-ring{position:absolute;border:1.5px dashed 
+rgba(255,255,255,.95);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25)}.focus-ring:after{cont
+ent:"";position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:#a78bfa;transform:translate
+(-50%,-50%);box-shadow:0 0 0 2px #fff}.render-badge{position:absolute;right:12px;bottom:12px;background:color-mix(in 
+srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:999px;padding:7px 
+10px;display:flex;align-items:center;gap:7px;font-size:9px;box-shadow:var(--shadow)}.render-badge 
+span{width:9px;height:9px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 
+.7s linear infinite}@keyframes 
+spin{to{transform:rotate(360deg)}}.statusbar{display:flex;align-items:center;justify-content:space-between;padding:0 
+10px;border-top:1px solid 
+var(--line);font-size:9px;color:var(--muted)}.zoom-controls{display:flex;align-items:center;gap:4px}.zoom-controls 
+button{height:25px;min-width:27px;border:1px solid 
+var(--line);border-radius:7px;background:var(--surface);font-size:10px}.zoom-controls 
+output{width:42px;text-align:center;font-size:9px}
+  legacy\image-studio\styles.css:12:.modal[hidden]{display:none}.modal{position:fixed;inset:0;z-index:1000;background:r
+gba(15,10,20,.62);backdrop-filter:blur(8px);display:grid;place-items:center;padding:20px}.modal-card{width:min(500px,10
+0%);background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:20px;box-shadow:0 25px 80px rgba(0,
+0,0,.35)}.modal-icon{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:color-mix(in 
+srgb,var(--accent) 14%,transparent);color:var(--accent);font-size:21px}.modal-card h2{font-size:18px;margin:13px 0 
+6px}.modal-card 
+p{font-size:11px;line-height:1.5;color:var(--muted)}.recovery-meta{font-size:10px;color:var(--muted);padding:9px 
+10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);margin:12px 
+0}.modal-actions{display:grid;grid-template-columns:1fr 
+1fr;gap:8px}.toast{position:fixed;right:18px;bottom:18px;z-index:1200;padding:10px 
+13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);font-size:11px;op
+acity:0;transform:translateY(18px);pointer-events:none;transition:.18s}.toast.show{opacity:1;transform:none}
+  legacy\image-studio\styles.css:13:@media(max-width:900px){body{overflow:auto}.image-app{height:auto;min-height:100%;g
+rid-template-rows:56px auto}.workspace{display:block;height:auto}.properties{max-height:none;overflow:visible;margin-bo
+ttom:10px}.stage{min-height:70vh}.viewport{min-height:55vh}.toolbar-actions .text-btn:not(.primary){display:none}}@medi
+a(max-width:650px){.standalone-nav{display:none}.workspace{padding:7px}.stage-toolbar{padding-inline:8px}.text-btn{font
+-size:0}.text-btn:before{font-size:12px}.toolbar-actions #exportTopBtn:before{content:"⇩"}.grid2{grid-template-columns:
+1fr}.button-grid,.button-grid:has(>button:nth-child(3)){grid-template-columns:1fr 1fr}}
+  legacy\image-studio\styles.css:14:
+  legacy\image-studio\styles.css:17:.repair-preview:hover{background:color-mix(in srgb,var(--accent) 
+9%,var(--surface))!important}
+  legacy\image-studio\styles.css:18:#previewCanvas{backface-visibility:hidden;transform:translateZ(0)}
+  legacy\image-studio\styles.css:19:
+> legacy\image-studio\styles.css:20:/* Lens Blur V3 - foco redimensionable + pinceles */
+  legacy\image-studio\styles.css:21:.lens-manual-tools{margin-top:10px;padding-top:9px;border-top:1px solid 
+var(--line)}
+  legacy\image-studio\styles.css:22:.lens-manual-tools>.compact{margin-bottom:8px}
+  legacy\image-studio\styles.css:23:.lens-brush-buttons{grid-template-columns:1fr 1fr!important}
+  legacy\image-studio\styles.css:24:.lens-brush-buttons .active{border-color:var(--accent);background:color-mix(in 
+srgb,var(--accent) 12%,var(--panel));color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 
+25%,transparent)}
+  legacy\image-studio\styles.css:25:.lens-tool-range{grid-template-columns:86px minmax(0,1fr) 46px}
+  legacy\image-studio\styles.css:26:.lens-clear-brush{margin-top:8px}
+> legacy\image-studio\styles.css:27:.focus-ring{pointer-events:none}
+> legacy\image-studio\styles.css:28:.focus-radius-handle{position:absolute;right:-9px;top:50%;width:18px;height:18px;pa
+dding:0;transform:translateY(-50%);border:2px solid #fff;border-radius:50%;background:var(--accent);box-shadow:0 1px 
+5px rgba(0,0,0,.4);pointer-events:auto;cursor:ew-resize}
+> legacy\image-studio\styles.css:29:.focus-radius-handle:focus-visible{outline:2px solid 
+var(--accent);outline-offset:3px}
+  legacy\image-studio\styles.css:30:.lens-brush-cursor{position:absolute;z-index:8;border:1.5px solid 
+rgba(255,255,255,.95);border-radius:50%;pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.42),inset 0 0 0 1px 
+rgba(0,0,0,.18)}
+  legacy\image-studio\styles.css:31:.lens-brush-cursor[data-mode=blur]{background:rgba(108,92,231,.08)}
+  legacy\image-studio\styles.css:32:.lens-brush-cursor[data-mode=restore]{background:rgba(255,255,255,.08);border-style
+:dashed}
+  legacy\image-studio\js\main.js:1:(function(){'use strict';
+  legacy\image-studio\js\main.js:2:  const $=s=>document.querySelector(s),clone=ImageState.clone;
+> legacy\image-studio\js\main.js:3:  let state=ImageState.defaults(),source=null,sourceBlob=null,sourceName='',sourceWi
+dth=0,sourceHeight=0,currentProjectId=null,zoom=1,focusMode=false,liveLensPreview=false,drag=null,recoveryTimer=0,toast
+Timer=0;
+  legacy\image-studio\js\main.js:4:  const history=new ImageHistory.History(90);
+  legacy\image-studio\js\main.js:5:  const preview=new ImagePreviewPipeline.PreviewPipeline(
+  legacy\image-studio\js\main.js:6:    $('#previewCanvas'),
+  legacy\image-studio\js\main.js:7:    busy=>{
+> legacy\image-studio\js\main.js:8:      const badge=$('#renderBadge');
+  legacy\image-studio\js\main.js:9:      if(badge)badge.hidden=!busy
+  legacy\image-studio\js\main.js:10:    },
+  legacy\image-studio\js\main.js:11:    text=>{
+  legacy\image-studio\js\main.js:18:    getState:()=>state,
+  legacy\image-studio\js\main.js:19:    getCanvas:()=>$('#previewCanvas'),
+  legacy\image-studio\js\main.js:20:    getLiveLensPreview:()=>liveLensPreview,
+> legacy\image-studio\js\main.js:21:    getFocusMode:()=>focusMode,
+> legacy\image-studio\js\main.js:22:    setFocusMode(value){focusMode=!!value;syncAll()},
+  legacy\image-studio\js\main.js:23:    notify:null,
+  legacy\image-studio\js\main.js:24:    sync(){syncAll()},
+> legacy\image-studio\js\main.js:25:    updateFocusRing(){updateFocusRing()},
+> legacy\image-studio\js\main.js:26:    
+renderFast(){preview.setState(state);preview.schedule('fast',0);updateFocusRing()},
+> legacy\image-studio\js\main.js:27:    
+renderFull(){preview.setState(state);preview.schedule('full',0);scheduleRecovery();updateFocusRing()},
+> legacy\image-studio\js\main.js:28:    commit(label){history.push(state);preview.setState(state);preview.schedule('ful
+l',0);scheduleRecovery();updateFocusRing();$('#statusText').textContent=label||'Lens Blur actualizado'},
+  legacy\image-studio\js\main.js:29:    toast(text){toast(text)}
+  legacy\image-studio\js\main.js:30:  };
+  legacy\image-studio\js\main.js:31:
+  legacy\image-studio\js\main.js:58:    setEnabled(true)
+  legacy\image-studio\js\main.js:59:  }
+  legacy\image-studio\js\main.js:60:  function getExportConfig(){return{format:$('#exportFormat').value,scale:Number($(
+'#exportScale').value)||1,width:Number($('#exportWidth').value)||1,height:Number($('#exportHeight').value)||1,quality:N
+umber($('#exportQuality').value)||92,transparent:$('#transparentBg').checked,background:$('#backgroundColor').value}}
+> legacy\image-studio\js\main.js:61:  function projectPayload(){return{schema:'kaoru-image-studio-project',version:14.4
+,state:clone(state),zoom,focusMode:false,liveLensPreview,export:getExportConfig(),fileName:sourceName}}
+  legacy\image-studio\js\main.js:62:  function scheduleRecovery(){if(!sourceBlob)return;clearTimeout(recoveryTimer);rec
+overyTimer=setTimeout(()=>ImageStorage.save({payload:projectPayload(),source:sourceBlob,fileName:sourceName}).catch(con
+sole.warn),180)}
+  legacy\image-studio\js\main.js:63:
+> legacy\image-studio\js\main.js:64:  function updateFocusRing(){const ring=$('#focusRing'),canvas=$('#previewCanvas');
+if(!source||!focusMode||!state.lens.enabled){ring.hidden=true;return}ring.hidden=false;const w=canvas.offsetWidth,h=can
+vas.offsetHeight,r=state.lens.focusRadius*Math.min(w,h);ring.style.width=`${r*2}px`;ring.style.height=`${r*2}px`;ring.s
+tyle.left=`${state.lens.focusX*w-r}px`;ring.style.top=`${state.lens.focusY*h-r}px`}
+> legacy\image-studio\js\main.js:65:  function applyZoom(){const c=$('#previewCanvas');if(!source)return;c.style.width=
+`${Math.max(1,Math.round(c.width*zoom))}px`;c.style.height=`${Math.max(1,Math.round(c.height*zoom))}px`;$('#zoomValue')
+.textContent=`${Math.round(zoom*100)}%`;requestAnimationFrame(updateFocusRing)}
+> legacy\image-studio\js\main.js:66:  function fitView(){if(!source)return;const vp=$('#canvasViewport'),c=$('#previewC
+anvas'),availableW=Math.max(80,vp.clientWidth-70),availableH=Math.max(80,vp.clientHeight-70);zoom=Math.max(.08,Math.min
+(1,availableW/c.width,availableH/c.height));applyZoom()}
+  legacy\image-studio\js\main.js:67:
+> legacy\image-studio\js\main.js:68:  function 
+previewFast(){preview.setState(state);if(state.lens.enabled&&!liveLensPreview){$('#statusText').textContent='Lens Blur 
+pendiente · pulsa Aplicar preview';updateFocusRing();return}preview.schedule('fast');updateFocusRing()}
+> legacy\image-studio\js\main.js:69:  function 
+previewFull(){preview.setState(state);preview.schedule('full');scheduleRecovery();updateFocusRing()}
+  legacy\image-studio\js\main.js:70:  function 
+commit(label){history.push(state);previewFull();scheduleRecovery();$('#statusText').textContent=label||'Cambio 
+guardado'}
+> legacy\image-studio\js\main.js:71:  function applyHistory(next){if(!next)return;state=ImageState.merge(next);syncAll(
+);preview.setState(state);preview.schedule('full',0);scheduleRecovery()}
+  legacy\image-studio\js\main.js:72:  
+history.onChange=({canUndo,canRedo})=>{$('#undoBtn').disabled=!canUndo;$('#redoBtn').disabled=!canRedo};
+  legacy\image-studio\js\main.js:73:
+  legacy\image-studio\js\main.js:74:  function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterC
+ontrols','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const 
+el=$(selector);el.dataset.group=group;ImageUI.build(el,state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
+  legacy\image-studio\js\main.js:105:    value('#cropWidth',Math.round(state.crop.width));
+  legacy\image-studio\js\main.js:106:    value('#cropHeight',Math.round(state.crop.height));
+  legacy\image-studio\js\main.js:107:
+> legacy\image-studio\js\main.js:108:    const focusButton=$('#focusModeBtn');
+> legacy\image-studio\js\main.js:109:    if(focusButton){
+> legacy\image-studio\js\main.js:110:      focusButton.classList.toggle(
+  legacy\image-studio\js\main.js:111:        'active',
+> legacy\image-studio\js\main.js:112:        focusMode
+  legacy\image-studio\js\main.js:113:      )
+  legacy\image-studio\js\main.js:114:    }
+  legacy\image-studio\js\main.js:115:
+  legacy\image-studio\js\main.js:116:    try{
+> legacy\image-studio\js\main.js:117:      updateFocusRing()
+  legacy\image-studio\js\main.js:118:    }catch(error){
+> legacy\image-studio\js\main.js:119:      console.warn('Image Studio focus sync',error)
+  legacy\image-studio\js\main.js:120:    }
+  legacy\image-studio\js\main.js:121:
+  legacy\image-studio\js\main.js:122:    try{
+  legacy\image-studio\js\main.js:165:      )
+  legacy\image-studio\js\main.js:166:    );
+  legacy\image-studio\js\main.js:167:
+> legacy\image-studio\js\main.js:168:    focusMode=false;
+  legacy\image-studio\js\main.js:169:    liveLensPreview=!!(
+  legacy\image-studio\js\main.js:170:      payload&&payload.liveLensPreview
+  legacy\image-studio\js\main.js:171:    );
+  legacy\image-studio\js\main.js:197:      )
+  legacy\image-studio\js\main.js:198:    }
+  legacy\image-studio\js\main.js:199:
+> legacy\image-studio\js\main.js:200:    preview.schedule(
+  legacy\image-studio\js\main.js:201:      'full',
+  legacy\image-studio\js\main.js:202:      80
+  legacy\image-studio\js\main.js:203:    );
+  legacy\image-studio\js\main.js:206:      ()=>{
+  legacy\image-studio\js\main.js:207:        try{
+  legacy\image-studio\js\main.js:208:          payload&&payload.zoom
+> legacy\image-studio\js\main.js:209:            ?applyZoom()
+> legacy\image-studio\js\main.js:210:            :fitView()
+  legacy\image-studio\js\main.js:211:        }catch(error){
+  legacy\image-studio\js\main.js:212:          console.warn(
+  legacy\image-studio\js\main.js:213:            'Image Studio fit preview',
+  legacy\image-studio\js\main.js:263:        )
+  legacy\image-studio\js\main.js:264:      }
+  legacy\image-studio\js\main.js:265:
+> legacy\image-studio\js\main.js:266:      const badge=$('#renderBadge');
+  legacy\image-studio\js\main.js:267:      if(badge)badge.hidden=true;
+  legacy\image-studio\js\main.js:268:
+  legacy\image-studio\js\main.js:269:      toast(
+  legacy\image-studio\js\main.js:330:
+  legacy\image-studio\js\main.js:331:  function bind(){const input=$('#fileInput'),drop=$('#dropZone'),viewport=$('#can
+vasViewport');input.addEventListener('change',e=>loadFile(e.target.files[0]));['dragenter','dragover'].forEach(t=>drop.
+addEventListener(t,e=>{e.preventDefault();drop.classList.add('dragover')}));['dragleave','drop'].forEach(t=>drop.addEve
+ntListener(t,e=>{e.preventDefault();drop.classList.remove('dragover')}));drop.addEventListener('drop',e=>loadFile(e.dat
+aTransfer.files[0]));viewport.addEventListener('dragover',e=>e.preventDefault());viewport.addEventListener('drop',e=>{e
+.preventDefault();loadFile(e.dataTransfer.files[0])});
+  legacy\image-studio\js\main.js:332:    $('#monochromeColor').addEventListener('input',e=>{state.filters.monochromeCol
+or=e.target.value;previewFast()});$('#monochromeColor').addEventListener('change',()=>commit('Color monocromático'));
+> legacy\image-studio\js\main.js:333:    $('#lensEnabled').addEventListener('change',e=>{state.lens.enabled=e.target.ch
+ecked;if(!state.lens.enabled)focusMode=false;syncAll();commit('Lens Blur')});$('#lensShape').addEventListener('change',
+e=>{state.lens.shape=e.target.value;if(liveLensPreview)commit('Forma de 
+apertura');else{$('#statusText').textContent='Lens Blur pendiente · pulsa Aplicar preview';history.push(state);schedule
+Recovery()}});$('#liveLensPreview').addEventListener('change',e=>{liveLensPreview=e.target.checked;if(liveLensPreview&&
+state.lens.enabled)previewFull();scheduleRecovery()});$('#applyLensPreviewBtn').addEventListener('click',()=>{if(!sourc
+e)return;preview.setState(state);preview.schedule('full',0);history.push(state);scheduleRecovery();toast('Preview de 
+Lens Blur actualizada.')});$('#focusModeBtn').addEventListener('click',()=>{focusMode=!focusMode;if(focusMode&&!state.l
+ens.enabled){state.lens.enabled=true;$('#lensEnabled').checked=true;history.push(state)}syncAll();toast(focusMode?'Haz 
+clic donde debe quedar el foco.':'Modo de foco desactivado.')});
+  legacy\image-studio\js\main.js:334:    const transformIds=['transformX','transformY','scaleX','scaleY','rotation','im
+ageOpacity'];transformIds.forEach(id=>{$(`#${id}`).addEventListener('input',()=>{const lock=state.transform.aspectLock,
+active=id;state.transform.x=Number($('#transformX').value)||0;state.transform.y=Number($('#transformY').value)||0;if(ac
+tive==='scaleX'){state.transform.scaleX=Math.max(.01,(Number($('#scaleX').value)||100)/100);if(lock){state.transform.sc
+aleY=state.transform.scaleX;$('#scaleY').value=$('#scaleX').value}}else if(active==='scaleY'){state.transform.scaleY=Ma
+th.max(.01,(Number($('#scaleY').value)||100)/100);if(lock){state.transform.scaleX=state.transform.scaleY;$('#scaleX').v
+alue=$('#scaleY').value}}state.transform.rotation=Number($('#rotation').value)||0;state.adjustments.opacity=Math.max(0,
+Math.min(1,(Number($('#imageOpacity').value)||0)/100));previewFast()});$(`#${id}`).addEventListener('change',()=>commit
+('Transformación'))});
+  legacy\image-studio\js\main.js:335:    
+$('#aspectLock').addEventListener('change',e=>{state.transform.aspectLock=e.target.checked;commit('Bloqueo de proporció
+n')});$('#flipXBtn').addEventListener('click',()=>{state.transform.flipX=!state.transform.flipX;commit('Voltear horizon
+tal')});$('#flipYBtn').addEventListener('click',()=>{state.transform.flipY=!state.transform.flipY;commit('Voltear verti
+cal')});$('#resetTransformBtn').addEventListener('click',()=>{state.transform=ImageState.defaults().transform;state.adj
+ustments.opacity=1;syncAll();commit('Restablecer transformación')});
+> legacy\image-studio\js\main.js:336:    $('#applyCropBtn').addEventListener('click',()=>{if(!source)return;state.crop=
+{x:Number($('#cropX').value)||0,y:Number($('#cropY').value)||0,width:Number($('#cropWidth').value)||1,height:Number($('
+#cropHeight').value)||1};clampCrop();syncAll();preview.updateDimensions(true);preview.setState(state);preview.schedule(
+'full',0);updateExportDimensions(true);history.push(state);setTimeout(fitView,60);scheduleRecovery()});$('#resetCropBtn
+').addEventListener('click',()=>{if(!source)return;state.crop={x:0,y:0,width:sourceWidth,height:sourceHeight};syncAll()
+;preview.updateDimensions(true);preview.schedule('full',0);updateExportDimensions(true);history.push(state);setTimeout(
+fitView,60);scheduleRecovery()});
+> legacy\image-studio\js\main.js:337:    const 
+c=$('#previewCanvas');c.addEventListener('pointerdown',e=>{if(!source)return;const rect=c.getBoundingClientRect();if(fo
+cusMode){state.lens.focusX=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));state.lens.focusY=Math.max(0,Math.m
+in(1,(e.clientY-rect.top)/rect.height));updateFocusRing();previewFast();history.push(state);previewFull();return}drag={
+id:e.pointerId,startX:e.clientX,startY:e.clientY,x:state.transform.x,y:state.transform.y,rect};c.setPointerCapture(e.po
+interId)});c.addEventListener('pointermove',e=>{if(!drag)return;state.transform.x=drag.x+(e.clientX-drag.startX)*state.
+crop.width/drag.rect.width;state.transform.y=drag.y+(e.clientY-drag.startY)*state.crop.height/drag.rect.height;$('#tran
+sformX').value=Math.round(state.transform.x);$('#transformY').value=Math.round(state.transform.y);previewFast()});const
+ finishDrag=()=>{if(drag){drag=null;commit('Mover 
+imagen')}};c.addEventListener('pointerup',finishDrag);c.addEventListener('pointercancel',finishDrag);
+  legacy\image-studio\js\main.js:338:    $('#undoBtn').addEventListener('click',()=>applyHistory(history.undo()));$('#r
+edoBtn').addEventListener('click',()=>applyHistory(history.redo()));document.addEventListener('keydown',e=>{const mod=e
+.ctrlKey||e.metaKey;if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();applyHistory(e.shiftKey?history.redo():histor
+y.undo())}});
+> legacy\image-studio\js\main.js:339:    $('#repairPreviewBtn').addEventListener('click',()=>{if(!source)return;$('#ren
+derBadge').hidden=true;preview.setState(state);preview.repair();requestAnimationFrame(()=>{const saved=zoom;zoom=Math.m
+ax(.08,saved*.985);applyZoom();requestAnimationFrame(()=>{zoom=saved;applyZoom();fitView();toast('Preview 
+refrescada.');})})});
+> legacy\image-studio\js\main.js:340:    $('#zoomOut').addEventListener('click',()=>{zoom=Math.max(.08,zoom/1.2);applyZ
+oom()});$('#zoomIn').addEventListener('click',()=>{zoom=Math.min(4,zoom*1.2);applyZoom()});$('#fitView').addEventListen
+er('click',fitView);window.addEventListener('resize',()=>{if(source){applyZoom();updateFocusRing()}});
+  legacy\image-studio\js\main.js:341:    $('#exportScale').addEventListener('change',()=>updateExportDimensions(true));
+$('#exportWidth').addEventListener('input',()=>{if(!source)return;const w=Number($('#exportWidth').value)||1;$('#export
+Height').value=Math.max(1,Math.round(w*state.crop.height/state.crop.width));updateExportInfo()});$('#exportHeight').add
+EventListener('input',()=>{if(!source)return;const h=Number($('#exportHeight').value)||1;$('#exportWidth').value=Math.m
+ax(1,Math.round(h*state.crop.width/state.crop.height));updateExportInfo()});$('#exportFormat').addEventListener('change
+',()=>{syncExportVisibility();scheduleRecovery()});$('#transparentBg').addEventListener('change',()=>{syncExportVisibil
+ity();scheduleRecovery()});$('#exportQuality').addEventListener('input',e=>{const output=$('#qualityRow output');if(out
+put)output.textContent=`${e.target.value}%`});['exportWidth','exportHeight','exportScale','exportQuality','backgroundCo
+lor'].forEach(id=>$(`#${id}`).addEventListener('change',scheduleRecovery));
+  legacy\image-studio\js\main.js:342:    $('#exportBtn').addEventListener('click',exportImage);$('#exportTopBtn').addEv
+entListener('click',exportImage);$('#saveProjectBtn').addEventListener('click',()=>saveGallery('project'));$('#saveTemp
+lateBtn').addEventListener('click',()=>saveGallery('template'));document.addEventListener('visibilitychange',()=>{if(do
+cument.visibilityState==='hidden')scheduleRecovery()});
+  legacy\image-studio\js\main.js:343:  }
+  legacy\image-studio\js\previewPipeline.js:39:    this.cancel('');
+  legacy\image-studio\js\previewPipeline.js:40:    this.source=source;
+  legacy\image-studio\js\previewPipeline.js:41:    this.state=state;
+> legacy\image-studio\js\previewPipeline.js:42:    this.updateDimensions(
+  legacy\image-studio\js\previewPipeline.js:43:      true
+  legacy\image-studio\js\previewPipeline.js:44:    );
+  legacy\image-studio\js\previewPipeline.js:45:
+  legacy\image-studio\js\previewPipeline.js:57:    this.state=state;
+  legacy\image-studio\js\previewPipeline.js:58:  }
+  legacy\image-studio\js\previewPipeline.js:59:
+> legacy\image-studio\js\previewPipeline.js:60:  updateDimensions(
+  legacy\image-studio\js\previewPipeline.js:61:    force=false
+  legacy\image-studio\js\previewPipeline.js:62:  ){
+  legacy\image-studio\js\previewPipeline.js:63:    if(!this.state)return;
+  legacy\image-studio\js\previewPipeline.js:121:        height
+  legacy\image-studio\js\previewPipeline.js:122:      };
+  legacy\image-studio\js\previewPipeline.js:123:
+> legacy\image-studio\js\previewPipeline.js:124:      this.canvas.width=
+  legacy\image-studio\js\previewPipeline.js:125:        width;
+  legacy\image-studio\js\previewPipeline.js:126:
+> legacy\image-studio\js\previewPipeline.js:127:      this.canvas.height=
+  legacy\image-studio\js\previewPipeline.js:128:        height;
+  legacy\image-studio\js\previewPipeline.js:129:
+  legacy\image-studio\js\previewPipeline.js:130:      this.back.width=
+  legacy\image-studio\js\previewPipeline.js:289:    }
+  legacy\image-studio\js\previewPipeline.js:290:
+  legacy\image-studio\js\previewPipeline.js:291:    try{
+> legacy\image-studio\js\previewPipeline.js:292:      this.updateDimensions();
+  legacy\image-studio\js\previewPipeline.js:293:
+  legacy\image-studio\js\previewPipeline.js:294:      const crop=
+  legacy\image-studio\js\previewPipeline.js:295:        this.safeCrop();
+  legacy\image-studio\js\previewPipeline.js:320:      ctx.clearRect(
+  legacy\image-studio\js\previewPipeline.js:321:        0,
+  legacy\image-studio\js\previewPipeline.js:322:        0,
+> legacy\image-studio\js\previewPipeline.js:323:        this.canvas.width,
+> legacy\image-studio\js\previewPipeline.js:324:        this.canvas.height
+  legacy\image-studio\js\previewPipeline.js:325:      );
+  legacy\image-studio\js\previewPipeline.js:326:
+  legacy\image-studio\js\previewPipeline.js:327:      ctx.imageSmoothingEnabled=
+  legacy\image-studio\js\previewPipeline.js:338:        crop.height,
+  legacy\image-studio\js\previewPipeline.js:339:        0,
+  legacy\image-studio\js\previewPipeline.js:340:        0,
+> legacy\image-studio\js\previewPipeline.js:341:        this.canvas.width,
+> legacy\image-studio\js\previewPipeline.js:342:        this.canvas.height
+  legacy\image-studio\js\previewPipeline.js:343:      );
+  legacy\image-studio\js\previewPipeline.js:344:
+  legacy\image-studio\js\previewPipeline.js:345:      bctx.clearRect(
+  legacy\image-studio\js\previewPipeline.js:393:    this.activeRequest=
+  legacy\image-studio\js\previewPipeline.js:394:      request;
+  legacy\image-studio\js\previewPipeline.js:395:
+> legacy\image-studio\js\previewPipeline.js:396:    this.updateDimensions();
+  legacy\image-studio\js\previewPipeline.js:397:
+  legacy\image-studio\js\previewPipeline.js:398:    const heavy=
+  legacy\image-studio\js\previewPipeline.js:399:      Boolean(
+  legacy\image-studio\js\previewPipeline.js:502:    try{
+  legacy\image-studio\js\previewPipeline.js:503:      await new Promise(
+  legacy\image-studio\js\previewPipeline.js:504:        resolve=>
+> legacy\image-studio\js\previewPipeline.js:505:          requestAnimationFrame(
+  legacy\image-studio\js\previewPipeline.js:506:            resolve
+  legacy\image-studio\js\previewPipeline.js:507:          )
+  legacy\image-studio\js\previewPipeline.js:508:      );
+  legacy\image-studio\js\previewPipeline.js:597:      ctx.clearRect(
+  legacy\image-studio\js\previewPipeline.js:598:        0,
+  legacy\image-studio\js\previewPipeline.js:599:        0,
+> legacy\image-studio\js\previewPipeline.js:600:        this.canvas.width,
+> legacy\image-studio\js\previewPipeline.js:601:        this.canvas.height
+  legacy\image-studio\js\previewPipeline.js:602:      );
+  legacy\image-studio\js\previewPipeline.js:603:
+  legacy\image-studio\js\previewPipeline.js:604:      ctx.imageSmoothingEnabled=
+  legacy\image-studio\js\previewPipeline.js:622:            ?'Preview rapida'
+  legacy\image-studio\js\previewPipeline.js:623:            :'Preview completa'
+  legacy\image-studio\js\previewPipeline.js:624:        } · ${
+> legacy\image-studio\js\previewPipeline.js:625:          this.canvas.width
+  legacy\image-studio\js\previewPipeline.js:626:        } × ${
+> legacy\image-studio\js\previewPipeline.js:627:          this.canvas.height
+  legacy\image-studio\js\previewPipeline.js:628:        }px`
+  legacy\image-studio\js\previewPipeline.js:629:      );
+  legacy\image-studio\js\previewPipeline.js:630:    }catch(error){
+  legacy\image-studio\js\previewPipeline.js:685:    ctx.clearRect(
+  legacy\image-studio\js\previewPipeline.js:686:      0,
+  legacy\image-studio\js\previewPipeline.js:687:      0,
+> legacy\image-studio\js\previewPipeline.js:688:      this.canvas.width,
+> legacy\image-studio\js\previewPipeline.js:689:      this.canvas.height
+  legacy\image-studio\js\previewPipeline.js:690:    );
+  legacy\image-studio\js\previewPipeline.js:691:
+  legacy\image-studio\js\previewPipeline.js:692:    ctx.drawImage(
+  legacy\image-studio\js\previewPipeline.js:693:      this.back,
+  legacy\image-studio\js\previewPipeline.js:694:      0,
+  legacy\image-studio\js\previewPipeline.js:695:      0,
+> legacy\image-studio\js\previewPipeline.js:696:      this.canvas.width,
+> legacy\image-studio\js\previewPipeline.js:697:      this.canvas.height
+  legacy\image-studio\js\previewPipeline.js:698:    );
+  legacy\image-studio\js\previewPipeline.js:699:  }
+  legacy\image-studio\js\previewPipeline.js:700:
+  legacy\image-studio\js\previewPipeline.js:703:      'Reparando preview...'
+  legacy\image-studio\js\previewPipeline.js:704:    );
+  legacy\image-studio\js\previewPipeline.js:705:
+> legacy\image-studio\js\previewPipeline.js:706:    this.updateDimensions(
+  legacy\image-studio\js\previewPipeline.js:707:      true
+  legacy\image-studio\js\previewPipeline.js:708:    );
+  legacy\image-studio\js\previewPipeline.js:709:
+  legacy\image-studio\js\renderer.js:380:    };
+  legacy\image-studio\js\renderer.js:381:
+  legacy\image-studio\js\renderer.js:382:    work=safeStage(
+> legacy\image-studio\js\renderer.js:383:      'Lens Blur',
+  legacy\image-studio\js\renderer.js:384:      work,
+  legacy\image-studio\js\renderer.js:385:      ()=>ImageLensBlur.apply(
+  legacy\image-studio\js\renderer.js:386:        work,
+  legacy\image-studio\js\lensBlur.js:49:
+  legacy\image-studio\js\lensBlur.js:50:  function sharpAt(opt,x,y,w,h){
+  legacy\image-studio\js\lensBlur.js:51:    const short=Math.min(w,h);
+> legacy\image-studio\js\lensBlur.js:52:    const fx=(Number(opt.focusX)||.5)*w;
+> legacy\image-studio\js\lensBlur.js:53:    const fy=(Number(opt.focusY)||.5)*h;
+> legacy\image-studio\js\lensBlur.js:54:    const focusR=Math.max(.01,Number(opt.focusRadius)||.24)*short;
+  legacy\image-studio\js\lensBlur.js:55:    const transition=Math.max(.01,Number(opt.transition)||.18)*short;
+  legacy\image-studio\js\lensBlur.js:56:    const d=Math.hypot(x-fx,y-fy);
+> legacy\image-studio\js\lensBlur.js:57:    const inner=Math.max(0,focusR-transition);
+> legacy\image-studio\js\lensBlur.js:58:    const outer=focusR+transition;
+  legacy\image-studio\js\lensBlur.js:59:
+  legacy\image-studio\js\lensBlur.js:60:    let sharp=d<=inner?1:d>=outer?0:1-(d-inner)/Math.max(1,outer-inner);
+  legacy\image-studio\js\lensBlur.js:61:
+  legacy\image-studio\js\lensBlur.js:100:
+  legacy\image-studio\js\lensBlur.js:101:  function buildSharpMask(opt,w,h){
+  legacy\image-studio\js\lensBlur.js:102:    const short=Math.min(w,h);
+> legacy\image-studio\js\lensBlur.js:103:    const fx=(Number(opt.focusX)||.5)*w;
+> legacy\image-studio\js\lensBlur.js:104:    const fy=(Number(opt.focusY)||.5)*h;
+> legacy\image-studio\js\lensBlur.js:105:    const focusR=Math.max(.01,Number(opt.focusRadius)||.24)*short;
+  legacy\image-studio\js\lensBlur.js:106:    const transition=Math.max(.01,Number(opt.transition)||.18)*short;
+  legacy\image-studio\js\lensBlur.js:107:    const maskCanvas=canvas(w,h);
+  legacy\image-studio\js\lensBlur.js:108:    const ctx=maskCanvas.getContext('2d');
+  legacy\image-studio\js\lensBlur.js:109:
+  legacy\image-studio\js\lensBlur.js:110:    const radial=ctx.createRadialGradient(
+> legacy\image-studio\js\lensBlur.js:111:      fx,fy,Math.max(0,focusR-transition),
+> legacy\image-studio\js\lensBlur.js:112:      fx,fy,focusR+transition
+  legacy\image-studio\js\lensBlur.js:113:    );
+  legacy\image-studio\js\lensBlur.js:114:
+  legacy\image-studio\js\lensBlur.js:115:    radial.addColorStop(0,'rgba(255,255,255,1)');
+  legacy\image-studio\js\lensBlur.js:151:    ctx.drawImage(blurred,0,0);
+  legacy\image-studio\js\lensBlur.js:152:
+  legacy\image-studio\js\lensBlur.js:153:    const sharpMask=buildSharpMask(opt,w,h);
+> legacy\image-studio\js\lensBlur.js:154:    const focus=canvas(w,h);
+> legacy\image-studio\js\lensBlur.js:155:    const fctx=focus.getContext('2d');
+  legacy\image-studio\js\lensBlur.js:156:    fctx.drawImage(source,0,0);
+  legacy\image-studio\js\lensBlur.js:157:    fctx.globalCompositeOperation='destination-in';
+  legacy\image-studio\js\lensBlur.js:158:    fctx.drawImage(sharpMask,0,0);
+  legacy\image-studio\js\lensBlur.js:159:    fctx.globalCompositeOperation='source-over';
+> legacy\image-studio\js\lensBlur.js:160:    ctx.drawImage(focus,0,0);
+  legacy\image-studio\js\lensBlur.js:161:
+  legacy\image-studio\js\lensBlur.js:162:    const opacity=Math.max(0,Math.min(1,Number(opt.opacity)||0));
+  legacy\image-studio\js\lensBlur.js:163:    const density=Math.max(1,Math.min(100,Number(opt.density)||1));
+  legacy\image-studio\js\lensBrushTools.js:13:  const blurBtn=$('lensBrushBlurBtn');
+  legacy\image-studio\js\lensBrushTools.js:14:  const restoreBtn=$('lensBrushRestoreBtn');
+  legacy\image-studio\js\lensBrushTools.js:15:  const clearBtn=$('clearLensBrushBtn');
+> legacy\image-studio\js\lensBrushTools.js:16:  const focusNumber=$('lensFocusRadiusNumber');
+  legacy\image-studio\js\lensBrushTools.js:17:  const brushRadius=$('lensBrushRadius');
+  legacy\image-studio\js\lensBrushTools.js:18:  const brushRadiusOut=$('lensBrushRadiusOut');
+  legacy\image-studio\js\lensBrushTools.js:19:  const hardness=$('lensBrushHardness');
+  legacy\image-studio\js\lensBrushTools.js:20:  const hardnessOut=$('lensBrushHardnessOut');
+  legacy\image-studio\js\lensBrushTools.js:21:  const strength=$('lensBrushStrength');
+  legacy\image-studio\js\lensBrushTools.js:22:  const strengthOut=$('lensBrushStrengthOut');
+> legacy\image-studio\js\lensBrushTools.js:23:  const handle=$('focusRadiusHandle');
+  legacy\image-studio\js\lensBrushTools.js:24:  const cursor=$('lensBrushCursor');
+  legacy\image-studio\js\lensBrushTools.js:25:
+  legacy\image-studio\js\lensBrushTools.js:26:  if(!canvas||!blurBtn||!restoreBtn)return;
+  legacy\image-studio\js\lensBrushTools.js:65:    const l=current&&current.lens;
+  legacy\image-studio\js\lensBrushTools.js:66:    if(!l)return;
+  legacy\image-studio\js\lensBrushTools.js:67:
+> legacy\image-studio\js\lensBrushTools.js:68:    if(focusNumber&&document.activeElement!==focusNumber){
+> legacy\image-studio\js\lensBrushTools.js:69:      focusNumber.value=String(
+> legacy\image-studio\js\lensBrushTools.js:70:        Math.round(clamp(l.focusRadius,.03,.7)*100)
+  legacy\image-studio\js\lensBrushTools.js:71:      )
+  legacy\image-studio\js\lensBrushTools.js:72:    }
+  legacy\image-studio\js\lensBrushTools.js:73:
+  legacy\image-studio\js\lensBrushTools.js:112:
+  legacy\image-studio\js\lensBrushTools.js:113:    if(mode!=='none'){
+  legacy\image-studio\js\lensBrushTools.js:114:      ensureLens();
+> legacy\image-studio\js\lensBrushTools.js:115:      bridge.setFocusMode(false)
+  legacy\image-studio\js\lensBrushTools.js:116:    }
+  legacy\image-studio\js\lensBrushTools.js:117:
+  legacy\image-studio\js\lensBrushTools.js:118:    syncControls(state());
+  legacy\image-studio\js\lensBrushTools.js:122:        ? 'Pincel de desenfoque activo.'
+  legacy\image-studio\js\lensBrushTools.js:123:        : mode==='restore'
+  legacy\image-studio\js\lensBrushTools.js:124:          ? 'Pincel restaurador activo.'
+> legacy\image-studio\js\lensBrushTools.js:125:          : 'Pinceles Lens Blur desactivados.'
+  legacy\image-studio\js\lensBrushTools.js:126:    )
+  legacy\image-studio\js\lensBrushTools.js:127:  }
+  legacy\image-studio\js\lensBrushTools.js:128:
+  legacy\image-studio\js\lensBrushTools.js:129:  function pointFromEvent(event){
+> legacy\image-studio\js\lensBrushTools.js:130:    const rect=canvas.getBoundingClientRect();
+  legacy\image-studio\js\lensBrushTools.js:131:
+  legacy\image-studio\js\lensBrushTools.js:132:    return{
+  legacy\image-studio\js\lensBrushTools.js:133:      x:clamp((event.clientX-rect.left)/Math.max(1,rect.width),0,1),
+  legacy\image-studio\js\lensBrushTools.js:199:      return
+  legacy\image-studio\js\lensBrushTools.js:200:    }
+  legacy\image-studio\js\lensBrushTools.js:201:
+> legacy\image-studio\js\lensBrushTools.js:202:    const rect=canvas.getBoundingClientRect();
+  legacy\image-studio\js\lensBrushTools.js:203:    const short=Math.min(rect.width,rect.height);
+  legacy\image-studio\js\lensBrushTools.js:204:    const size=clamp(lens().brushRadius,.01,.4)*short*2;
+> legacy\image-studio\js\lensBrushTools.js:205:    const wrap=canvas.parentElement.getBoundingClientRect();
+  legacy\image-studio\js\lensBrushTools.js:206:
+  legacy\image-studio\js\lensBrushTools.js:207:    cursor.hidden=false;
+> legacy\image-studio\js\lensBrushTools.js:208:    cursor.style.width=`${size}px`;
+> legacy\image-studio\js\lensBrushTools.js:209:    cursor.style.height=`${size}px`;
+  legacy\image-studio\js\lensBrushTools.js:210:    cursor.style.left=`${event.clientX-wrap.left-size/2}px`;
+  legacy\image-studio\js\lensBrushTools.js:211:    cursor.style.top=`${event.clientY-wrap.top-size/2}px`;
+  legacy\image-studio\js\lensBrushTools.js:212:    cursor.dataset.mode=mode
+  legacy\image-studio\js\lensBrushTools.js:222:    ()=>setMode('restore')
+  legacy\image-studio\js\lensBrushTools.js:223:  );
+  legacy\image-studio\js\lensBrushTools.js:224:
+> legacy\image-studio\js\lensBrushTools.js:225:  $('focusModeBtn')?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:226:    'click',
+  legacy\image-studio\js\lensBrushTools.js:227:    ()=>{
+  legacy\image-studio\js\lensBrushTools.js:228:      mode='none';
+  legacy\image-studio\js\lensBrushTools.js:234:    'click',
+  legacy\image-studio\js\lensBrushTools.js:235:    ()=>{
+  legacy\image-studio\js\lensBrushTools.js:236:      if(!lens().strokes.length){
+> legacy\image-studio\js\lensBrushTools.js:237:        bridge.toast('No hay pinceladas Lens Blur.')
+  legacy\image-studio\js\lensBrushTools.js:238:        return
+  legacy\image-studio\js\lensBrushTools.js:239:      }
+  legacy\image-studio\js\lensBrushTools.js:240:
+  legacy\image-studio\js\lensBrushTools.js:241:      lens().strokes=[];
+> legacy\image-studio\js\lensBrushTools.js:242:      bridge.commit('Pinceladas Lens Blur eliminadas');
+  legacy\image-studio\js\lensBrushTools.js:243:      syncControls(state())
+  legacy\image-studio\js\lensBrushTools.js:244:    }
+  legacy\image-studio\js\lensBrushTools.js:245:  );
+  legacy\image-studio\js\lensBrushTools.js:246:
+> legacy\image-studio\js\lensBrushTools.js:247:  focusNumber?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:248:    'input',
+  legacy\image-studio\js\lensBrushTools.js:249:    ()=>{
+  legacy\image-studio\js\lensBrushTools.js:250:      ensureLens();
+> legacy\image-studio\js\lensBrushTools.js:251:      lens().focusRadius=
+> legacy\image-studio\js\lensBrushTools.js:252:        clamp(focusNumber.value,3,70)/100;
+  legacy\image-studio\js\lensBrushTools.js:253:
+> legacy\image-studio\js\lensBrushTools.js:254:      bridge.updateFocusRing();
+  legacy\image-studio\js\lensBrushTools.js:255:      bridge.renderFast()
+  legacy\image-studio\js\lensBrushTools.js:256:    }
+  legacy\image-studio\js\lensBrushTools.js:257:  );
+  legacy\image-studio\js\lensBrushTools.js:258:
+> legacy\image-studio\js\lensBrushTools.js:259:  focusNumber?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:260:    'change',
+  legacy\image-studio\js\lensBrushTools.js:261:    ()=>{
+  legacy\image-studio\js\lensBrushTools.js:262:      bridge.commit('Radio de foco')
+  legacy\image-studio\js\lensBrushTools.js:275:
+  legacy\image-studio\js\lensBrushTools.js:276:  brushRadius?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:277:    'change',
+> legacy\image-studio\js\lensBrushTools.js:278:    ()=>bridge.commit('Radio del pincel Lens Blur')
+  legacy\image-studio\js\lensBrushTools.js:279:  );
+  legacy\image-studio\js\lensBrushTools.js:280:
+  legacy\image-studio\js\lensBrushTools.js:281:  hardness?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:290:
+  legacy\image-studio\js\lensBrushTools.js:291:  hardness?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:292:    'change',
+> legacy\image-studio\js\lensBrushTools.js:293:    ()=>bridge.commit('Dureza del pincel Lens Blur')
+  legacy\image-studio\js\lensBrushTools.js:294:  );
+  legacy\image-studio\js\lensBrushTools.js:295:
+  legacy\image-studio\js\lensBrushTools.js:296:  strength?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:305:
+  legacy\image-studio\js\lensBrushTools.js:306:  strength?.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:307:    'change',
+> legacy\image-studio\js\lensBrushTools.js:308:    ()=>bridge.commit('Fuerza del pincel Lens Blur')
+  legacy\image-studio\js\lensBrushTools.js:309:  );
+  legacy\image-studio\js\lensBrushTools.js:310:
+  legacy\image-studio\js\lensBrushTools.js:311:  canvas.addEventListener(
+  legacy\image-studio\js\lensBrushTools.js:371:    if(changed){
+  legacy\image-studio\js\lensBrushTools.js:372:      bridge.commit(
+  legacy\image-studio\js\lensBrushTools.js:373:        mode==='restore'
+> legacy\image-studio\js\lensBrushTools.js:374:          ? 'Pincel restaurador Lens Blur'
+> legacy\image-studio\js\lensBrushTools.js:375:          : 'Pincel desenfoque Lens Blur'
+  legacy\image-studio\js\lensBrushTools.js:376:      )
+  legacy\image-studio\js\lensBrushTools.js:377:    }
+  legacy\image-studio\js\lensBrushTools.js:378:  }
+  legacy\image-studio\js\lensBrushTools.js:416:
+  legacy\image-studio\js\lensBrushTools.js:417:      event.preventDefault();
+  legacy\image-studio\js\lensBrushTools.js:418:
+> legacy\image-studio\js\lensBrushTools.js:419:      const rect=canvas.getBoundingClientRect();
+> legacy\image-studio\js\lensBrushTools.js:420:      const cx=rect.left+lens().focusX*rect.width;
+> legacy\image-studio\js\lensBrushTools.js:421:      const cy=rect.top+lens().focusY*rect.height;
+  legacy\image-studio\js\lensBrushTools.js:422:      const distance=Math.hypot(
+  legacy\image-studio\js\lensBrushTools.js:423:        event.clientX-cx,
+  legacy\image-studio\js\lensBrushTools.js:424:        event.clientY-cy
+  legacy\image-studio\js\lensBrushTools.js:425:      );
+  legacy\image-studio\js\lensBrushTools.js:426:
+> legacy\image-studio\js\lensBrushTools.js:427:      lens().focusRadius=clamp(
+  legacy\image-studio\js\lensBrushTools.js:428:        distance/Math.max(1,Math.min(rect.width,rect.height)),
+  legacy\image-studio\js\lensBrushTools.js:429:        .03,
+  legacy\image-studio\js\lensBrushTools.js:430:        .7
+  legacy\image-studio\js\lensBrushTools.js:431:      );
+  legacy\image-studio\js\lensBrushTools.js:432:
+  legacy\image-studio\js\lensBrushTools.js:433:      syncControls(state());
+> legacy\image-studio\js\lensBrushTools.js:434:      bridge.updateFocusRing();
+  legacy\image-studio\js\lensBrushTools.js:435:      bridge.renderFast()
+  legacy\image-studio\js\lensBrushTools.js:436:    }
+  legacy\image-studio\js\lensBrushTools.js:437:  );
+  legacy\image-studio\js\lensBrushTools.js:445:      handle.releasePointerCapture(event.pointerId)
+  legacy\image-studio\js\lensBrushTools.js:446:    }catch(_){}
+  legacy\image-studio\js\lensBrushTools.js:447:
+> legacy\image-studio\js\lensBrushTools.js:448:    bridge.commit('Radio del foco Lens Blur')
+  legacy\image-studio\js\lensBrushTools.js:449:  }
+  legacy\image-studio\js\lensBrushTools.js:450:
+  legacy\image-studio\js\lensBrushTools.js:451:  handle?.addEventListener(
+
+
