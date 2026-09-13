@@ -6,7 +6,7 @@ import {
 import {
   detectWebGL,
   create3dScene
-} from './scene3d.js?cache=side-curls-v11-3-1-20260913';
+} from './scene3d.js?cache=wolf-palette-v12-1-20260913';
 import {
   MAX_3D_LIGHTS,
   createDefault3dLight,

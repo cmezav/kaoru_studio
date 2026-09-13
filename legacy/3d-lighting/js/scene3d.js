@@ -29,7 +29,7 @@ const HAIR_PACK_2_MODEL_URL = new URL(
 ).href;
 
 const HAIR_WOLF_MODEL_URL = new URL(
-  '../assets/models/hair/wolf_haircut_with_bones=hair-models-v11-1-20260912',
+  '../assets/models/hair/wolf_haircut_with_bones.glb?cache=wolf-v12-1-20260913',
   import.meta.url
 ).href;
 
