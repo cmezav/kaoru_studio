@@ -117,6 +117,51 @@ function getBaseColor(colors){
   return safe[6] || safe[0] || '#4B362B';
 }
 
+function getHairPalette(colors){
+  const safe = Array.isArray(colors) ? colors : [];
+  const base = getBaseColor(safe);
+  const fallback = [
+    mixHex(base, '#050308', 0.78),
+    mixHex(base, '#0b0710', 0.66),
+    mixHex(base, '#17101d', 0.50),
+    mixHex(base, '#281c31', 0.34),
+    mixHex(base, '#6f78b8', 0.18),
+    mixHex(base, '#25182d', 0.14),
+    base,
+    mixHex(base, '#d77b57', 0.18),
+    mixHex(base, '#d89283', 0.22),
+    mixHex(base, '#ffffff', 0.20),
+    mixHex(base, '#ffffff', 0.34),
+    mixHex(base, '#ffffff', 0.48),
+    mixHex(base, '#ffffff', 0.64),
+    mixHex(base, '#ffffff', 0.80),
+    mixHex(base, '#9ecbff', 0.52),
+    mixHex(base, '#ff9b72', 0.46)
+  ];
+  return fallback.map((value, index) => hexToRgb(safe[index] || value));
+}
+
+function mixRgb(a, b, amount){
+  const t = clamp(amount);
+  return {
+    r:a.r + (b.r - a.r) * t,
+    g:a.g + (b.g - a.g) * t,
+    b:a.b + (b.b - a.b) * t
+  };
+}
+
+function paletteColorAt(palette, position){
+  const value = clamp(position, 0, palette.length - 1);
+  const low = Math.floor(value);
+  const high = Math.min(palette.length - 1, low + 1);
+  return mixRgb(palette[low], palette[high], value - low);
+}
+
+function percent(value, fallback = 0){
+  const number = Number(value);
+  return clamp(Number.isFinite(number) ? number / 100 : fallback);
+}
+
 function tintGrayscaleMask(maskCanvas, colors){
   const width = maskCanvas.width;
   const height = maskCanvas.height;
@@ -124,7 +169,7 @@ function tintGrayscaleMask(maskCanvas, colors){
   const outputCanvas = createCanvas(width, height);
   const outputContext = outputCanvas.getContext('2d');
   const output = outputContext.createImageData(width, height);
-  const base = hexToRgb(getBaseColor(colors));
+  const palette = getHairPalette(colors);
 
   for(let index = 0; index < source.data.length; index += 4){
     const alpha = source.data[index + 3];
@@ -136,24 +181,30 @@ function tintGrayscaleMask(maskCanvas, colors){
       source.data[index + 2] * 0.0722
     ) / 255;
 
-    let red;
-    let green;
-    let blue;
-    if(luminance < 0.5){
-      const factor = 0.24 + luminance * 1.52;
-      red = base.r * factor;
-      green = base.g * factor;
-      blue = base.b * factor;
+    const pixel = index / 4;
+    const x = (pixel % width) / Math.max(1, width - 1);
+    const y = Math.floor(pixel / width) / Math.max(1, height - 1);
+    const tone = clamp((luminance - 0.045) / 0.86);
+    const strandVariation = Math.sin(x * 31 + y * 17) * 0.24;
+    let palettePosition;
+
+    if(tone < 0.34){
+      palettePosition = tone / 0.34 * 4;
+    }else if(tone < 0.72){
+      palettePosition = 4 + (tone - 0.34) / 0.38 * 6 + strandVariation;
     }else{
-      const highlight = clamp((luminance - 0.5) * 1.35, 0, 0.68);
-      red = base.r + (255 - base.r) * highlight;
-      green = base.g + (255 - base.g) * highlight;
-      blue = base.b + (255 - base.b) * highlight;
+      palettePosition = 10 + (tone - 0.72) / 0.28 * 3;
     }
 
-    output.data[index] = Math.round(clamp(red, 0, 255));
-    output.data[index + 1] = Math.round(clamp(green, 0, 255));
-    output.data[index + 2] = Math.round(clamp(blue, 0, 255));
+    let color = paletteColorAt(palette.slice(0, 14), palettePosition);
+    const coolWarm = clamp(x * 0.66 + y * 0.20 + strandVariation * 0.18);
+    const transition = mixRgb(palette[4], palette[7], coolWarm);
+    const transitionStrength = 0.05 + (1 - Math.abs(tone - 0.52) * 2) * 0.11;
+    color = mixRgb(color, transition, clamp(transitionStrength, 0.03, 0.16));
+
+    output.data[index] = Math.round(clamp(color.r, 0, 255));
+    output.data[index + 1] = Math.round(clamp(color.g, 0, 255));
+    output.data[index + 2] = Math.round(clamp(color.b, 0, 255));
     output.data[index + 3] = alpha;
   }
 
@@ -166,37 +217,157 @@ function applyLighting(tintedCanvas, maskCanvas, colors, lighting){
   const height = tintedCanvas.height;
   const canvas = createCanvas(width, height);
   const context = canvas.getContext('2d');
-  const base = getBaseColor(colors);
-  const vector = dominantLightVector(lighting || {});
   const lights = activeLights(lighting || {});
+  const palette = Array.isArray(colors) ? colors : [];
+  const atmosphere = lighting?.atmosphere?.backdrop;
 
   context.drawImage(tintedCanvas, 0, 0);
 
-  const keyX = clamp((vector?.x ?? 0) * 0.5 + 0.5, 0.05, 0.95);
-  const keyY = clamp((vector?.y ?? -0.5) * 0.5 + 0.5, 0.04, 0.96);
-  const key = context.createRadialGradient(
-    width * keyX, height * keyY, 0,
-    width * keyX, height * keyY, Math.max(width, height) * 0.68
-  );
-  key.addColorStop(0, rgba(mixHex(base, '#ffffff', 0.72), 0.28));
-  key.addColorStop(0.42, rgba(base, 0.05));
-  key.addColorStop(1, rgba(base, 0));
-  context.globalCompositeOperation = 'screen';
-  context.fillStyle = key;
-  context.fillRect(0, 0, width, height);
+  if(lighting){
+    const ambientStrength = percent(lighting.ambient?.intensity, 0.12);
+    if(ambientStrength > 0){
+      context.save();
+      context.globalCompositeOperation = 'soft-light';
+      context.globalAlpha = 0.18 + ambientStrength * 0.52;
+      context.fillStyle = lighting.ambient?.color || '#AEB8CF';
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
 
-  lights.slice(0, 4).forEach((light) => {
-    const x = clamp((light.position?.x ?? 0) * 0.5 + 0.5, 0.04, 0.96);
-    const y = clamp((light.position?.y ?? -0.5) * 0.5 + 0.5, 0.03, 0.97);
-    const intensity = clamp(Number(light.intensity ?? 1), 0, 3);
-    const radius = Math.max(width, height) * (0.32 + clamp(light.softness ?? 0.45) * 0.42);
+    if(atmosphere){
+      const environment = context.createLinearGradient(0, 0, width, height);
+      environment.addColorStop(0, rgba(atmosphere.top || '#7FAED0', 0.54));
+      environment.addColorStop(0.48, rgba(atmosphere.mid || '#AAB7C0', 0.34));
+      environment.addColorStop(1, rgba(atmosphere.bottom || '#6E7778', 0.48));
+      context.save();
+      context.globalCompositeOperation = 'soft-light';
+      context.globalAlpha = 0.48;
+      context.fillStyle = environment;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+
+      const accent = context.createRadialGradient(
+        width * 0.24, height * 0.20, 0,
+        width * 0.24, height * 0.20, Math.max(width, height) * 0.78
+      );
+      accent.addColorStop(0, rgba(atmosphere.accent || '#ffffff', 0.34));
+      accent.addColorStop(0.46, rgba(atmosphere.accent || '#ffffff', 0.10));
+      accent.addColorStop(1, rgba(atmosphere.accent || '#ffffff', 0));
+      context.save();
+      context.globalCompositeOperation = 'screen';
+      context.fillStyle = accent;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+
+    const shadowStrength = percent(lighting.shadow?.intensity, 0.30);
+    if(shadowStrength > 0){
+      const vector = dominantLightVector(lighting || {});
+      const shadow = context.createLinearGradient(
+        width * clamp(0.5 + (vector?.x ?? 0) * 0.5),
+        height * clamp(0.5 + (vector?.y ?? -0.4) * 0.5),
+        width * clamp(0.5 - (vector?.x ?? 0) * 0.5),
+        height * clamp(0.5 - (vector?.y ?? -0.4) * 0.5)
+      );
+      shadow.addColorStop(0, rgba(lighting.shadow?.color || palette[1] || '#211827', 0.03));
+      shadow.addColorStop(0.52, rgba(lighting.shadow?.color || palette[1] || '#211827', 0.16 * shadowStrength));
+      shadow.addColorStop(1, rgba(lighting.shadow?.color || palette[1] || '#211827', 0.62 * shadowStrength));
+      context.save();
+      context.globalCompositeOperation = 'multiply';
+      context.fillStyle = shadow;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+  }
+
+  lights.slice(0, 8).forEach((light, index) => {
+    const direction = Number(light.direction || 0) * Math.PI / 180;
+    const elevation = Number(light.elevation || 0) * Math.PI / 180;
+    const x = clamp(0.5 + Math.sin(direction) * 0.46, 0.04, 0.96);
+    const y = clamp(0.52 - Math.sin(elevation) * 0.46, 0.03, 0.97);
+    const intensity = percent(light.intensity, 0.55);
+    const softness = percent(light.softness, 0.40);
+    const radius = Math.max(width, height) * (0.25 + softness * 0.58 + index * 0.025);
     const glow = context.createRadialGradient(width * x, height * y, 0, width * x, height * y, radius);
-    glow.addColorStop(0, rgba(light.color || '#ffffff', 0.22 * intensity));
-    glow.addColorStop(0.35, rgba(light.color || '#ffffff', 0.08 * intensity));
+    glow.addColorStop(0, rgba(light.color || '#ffffff', 0.18 + 0.46 * intensity));
+    glow.addColorStop(0.28, rgba(light.color || '#ffffff', 0.08 + 0.25 * intensity));
+    glow.addColorStop(0.64, rgba(light.color || '#ffffff', 0.05 * intensity));
     glow.addColorStop(1, rgba(light.color || '#ffffff', 0));
+    context.save();
+    context.globalCompositeOperation = 'screen';
     context.fillStyle = glow;
     context.fillRect(0, 0, width, height);
+    context.restore();
   });
+
+  if(lighting){
+    const bounceStrength = percent(lighting.bounce?.intensity, 0.10);
+    if(bounceStrength > 0){
+      const bounceColor = lighting.bounce?.color || palette[15] || '#D19B83';
+      const bounce = context.createRadialGradient(
+        width * 0.5, height * 1.02, 0,
+        width * 0.5, height * 1.02, Math.max(width, height) * 0.72
+      );
+      bounce.addColorStop(0, rgba(bounceColor, 0.18 + bounceStrength * 0.62));
+      bounce.addColorStop(0.48, rgba(bounceColor, bounceStrength * 0.20));
+      bounce.addColorStop(1, rgba(bounceColor, 0));
+      context.save();
+      context.globalCompositeOperation = 'screen';
+      context.fillStyle = bounce;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+
+    const rimStrength = percent(lighting.rim?.intensity, 0.08);
+    if(rimStrength > 0){
+      const firstDirection = Number(lights[0]?.direction || 0);
+      const rimFromRight = firstDirection <= 0;
+      const rim = context.createLinearGradient(
+        rimFromRight ? width : 0, 0,
+        rimFromRight ? width * 0.54 : width * 0.46, 0
+      );
+      const rimColor = lighting.rim?.color || palette[14] || '#D8E8FF';
+      rim.addColorStop(0, rgba(rimColor, 0.26 + rimStrength * 0.72));
+      rim.addColorStop(0.34, rgba(rimColor, rimStrength * 0.24));
+      rim.addColorStop(1, rgba(rimColor, 0));
+      context.save();
+      context.globalCompositeOperation = 'screen';
+      context.fillStyle = rim;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+    }
+
+    const effect = atmosphere?.effect || lighting.projector;
+    const rawOpacity = Number(effect?.opacity || 0);
+    const effectOpacity = rawOpacity > 1 ? clamp(rawOpacity / 100) : clamp(rawOpacity);
+    if(effect && effect.type && effect.type !== 'none' && effectOpacity > 0){
+      context.save();
+      context.globalCompositeOperation = 'screen';
+      context.globalAlpha = effectOpacity * 0.72;
+      if(effect.type === 'split' || effect.type === 'neon' || effect.type === 'rainbow'){
+        const split = context.createLinearGradient(0, 0, width, 0);
+        split.addColorStop(0, effect.colorA || atmosphere?.accent || '#38BDF8');
+        split.addColorStop(0.48, 'rgba(255,255,255,0)');
+        split.addColorStop(0.52, 'rgba(255,255,255,0)');
+        split.addColorStop(1, effect.colorB || '#F472B6');
+        context.fillStyle = split;
+        context.fillRect(0, 0, width, height);
+      }else{
+        const effectGlow = context.createRadialGradient(
+          width * (0.5 + Number(effect.offsetX || 0) / 200),
+          height * (0.5 + Number(effect.offsetY || 0) / 200),
+          0,
+          width * 0.5, height * 0.5, Math.max(width, height) * 0.68
+        );
+        effectGlow.addColorStop(0, effect.colorA || atmosphere?.accent || '#ffffff');
+        effectGlow.addColorStop(0.58, rgba(effect.colorB || effect.colorA || '#ffffff', 0.18));
+        effectGlow.addColorStop(1, 'rgba(255,255,255,0)');
+        context.fillStyle = effectGlow;
+        context.fillRect(0, 0, width, height);
+      }
+      context.restore();
+    }
+  }
 
   context.globalCompositeOperation = 'destination-in';
   context.drawImage(maskCanvas, 0, 0);

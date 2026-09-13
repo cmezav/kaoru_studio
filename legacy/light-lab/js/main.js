@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-masks-v9-20260913';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-multicolor-v9-1-20260913';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';

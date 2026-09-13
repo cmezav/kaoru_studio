@@ -1,7 +1,7 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
 import { drawLightProjectorPattern, normalizeLightProjector } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
-import { renderCompleteHairAsset } from './hairAssetRenderer.js?cache=hair-masks-v9-20260913';
+import { renderCompleteHairAsset } from './hairAssetRenderer.js?cache=hair-multicolor-v9-1-20260913';
 
 const MATERIAL_TINTS = {
   gold: '#D6A93D',
@@ -2238,7 +2238,7 @@ export function renderBasicPreview(canvas, colors, mode = 'sphere', lighting = n
       width,
       height,
       safeColors,
-      lighting || lightVector,
+      lighting,
       options.hairTexture || '1b',
       options.hairStudyMode || 'render',
       options.hairView || 'back'
