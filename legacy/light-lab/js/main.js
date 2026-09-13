@@ -4396,3 +4396,117 @@ kaoruImportPresetsFileLight
 
 kaoruBindBeforeHoldLight();
 /* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+
+/* === KAORU_FACE_LIGHTS_LIGHTLAB_V12 === */
+(async () => {
+  if (window.__KAORU_FACE_LIGHTS_LIGHTLAB_V12__) return;
+  window.__KAORU_FACE_LIGHTS_LIGHTLAB_V12__ = true;
+
+  const kit = await import('../../shared/kaoruFaceLightKit.js?cache=face-lights-v12-20260913');
+
+  function normalizePresetLights(preset) {
+    return (preset?.lights || []).map((light, index) => ({
+      id: `kaoru-face-${index + 1}`,
+      label: light.label || `Luz ${index + 1}`,
+      enabled: true,
+      color: light.color,
+      intensity: Number(light.intensity ?? 1),
+      softness: Number(light.softness ?? 0.4),
+      position: {
+        x: Number(light.position?.x ?? 0),
+        y: Number(light.position?.y ?? 0)
+      }
+    }));
+  }
+
+  function applyToStore(preset) {
+    const localStore =
+      typeof store !== 'undefined'
+        ? store
+        : (window.store || null);
+
+    const localRender =
+      typeof render !== 'undefined'
+        ? render
+        : null;
+
+    if (!localStore || typeof localStore.getState !== 'function') {
+      return false;
+    }
+
+    const current = localStore.getState() || {};
+    const nextLighting = {
+      ...(current.lighting || {}),
+      enabled: true,
+      lights: normalizePresetLights(preset)
+    };
+
+    const next = {
+      ...current,
+      lighting: nextLighting
+    };
+
+    let applied = false;
+
+    if (typeof localStore.setState === 'function') {
+      localStore.setState(next);
+      applied = true;
+    } else if (typeof localStore.patch === 'function') {
+      localStore.patch({ lighting: nextLighting });
+      applied = true;
+    } else if (typeof localStore.dispatch === 'function') {
+      localStore.dispatch({
+        type: 'KAORU_APPLY_FACE_LIGHT_PRESET',
+        payload: next
+      });
+      applied = true;
+    } else {
+      try {
+        current.lighting = nextLighting;
+        applied = true;
+      } catch (error) {
+        console.warn('Kaoru preset mutate fallback fallo:', error);
+      }
+    }
+
+    try {
+      if (typeof localRender === 'function') {
+        localRender(
+          typeof localStore.getState === 'function'
+            ? localStore.getState()
+            : next
+        );
+      }
+    } catch (error) {
+      console.warn('Kaoru preset render fallback fallo:', error);
+    }
+
+    return applied;
+  }
+
+  function applyPreset(preset) {
+    try {
+      const byState = applyToStore(preset);
+      const byDom = kit.applyPresetToLightEditorDom(preset, document);
+      return byState || byDom;
+    } catch (error) {
+      console.warn('Kaoru Light Studio preset fallo:', error);
+      return kit.applyPresetToLightEditorDom(preset, document);
+    }
+  }
+
+  function mountPanel() {
+    kit.mountKaoruFacePanel({
+      doc: document,
+      title: 'Face Lights + Palette',
+      subtitle: '4 presets extraÃ­dos de retratos: rostro, cabello, contraste y ambiente.',
+      applyPreset
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountPanel, { once: true });
+  } else {
+    mountPanel();
+  }
+})();

@@ -5010,3 +5010,90 @@ kaoruImportPresetsFile3d
 
 kaoruBindBeforeHold3d();
 /* === /KAORU BEFORE AFTER + PRESET TRANSFER V11 === */
+
+/* === KAORU_FACE_LIGHTS_3D_V12 === */
+(async () => {
+  if (window.__KAORU_FACE_LIGHTS_3D_V12__) return;
+  window.__KAORU_FACE_LIGHTS_3D_V12__ = true;
+
+  const kit = await import('../../shared/kaoruFaceLightKit.js?cache=face-lights-v12-20260913');
+
+  function tryKnownApis(preset) {
+    const payload = (preset?.lights || []).map((light, index) => ({
+      id: `kaoru-face-${index + 1}`,
+      label: light.label || `Luz ${index + 1}`,
+      enabled: true,
+      color: light.color,
+      intensity: Number(light.intensity ?? 1),
+      softness: Number(light.softness ?? 0.4),
+      position: {
+        x: Number(light.position?.x ?? 0),
+        y: Number(light.position?.y ?? 0)
+      }
+    }));
+
+    const apis = [
+      window.KAORU_3D_STUDIO_API,
+      window.KAORU_3D_LIGHTING_API,
+      window.KAORU_3D_VIEWER,
+      window.scene3d,
+      window.sceneController,
+      window.viewer3d,
+      window.studio3d
+    ].filter(Boolean);
+
+    for (const api of apis) {
+      try {
+        if (typeof api.applyLightPreset === 'function') {
+          api.applyLightPreset(payload);
+          return true;
+        }
+        if (typeof api.setLights === 'function') {
+          api.setLights(payload);
+          return true;
+        }
+        if (typeof api.applyLights === 'function') {
+          api.applyLights(payload);
+          return true;
+        }
+      } catch (error) {
+        console.warn('Kaoru 3D API preset fallo:', error);
+      }
+    }
+
+    return false;
+  }
+
+  function applyPreset(preset) {
+    const viaApi = tryKnownApis(preset);
+    const viaDom = kit.applyPresetToLightEditorDom(preset, document);
+
+    try {
+      window.__KAORU_PENDING_3D_FACE_PRESET__ = preset;
+      window.dispatchEvent(
+        new CustomEvent('kaoru-3d-face-preset-applied', {
+          detail: { preset }
+        })
+      );
+    } catch (error) {
+      console.warn('Kaoru 3D event fallback fallo:', error);
+    }
+
+    return viaApi || viaDom;
+  }
+
+  function mountPanel() {
+    kit.mountKaoruFacePanel({
+      doc: document,
+      title: '3D Face Lights + Palette',
+      subtitle: 'Presets para probar cÃ³mo la luz modela facciones y cabello en 3D.',
+      applyPreset
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', mountPanel, { once: true });
+  } else {
+    mountPanel();
+  }
+})();
