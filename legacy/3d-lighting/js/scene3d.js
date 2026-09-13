@@ -12,7 +12,7 @@ import { createHairModel } from './hairModels3d.js?cache=hair-models-v11-1-20260
 export const SCENE3D_PHASE = 6;
 
 const SIDE_SWEPT_CURLS_MODEL_URL = new URL(
-  '../assets/models/hair/side_swept_curls_with_bones=hair-models-v11-3-20260912',
+  '../assets/models/hair/side_swept_curls_with_bones.glb?cache=side-curls-v11-3-1-20260913',
   import.meta.url
 ).href;
 
