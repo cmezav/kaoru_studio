@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-multicolor-v9-1-20260913';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-balanced-v9-2-20260913';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -2770,7 +2770,25 @@ function render(state) {
   elements.canvasHint.textContent=referenceActive?(state.reference.image?'Haz clic sobre la imagen para capturar el color':'Sube, pega o arrastra una imagen'):(paletteView==='original'?'Paleta sin iluminaciÃ³n':paletteView==='selected'?`Solo ${selectedLight?.name || 'luz elegida'}`:lightingSummary(state.lighting));
   elements.previewTabs.querySelectorAll('[data-view]').forEach((button)=>{const active=button.dataset.view===state.selection.previewMode;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
   elements.paletteViewTabs.querySelectorAll('[data-palette-view]').forEach((button)=>{const active=button.dataset.paletteView===paletteView;button.classList.toggle('is-active',active);button.setAttribute('aria-selected',String(active));});
-  if(!referenceActive){const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;requestAnimationFrame(()=>renderBasicPreview(elements.canvas,previewEntries.map((entry)=>entry.hex),state.selection.previewMode,paletteView==='original'?null:previewLighting,{categoryId:state.selection.categoryId,hairTexture:state.selection.hairTexture||state.selection.undertoneId||'1b',hairStudyMode:window.KAORU_HAIR_STUDY_MODE||'render',hairView:window.KAORU_HAIR_VIEW||'back'}));}
+  if(!referenceActive){
+    const previewEntries=paletteView==='original'?original:paletteView==='selected'?selectedEntries:illuminated;
+    const previewLighting=paletteView==='selected'?{...state.lighting,lights:selectedLight?[selectedLight]:[]}:state.lighting;
+    const isHairPreview=state.selection.previewMode==='hair';
+    const previewColors=isHairPreview?original:previewEntries;
+    requestAnimationFrame(()=>renderBasicPreview(
+      elements.canvas,
+      previewColors.map((entry)=>entry.hex),
+      state.selection.previewMode,
+      paletteView==='original'?null:previewLighting,
+      {
+        categoryId:state.selection.categoryId,
+        hairTexture:state.selection.hairTexture||state.selection.undertoneId||'1b',
+        hairStudyMode:window.KAORU_HAIR_STUDY_MODE||'render',
+        hairView:window.KAORU_HAIR_VIEW||'back',
+        hairBaseHex:state.palette.baseHex
+      }
+    ));
+  }
 }
 
 function applyManualHex() {
@@ -3466,7 +3484,8 @@ elements.clearSamples.addEventListener('click',()=>{store.setState((state)=>({..
 elements.recentColors.addEventListener('click',async(event)=>{const item=event.target.closest('[data-recent-hex]');if(!item)return;const hex=item.dataset.recentHex;const action=event.target.closest('[data-recent-action]')?.dataset.recentAction;if(action==='copy'){await copyText(hex);showToast(`${hex} copiado`);}else if(action==='base')useExtractedAsBase(hex,'recent-base');});
 elements.copyAll.addEventListener('click',async()=>{const state=store.getState();const illuminated=applyLightingToPalette(state.palette.entries,state.lighting);const selected=applyLightingToPalette(state.palette.entries,state.lighting,{onlyLightId:state.lighting.selectedLightId});const view=state.ui.paletteView||'illuminated';const text=view==='compare'?[`ORIGINAL`,...state.palette.entries.map((item)=>`${item.role}: ${item.hex}`),``,`ILUMINADA`,...illuminated.map((item)=>`${item.role}: ${item.hex}`)].join('\n'):(view==='original'?state.palette.entries:view==='selected'?selected:illuminated).map((item)=>`${item.role}: ${item.hex}`).join('\n');await copyText(text);showToast(view==='compare'?'ComparaciÃ³n completa copiada':'Los 16 cÃ³digos HEX fueron copiados');});
 elements.download.addEventListener('click',()=>{downloadProjectStructure(store.getState());showToast('Proyecto Light Lab descargado');});
-document.addEventListener('studio-theme-change',()=>render(store.getState())); window.addEventListener('resize',()=>{const state=store.getState();if(state.selection.previewMode!=='reference'){const original=state.palette.entries;const selected=state.lighting.lights.find((light)=>light.id===state.lighting.selectedLightId);const entries=state.ui.paletteView==='original'?original:applyLightingToPalette(original,state.lighting,state.ui.paletteView==='selected'?{onlyLightId:selected?.id}:{});const previewLighting=state.ui.paletteView==='selected'?{...state.lighting,lights:selected?[selected]:[]}:state.lighting;renderBasicPreview(elements.canvas,entries.map((entry)=>entry.hex),state.selection.previewMode,state.ui.paletteView==='original'?null:previewLighting);}},{passive:true});
+document.addEventListener('studio-theme-change',()=>render(store.getState()));
+window.addEventListener('resize',()=>render(store.getState()),{passive:true});
 store.subscribe(render); render(store.getState()); window.LightLab={getState:store.getState,reset:store.reset,useExtractedAsBase,applyLightingToPalette,phase:4};
 
 /* === KAORU PRESET SEARCH V4 === */
