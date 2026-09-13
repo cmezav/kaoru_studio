@@ -27,7 +27,7 @@ import {
   save3dToGallery,
   consume3dGalleryLaunch
 } from './storage3d.js?v=6.0';
-import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=lighting-calibration-v3-20260907';
+import { THREE_ATMOSPHERES, atmosphere3dById, build3dAtmosphere } from './atmospheres3d.js?cache=face-catalog-v12-3-1-20260913';
 import { projectorFromEffect } from '../../shared/lightPatterns.js?cache=lighting-calibration-v3-20260907';
 import {
   customLightingPresetById,

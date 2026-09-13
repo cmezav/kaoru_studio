@@ -47,7 +47,11 @@ const EXTRA_PRESET_TAGS={
   'ref-malla-ortogonal':['pattern','dramatic'],
   'ref-dispersion-espectral':['fantasy','color','pattern'],
   'ref-prisma-real':['fantasy','color','pattern'],
-  'ref-recorte-acuatico-multiple':['fantasy','color','pattern','dramatic']
+  'ref-recorte-acuatico-multiple':['fantasy','color','pattern','dramatic'],
+  'ref-club-blue-magenta':['color','dramatic'],
+  'ref-pink-green-editorial':['color','dramatic'],
+  'ref-electric-blue-rim':['color','dramatic'],
+  'ref-icy-wet-portrait':['color','natural'],
 };
 
 function extraPresetTags(id,c={}){
@@ -136,4 +140,141 @@ export const EXTRA_LIGHTING_ATMOSPHERES=[
   mk('ref-dispersion-espectral','Frente con Dispersión Espectral','Frente magenta y fina banda prismática iridiscente en el terminador',{background:'#704868',floor:'#5B3B55',exposure:.98,ambient:['#956389',22],shadow:['#533348',56],bounce:['#A6746C',14],rim:['#E7A9D4',14],key:['#E69ACB',96,0,18,42],fill:['#8C5A77',18,170,18,88],effect:{type:'iridescent',colorA:'#FF4FA3',colorB:'#62E8FF',opacity:84,angle:-18,scale:54,blur:2,offsetX:18,contrast:100,density:44}}),
   mk('ref-prisma-real','Proyección Prisma (Arcoíris Real)','Banda diagonal concentrada de espectro rojo/amarillo/verde/cian sobre taupé gris',{background:'#716965',floor:'#5C5552',exposure:.96,ambient:['#817A76',22],shadow:['#514B48',52],bounce:['#81756A',10],rim:['#D8D0C9',6],key:['#FFFFFF',88,-38,34,12],fill:['#716B69',16,135,18,92],effect:{type:'rainbow',colorA:'#FF3A3A',colorB:'#28E7FF',opacity:98,angle:-38,scale:64,blur:1,contrast:100,density:56}}),
   mk('ref-recorte-acuatico-multiple','Múltiple Recorte Frío Acuático','Rim blanco-azul superior/izquierdo y caústicas aguamarina desde base derecha',{background:'#072B3D',floor:'#052D36',exposure:.90,ambient:['#13495E',22],shadow:['#04202D',70],bounce:['#23D9B5',38],rim:['#B8EDFF',58],key:['#C6F1FF',110,-48,62,14],fill:['#29E1B8',92,118,-28,20],effect:{type:'caustics',colorA:'#32F2C2',colorB:'#84E8F3',opacity:92,angle:55,scale:116,blur:3,offsetX:30,offsetY:26,contrast:100,density:88},extra:[{id:'aquatic-rim-extra',name:'Recorte azul extra',color:'#A7E9FF',intensity:68,azimuth:-112,elevation:34,distance:5.8,softness:16}]}),
+
+  mk(
+    'ref-club-blue-magenta',
+    'Club Blue Magenta',
+    'Split nocturno magenta/azul: afila el rostro, ilumina frente, nariz y labios y hunde media cara en azul profundo.',
+    {
+      background:'#07051D',
+      floor:'#070515',
+      exposure:.84,
+      ambient:['#101353',18],
+      shadow:['#02020A',82],
+      bounce:['#173DFF',14],
+      rim:['#4FD8FF',18],
+      key:['#FF1F8F',135,-26,36,20,5.2],
+      fill:['#173DFF',115,58,12,62,5.8],
+      extra:[
+        {
+          id:'club-cyan-streak',
+          name:'Cyan streak accent',
+          color:'#4FD8FF',
+          intensity:52,
+          azimuth:94,
+          elevation:8,
+          distance:5.6,
+          softness:18
+        }
+      ],
+      effect:{
+        type:'split',
+        colorA:'#FF1F8F',
+        colorB:'#173DFF',
+        opacity:68,
+        angle:-24,
+        scale:124,
+        blur:10,
+        contrast:94,
+        density:52
+      }
+    }
+  ),
+
+  mk(
+    'ref-pink-green-editorial',
+    'Pink Green Editorial',
+    'Beauty editorial glossy: magenta dominante sobre pomulos, nariz, labios y cuello con verde lateral para tallar el contorno.',
+    {
+      background:'#25051F',
+      floor:'#180416',
+      exposure:.98,
+      ambient:['#4A014A',20],
+      shadow:['#130216',62],
+      bounce:['#72FF63',18],
+      rim:['#FF58D4',14],
+      key:['#FF1EC8',155,18,44,24,5.1],
+      fill:['#72FF63',72,-64,10,32,5.6],
+      extra:[
+        {
+          id:'editorial-plum-ambient',
+          name:'Plum ambient',
+          color:'#4A014A',
+          intensity:32,
+          azimuth:168,
+          elevation:-8,
+          distance:6.0,
+          softness:82
+        }
+      ],
+      effect:{
+        type:'neon',
+        colorA:'#FF1EC8',
+        colorB:'#72FF63',
+        opacity:64,
+        angle:18,
+        scale:118,
+        blur:9,
+        contrast:92,
+        density:54
+      }
+    }
+  ),
+
+  mk(
+    'ref-electric-blue-rim',
+    'Electric Blue Rim',
+    'Perfil escultorico casi en silueta: el azul electrico dibuja nariz, labios, menton, mandibula, cuello y borde del cabello.',
+    {
+      background:'#02040D',
+      floor:'#030611',
+      exposure:.72,
+      ambient:['#07122D',8],
+      shadow:['#000000',92],
+      bounce:['#0A173D',6],
+      rim:['#1F63FF',84],
+      key:['#1F63FF',160,-112,14,26,5.5],
+      fill:['#0A173D',18,38,8,70,6.0],
+      effect:{
+        type:'rim',
+        colorA:'#1F63FF',
+        colorB:'#08142F',
+        opacity:82,
+        angle:-108,
+        scale:128,
+        blur:5,
+        contrast:100,
+        density:44
+      }
+    }
+  ),
+
+  mk(
+    'ref-icy-wet-portrait',
+    'Icy Wet Portrait',
+    'Retrato frio y luminoso: frontal blanco-azulado que suaviza facciones y deja sombras finas del cabello sobre ojos, nariz y labios.',
+    {
+      background:'#BBD7E6',
+      floor:'#A8CADC',
+      exposure:1.12,
+      ambient:['#C8ECF9',34],
+      shadow:['#35465E',24],
+      bounce:['#89B7D9',30],
+      rim:['#DDF7FF',12],
+      key:['#E8F8FF',145,4,56,42,5.0],
+      fill:['#8FD3FF',60,0,82,28,5.4],
+      extra:[
+        {
+          id:'icy-blue-separator',
+          name:'Soft blue separator',
+          color:'#356DFF',
+          intensity:24,
+          azimuth:-46,
+          elevation:10,
+          distance:5.8,
+          softness:46
+        }
+      ]
+    }
+  ),
 ];
