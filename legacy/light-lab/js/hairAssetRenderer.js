@@ -1,7 +1,7 @@
 import { activeLights, dominantLightVector } from './lightingEngine.js';
 import { mixHex } from './colorUtils.js';
 
-const TYPE_IDS = ['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c'];
+const TYPE_IDS = ['test-lock','1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c'];
 const VIEW_IDS = ['front','side','back'];
 const VIEW_INDEX = { front:0, side:1, back:2 };
 const sheetCache = new Map();
@@ -54,6 +54,7 @@ function queueRefresh(){
 }
 
 function getSheetUrl(typeId){
+  if(typeId === 'test-lock') return './assets/hair/test-lock/mask.png';
   return `./assets/hair/${typeId}/mask-sheet-v2.png`;
 }
 
@@ -74,12 +75,15 @@ function ensureSheet(typeId){
     entry.status = 'error';
     queueRefresh();
   };
-  image.src = `${getSheetUrl(id)}?v=hair-masks-v9-20260913`;
+  image.src = `${getSheetUrl(id)}?v=hair-test-lock-v10-20260913`;
   sheetCache.set(id, entry);
   return entry;
 }
 
-function getCrop(image, viewId){
+function getCrop(image, viewId, typeId){
+  if(typeId === 'test-lock'){
+    return { sx:0, sy:0, sw:image.width, sh:image.height };
+  }
   const index = VIEW_INDEX[normalizeView(viewId)];
   const third = image.width / 3;
   return { sx:third * index, sy:0, sw:third, sh:image.height };
@@ -382,10 +386,13 @@ function applyLighting(tintedCanvas, maskCanvas, colors, lighting){
 function drawHeader(ctx, width, height, typeId, viewId){
   const night = document.documentElement.dataset.theme === 'night';
   const viewLabel = viewId === 'front' ? 'FRENTE' : viewId === 'side' ? 'COSTADO' : 'ATRAS';
+  const title = typeId === 'test-lock'
+    ? 'MECHON TECNICO - PRUEBA DE MATERIAL'
+    : `CABELLO ${typeId.toUpperCase()} - ${viewLabel}`;
   ctx.save();
   ctx.fillStyle = night ? 'rgba(255,255,255,.92)' : 'rgba(28,24,33,.88)';
   ctx.font = `800 ${Math.max(13, Math.round(width * 0.016))}px Inter, system-ui, sans-serif`;
-  ctx.fillText(`CABELLO ${typeId.toUpperCase()} - ${viewLabel}`, width * 0.03, height * 0.055);
+  ctx.fillText(title, width * 0.03, height * 0.055);
   ctx.globalAlpha = 0.76;
   ctx.font = `500 ${Math.max(10, Math.round(width * 0.0105))}px Inter, system-ui, sans-serif`;
   ctx.fillText('Mascara gris transparente + color editable + luz activa', width * 0.03, height * 0.085);
@@ -455,7 +462,7 @@ export function renderCompleteHairAsset(ctx, width, height, colors, lighting, te
     return;
   }
 
-  const crop = getCrop(entry.image, viewId);
+  const crop = getCrop(entry.image, viewId, typeId);
   const placement = placeCrop(crop, width, height);
   const maskCanvas = buildViewCanvas(entry.image, crop, placement);
   const tintedCanvas = tintGrayscaleMask(maskCanvas, colors, baseHex);

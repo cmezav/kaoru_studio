@@ -2,7 +2,7 @@ import { LIGHT_LAB_CATEGORIES, categoryById } from './presets.js';
 import { createStore } from './state.js';
 import { DEFAULT_PARAMS, generateDetailedPalette } from './paletteEngine.js';
 import { normalizeHex, readableTextColor } from './colorUtils.js';
-import { renderBasicPreview } from './renderer2d.js?cache=hair-balanced-v9-2-20260913';
+import { renderBasicPreview } from './renderer2d.js?cache=hair-test-lock-v10-20260913';
 import { downloadProjectStructure } from './exportSystem.js';
 import { SAMPLE_ROLES, addRecentColor, createExtractedSample, imageBlobFromFile, imageBlobFromPasteEvent, readImageFromClipboard, renderImageBlob, sampleCanvasAtPointer } from './extractionSystem.js';
 import { LIGHTING_SCENES, MAX_DIRECT_LIGHTS, activeLights, applyLightingToPalette, createDirectLight, lightingSummary, sceneLighting } from './lightingEngine.js';
@@ -122,6 +122,7 @@ let creativeAtmosphereSearch = '';
 let creativeAtmosphereSort = 'original';
 setupAdvancedPreviewUI();
 const HAIR_TEXTURE_OPTIONS = [
+  ['test-lock','Mechon tecnico - prueba de color','Mascara neutral para evaluar color, sombras, reflejos y ambientes.'],
   ['1a','Tipo 1A - liso fino','Brillo muy largo, limpio y continuo.'],
   ['1b','Tipo 1B - liso con cuerpo','Liso con un poco mas de cuerpo y movimiento.'],
   ['1c','Tipo 1C - liso grueso','Liso pesado y voluminoso.'],
@@ -148,10 +149,11 @@ if (!window.__KAORU_HAIR_SHEET_READY_BOUND__) {
     }
   });
 }
-const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c']);
+const KAORU_HAIR_REFERENCE_AVAILABLE = new Set(['test-lock','1a','1b','1c','2a','2b','2c','3a','3b','3c','4a','4b','4c']);
 const KAORU_HAIR_REFERENCE_CACHE = new Map();
 
 function hairReferenceUrl(type) {
+  if (type === 'test-lock') return './assets/hair/test-lock/mask.png?cache=hair-test-lock-v10-20260913';
   return `./assets/hair/${type}/mask-sheet-v2.png?cache=hair-masks-v9-20260913`;
 }
 
@@ -212,7 +214,11 @@ async function drawHairReferenceCrop(type, view = 'back') {
     return;
   }
 
-  const thirds = {
+  const thirds = type === 'test-lock' ? {
+    front: [0, 1],
+    side:  [0, 1],
+    back:  [0, 1]
+  } : {
     front: [0, 1 / 3],
     side:  [1 / 3, 2 / 3],
     back:  [2 / 3, 1]
@@ -243,7 +249,9 @@ async function drawHairReferenceCrop(type, view = 'back') {
   context.imageSmoothingQuality = 'high';
   context.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
 
-  const label = view === 'front' ? 'FRENTE' : view === 'side' ? 'COSTADO' : 'ATRAS';
+  const label = type === 'test-lock'
+    ? 'MATERIAL'
+    : view === 'front' ? 'FRENTE' : view === 'side' ? 'COSTADO' : 'ATRAS';
   context.fillStyle = 'rgba(0,0,0,.64)';
   const badgeW = Math.max(74, width * .18);
   const badgeH = Math.max(26, height * .10);
@@ -572,6 +580,9 @@ function syncHairTextureUI(state) {
     state.selection.hairTexture ||
     state.selection.undertoneId ||
     '1b';
+
+  const viewControls = panel.querySelector('.hair-view-controls');
+  if (viewControls) viewControls.hidden = value === 'test-lock';
 
   if (document.activeElement !== select) {
     select.value = value;
