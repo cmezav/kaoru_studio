@@ -714,6 +714,7 @@
     renderControls();
     renderLayerPanel();
     renderVisualControls();
+    window.KaoruShapeStudio?.sync?.(clone(state));
   }
 
   function updateSingleLayer(id,patch){
@@ -1205,6 +1206,7 @@
     renderControls();
     renderLayerPanel();
     renderVisualControls();
+    window.KaoruShapeStudio?.sync?.(clone(state));
   }
 
   function applyCanvasSize(){
@@ -1323,6 +1325,8 @@
       const image=await CombinerEffects.imageFromSource(layer.src);
       CombinerEffects.drawLayer(ctx,layer,image);
     }
+
+    await window.KaoruShapeStudio?.drawToCanvas?.(ctx,1,state);
 
     canvas.toBlob(blob=>{
       if(!blob) return;
@@ -1488,6 +1492,7 @@
         renderControls();
         renderLayerPanel();
         renderVisualControls();
+    window.KaoruShapeStudio?.sync?.(clone(state));
       }
 
       if(layer.locked || state.cropUi.enabled) return;
@@ -1752,6 +1757,7 @@
         const value=normalizeHex(event.target.value);
         if(!value){
           renderVisualControls();
+    window.KaoruShapeStudio?.sync?.(clone(state));
           toast('HEX inválido');
           return;
         }
@@ -1792,6 +1798,7 @@
       const value=normalizeHex(els.shadowHex.value);
       if(!value){
         renderVisualControls();
+    window.KaoruShapeStudio?.sync?.(clone(state));
         toast('HEX inválido');
         return;
       }
@@ -1837,6 +1844,7 @@
       const value=normalizeHex(els.glowHex.value);
       if(!value){
         renderVisualControls();
+    window.KaoruShapeStudio?.sync?.(clone(state));
         toast('HEX inválido');
         return;
       }

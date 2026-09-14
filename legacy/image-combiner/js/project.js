@@ -79,6 +79,8 @@
       CombinerEffects.drawLayer(ctx,layer,image);
     }
 
+    await window.KaoruShapeStudio?.drawToCanvas?.(ctx,1,state);
+
     const scale=Math.max(.25,Math.min(4,Number(multiplier)||1));
 
     if(scale===1) return base;
