@@ -14,6 +14,7 @@ let layerGroup=null;
 let selectedId=null;
 let layerCounter=1;
 let renderBusy=false;
+let keyboardBound=false;
 
 function clone(v){return JSON.parse(JSON.stringify(v));}
 function uid(){return `shape-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;}
@@ -195,8 +196,16 @@ function injectStyles(){
     #kaoruShapeOverlay .kaoru-shape-node{pointer-events:auto;cursor:move}
     #kaoruShapeOverlay .kaoru-shape-node.selected .kaoru-shape-box{display:block}
     #kaoruShapeOverlay .kaoru-shape-box{display:none;fill:none;stroke:#FACC15;stroke-width:2;stroke-dasharray:8 5;vector-effect:non-scaling-stroke;pointer-events:none}
+    #kaoruShapeOverlay .kaoru-shape-rotate-line{display:none;stroke:#FACC15;stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:none}
     #kaoruShapeOverlay .kaoru-shape-rotator{display:none;fill:#FACC15;stroke:#111827;stroke-width:2;vector-effect:non-scaling-stroke;cursor:grab;pointer-events:auto}
-    #kaoruShapeOverlay .kaoru-shape-node.selected .kaoru-shape-rotator{display:block}
+    #kaoruShapeOverlay .kaoru-shape-handle{display:none;fill:#FFFFFF;stroke:#7C3AED;stroke-width:2;vector-effect:non-scaling-stroke;pointer-events:auto}
+    #kaoruShapeOverlay .kaoru-shape-node.selected .kaoru-shape-rotator,
+    #kaoruShapeOverlay .kaoru-shape-node.selected .kaoru-shape-rotate-line,
+    #kaoruShapeOverlay .kaoru-shape-node.selected .kaoru-shape-handle{display:block}
+    #kaoruShapeOverlay .kaoru-shape-handle[data-dir="nw"],#kaoruShapeOverlay .kaoru-shape-handle[data-dir="se"]{cursor:nwse-resize}
+    #kaoruShapeOverlay .kaoru-shape-handle[data-dir="ne"],#kaoruShapeOverlay .kaoru-shape-handle[data-dir="sw"]{cursor:nesw-resize}
+    #kaoruShapeOverlay .kaoru-shape-handle[data-dir="n"],#kaoruShapeOverlay .kaoru-shape-handle[data-dir="s"]{cursor:ns-resize}
+    #kaoruShapeOverlay .kaoru-shape-handle[data-dir="e"],#kaoruShapeOverlay .kaoru-shape-handle[data-dir="w"]{cursor:ew-resize}
   `;
   document.head.appendChild(style);
 }
@@ -234,6 +243,9 @@ function buildPanel(){
 
     <p class="shape-status" id="shapeStudioStatus">
       Las figuras se guardan con el proyecto y aparecen también en las exportaciones.
+    </p>
+    <p class="shape-status">
+      Arrastra la figura = mover · puntos blancos = escalar · Ctrl + esquina = mantener proporción · punto amarillo = rotar · Shift al rotar = saltos de 15° · flechas = mover 1 px (Shift = 10 px).
     </p>
   `;
 
@@ -394,6 +406,82 @@ function svgPaint(shape,paint,key){
   return 'none';
 }
 
+function overlayPoint(event,state=current()){
+  const rect=overlay.getBoundingClientRect();
+  return {
+    x:(event.clientX-rect.left)*(state?.canvas?.width||1080)/Math.max(1,rect.width),
+    y:(event.clientY-rect.top)*(state?.canvas?.height||1080)/Math.max(1,rect.height)
+  };
+}
+
+function rotateVector(x,y,degrees){
+  const a=degrees*Math.PI/180;
+  const c=Math.cos(a),s=Math.sin(a);
+  return {x:x*c-y*s,y:x*s+y*c};
+}
+
+function worldFromLocal(shape,lx,ly){
+  const cx=shape.width/2,cy=shape.height/2;
+  const v=rotateVector(lx-cx,ly-cy,shape.rotation||0);
+  return {x:shape.x+cx+v.x,y:shape.y+cy+v.y};
+}
+
+function localDeltaFromWorld(dx,dy,rotation){
+  return rotateVector(dx,dy,-(rotation||0));
+}
+
+function pointerSession(event,onMove,onEnd){
+  const pointerId=event.pointerId;
+  const move=next=>{
+    if(next.pointerId!==pointerId)return;
+    next.preventDefault();
+    onMove(next);
+  };
+  const end=next=>{
+    if(next.pointerId!==pointerId)return;
+    next.preventDefault();
+    window.removeEventListener('pointermove',move,true);
+    window.removeEventListener('pointerup',end,true);
+    window.removeEventListener('pointercancel',end,true);
+    onEnd?.(next);
+  };
+  window.addEventListener('pointermove',move,true);
+  window.addEventListener('pointerup',end,true);
+  window.addEventListener('pointercancel',end,true);
+}
+
+function resizeSpec(dir,w,h){
+  const specs={
+    nw:{opp:[w,h],signX:-1,signY:-1,x:true,y:true},
+    n:{opp:[w/2,h],signX:0,signY:-1,x:false,y:true},
+    ne:{opp:[0,h],signX:1,signY:-1,x:true,y:true},
+    e:{opp:[0,h/2],signX:1,signY:0,x:true,y:false},
+    se:{opp:[0,0],signX:1,signY:1,x:true,y:true},
+    s:{opp:[w/2,0],signX:0,signY:1,x:false,y:true},
+    sw:{opp:[w,0],signX:-1,signY:1,x:true,y:true},
+    w:{opp:[w,h/2],signX:-1,signY:0,x:true,y:false}
+  };
+  return specs[dir];
+}
+
+function localOppForNewSize(dir,w,h){
+  const map={
+    nw:[w,h],n:[w/2,h],ne:[0,h],e:[0,h/2],
+    se:[0,0],s:[w/2,0],sw:[w,0],w:[w,h/2]
+  };
+  return map[dir];
+}
+
+function newTopLeftForAnchor(anchorWorld,dir,width,height,rotation){
+  const opp=localOppForNewSize(dir,width,height);
+  const cx=width/2,cy=height/2;
+  const rotated=rotateVector(opp[0]-cx,opp[1]-cy,rotation||0);
+  return {
+    x:anchorWorld.x-cx-rotated.x,
+    y:anchorWorld.y-cy-rotated.y
+  };
+}
+
 function renderOverlay(state){
   ensureOverlay();
   if(!overlay||!layerGroup)return;
@@ -416,6 +504,7 @@ function renderOverlay(state){
     );
 
     const node=svgShapeElement(shape);
+    node.classList.add('kaoru-shape-art');
     node.setAttribute('fill',svgPaint(shape,shape.fill,'fill'));
     node.setAttribute('fill-opacity',clamp(shape.fill.opacity??1,0,1));
     node.setAttribute('stroke',shape.stroke.enabled?svgPaint(shape,shape.stroke,'stroke'):'none');
@@ -430,105 +519,162 @@ function renderOverlay(state){
     box.setAttribute('width',shape.width);box.setAttribute('height',shape.height);
     group.appendChild(box);
 
+    const rotateY=-Math.max(28,shape.height*.10);
+    const line=document.createElementNS(SVG_NS,'line');
+    line.classList.add('kaoru-shape-rotate-line');
+    line.setAttribute('x1',shape.width/2);line.setAttribute('y1','0');
+    line.setAttribute('x2',shape.width/2);line.setAttribute('y2',rotateY);
+    group.appendChild(line);
+
     const rot=document.createElementNS(SVG_NS,'circle');
     rot.classList.add('kaoru-shape-rotator');
     rot.setAttribute('cx',shape.width/2);
-    rot.setAttribute('cy',-Math.max(18,shape.height*.08));
-    rot.setAttribute('r',Math.max(7,Math.min(shape.width,shape.height)*.018));
+    rot.setAttribute('cy',rotateY);
+    rot.setAttribute('r',Math.max(8,Math.min(shape.width,shape.height)*.02));
     group.appendChild(rot);
 
-    bindShapeDrag(group,rot,shape,state);
+    const handleSize=Math.max(10,Math.min(shape.width,shape.height)*.028);
+    const positions={
+      nw:[0,0],n:[shape.width/2,0],ne:[shape.width,0],
+      e:[shape.width,shape.height/2],se:[shape.width,shape.height],
+      s:[shape.width/2,shape.height],sw:[0,shape.height],w:[0,shape.height/2]
+    };
+
+    Object.entries(positions).forEach(([dir,[x,y]])=>{
+      const handle=document.createElementNS(SVG_NS,'rect');
+      handle.classList.add('kaoru-shape-handle');
+      handle.dataset.dir=dir;
+      handle.setAttribute('x',x-handleSize/2);
+      handle.setAttribute('y',y-handleSize/2);
+      handle.setAttribute('width',handleSize);
+      handle.setAttribute('height',handleSize);
+      handle.setAttribute('rx',Math.max(2,handleSize*.18));
+      group.appendChild(handle);
+      bindResizeHandle(handle,shape,dir,state);
+    });
+
+    bindShapeTransform(group,rot,shape,state);
     layerGroup.appendChild(group);
   });
 }
 
-function bindShapeDrag(group,rotator,shape,state){
-  let drag=null;
-  let rotate=null;
+function selectForInteraction(shapeId){
+  if(selectedId===shapeId)return;
+  selectedId=shapeId;
+  sync(current());
+}
 
+function bindShapeTransform(group,rotator,shape,state){
   group.addEventListener('pointerdown',event=>{
-    if(event.target===rotator)return;
+    if(event.target.closest?.('.kaoru-shape-handle')||event.target===rotator)return;
     event.preventDefault();
     event.stopPropagation();
+
+    const startState=current();
+    const startShape=shapesOf(startState).find(s=>s.id===shape.id);
+    if(!startShape)return;
+
     selectedId=shape.id;
-    sync(current());
+    const start=overlayPoint(event,startState);
+    const origin={x:startShape.x,y:startShape.y};
+    sync(startState);
 
-    const rect=overlay.getBoundingClientRect();
-    const sx=(state.canvas.width||1080)/Math.max(1,rect.width);
-    const sy=(state.canvas.height||1080)/Math.max(1,rect.height);
-
-    drag={
-      pointerId:event.pointerId,
-      clientX:event.clientX,
-      clientY:event.clientY,
-      x:shape.x,
-      y:shape.y,
-      sx,sy
-    };
-    group.setPointerCapture?.(event.pointerId);
+    pointerSession(event,next=>{
+      const p=overlayPoint(next,current());
+      mutateSelected(s=>{
+        s.x=origin.x+(p.x-start.x);
+        s.y=origin.y+(p.y-start.y);
+      },'Mover figura',false);
+    },()=>{
+      api()?.commit?.('Mover figura');
+      notify('Figura movida.');
+    });
   });
-
-  group.addEventListener('pointermove',event=>{
-    if(!drag||event.pointerId!==drag.pointerId)return;
-    const nx=drag.x+(event.clientX-drag.clientX)*drag.sx;
-    const ny=drag.y+(event.clientY-drag.clientY)*drag.sy;
-    mutateSelected(s=>{
-      s.x=nx;s.y=ny;
-    },'Mover figura',false);
-  });
-
-  const finishMove=event=>{
-    if(!drag||event.pointerId!==drag.pointerId)return;
-    drag=null;
-    api()?.commit?.('Mover figura');
-  };
-  group.addEventListener('pointerup',finishMove);
-  group.addEventListener('pointercancel',finishMove);
 
   rotator.addEventListener('pointerdown',event=>{
     event.preventDefault();
     event.stopPropagation();
+
+    const startState=current();
+    const startShape=shapesOf(startState).find(s=>s.id===shape.id);
+    if(!startShape)return;
+
+    selectedId=shape.id;
+    const center={
+      x:startShape.x+startShape.width/2,
+      y:startShape.y+startShape.height/2
+    };
+    const p=overlayPoint(event,startState);
+    const startAngle=Math.atan2(p.y-center.y,p.x-center.x)*180/Math.PI;
+    const originRotation=startShape.rotation||0;
+
+    pointerSession(event,next=>{
+      const q=overlayPoint(next,current());
+      let rotation=originRotation+(Math.atan2(q.y-center.y,q.x-center.x)*180/Math.PI-startAngle);
+      if(next.shiftKey)rotation=Math.round(rotation/15)*15;
+      mutateSelected(s=>{s.rotation=rotation;},'Rotar figura',false);
+    },()=>{
+      api()?.commit?.('Rotar figura');
+      notify('Rotación actualizada.');
+    });
+  });
+}
+
+function bindResizeHandle(handle,shape,dir,state){
+  handle.addEventListener('pointerdown',event=>{
+    event.preventDefault();
+    event.stopPropagation();
+
+    const startState=current();
+    const startShape=shapesOf(startState).find(s=>s.id===shape.id);
+    if(!startShape)return;
+
     selectedId=shape.id;
 
-    const rect=overlay.getBoundingClientRect();
-    const sx=(state.canvas.width||1080)/Math.max(1,rect.width);
-    const sy=(state.canvas.height||1080)/Math.max(1,rect.height);
-    const centerX=shape.x+shape.width/2;
-    const centerY=shape.y+shape.height/2;
-    const px=(event.clientX-rect.left)*sx;
-    const py=(event.clientY-rect.top)*sy;
+    const spec=resizeSpec(dir,startShape.width,startShape.height);
+    const anchorWorld=worldFromLocal(startShape,spec.opp[0],spec.opp[1]);
+    const aspect=startShape.width/Math.max(1,startShape.height);
+    const corner=spec.x&&spec.y;
 
-    rotate={
-      pointerId:event.pointerId,
-      centerX,centerY,
-      startAngle:Math.atan2(py-centerY,px-centerX)*180/Math.PI,
-      rotation:shape.rotation
-    };
-    rotator.setPointerCapture?.(event.pointerId);
+    pointerSession(event,next=>{
+      const p=overlayPoint(next,current());
+      const local=localDeltaFromWorld(
+        p.x-anchorWorld.x,
+        p.y-anchorWorld.y,
+        startShape.rotation||0
+      );
+
+      let width=spec.x?Math.max(12,spec.signX*local.x):startShape.width;
+      let height=spec.y?Math.max(12,spec.signY*local.y):startShape.height;
+
+      if(corner&&next.ctrlKey){
+        const scaleW=width/startShape.width;
+        const scaleH=height/startShape.height;
+        let scale=Math.abs(scaleW-1)>=Math.abs(scaleH-1)?scaleW:scaleH;
+        scale=Math.max(12/startShape.width,12/startShape.height,scale);
+        width=startShape.width*scale;
+        height=startShape.height*scale;
+      }
+
+      const topLeft=newTopLeftForAnchor(
+        anchorWorld,
+        dir,
+        width,
+        height,
+        startShape.rotation||0
+      );
+
+      mutateSelected(s=>{
+        s.x=topLeft.x;
+        s.y=topLeft.y;
+        s.width=width;
+        s.height=height;
+      },'Escalar figura',false);
+    },()=>{
+      api()?.commit?.('Escalar figura');
+      notify('Tamaño actualizado.');
+    });
   });
-
-  rotator.addEventListener('pointermove',event=>{
-    if(!rotate||event.pointerId!==rotate.pointerId)return;
-
-    const rect=overlay.getBoundingClientRect();
-    const sx=(state.canvas.width||1080)/Math.max(1,rect.width);
-    const sy=(state.canvas.height||1080)/Math.max(1,rect.height);
-    const px=(event.clientX-rect.left)*sx;
-    const py=(event.clientY-rect.top)*sy;
-    const angle=Math.atan2(py-rotate.centerY,px-rotate.centerX)*180/Math.PI;
-
-    mutateSelected(s=>{
-      s.rotation=rotate.rotation+(angle-rotate.startAngle);
-    },'Rotar figura',false);
-  });
-
-  const finishRotate=event=>{
-    if(!rotate||event.pointerId!==rotate.pointerId)return;
-    rotate=null;
-    api()?.commit?.('Rotar figura');
-  };
-  rotator.addEventListener('pointerup',finishRotate);
-  rotator.addEventListener('pointercancel',finishRotate);
 }
 
 function getPath(obj,path){
@@ -1038,6 +1184,49 @@ async function drawToCanvas(ctx,scale=1,state=current()){
   }
 }
 
+
+function bindKeyboardTransforms(){
+  if(keyboardBound)return;
+  keyboardBound=true;
+
+  document.addEventListener('keydown',event=>{
+    const target=event.target;
+    const editing=target&&(
+      target.tagName==='INPUT'||
+      target.tagName==='TEXTAREA'||
+      target.tagName==='SELECT'||
+      target.isContentEditable
+    );
+    if(editing||!selectedId)return;
+
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){
+      event.preventDefault();
+      const step=event.shiftKey?10:1;
+      const dx=event.key==='ArrowLeft'?-step:event.key==='ArrowRight'?step:0;
+      const dy=event.key==='ArrowUp'?-step:event.key==='ArrowDown'?step:0;
+      mutateSelected(s=>{s.x+=dx;s.y+=dy;},'Mover figura con teclado',false);
+      return;
+    }
+
+    if(event.key==='Delete'||event.key==='Backspace'){
+      event.preventDefault();
+      const id=selectedId;
+      mutate((state,list)=>{
+        const index=list.findIndex(s=>s.id===id);
+        if(index>=0)list.splice(index,1);
+        selectedId=list.at(-1)?.id||null;
+      },'Figura eliminada');
+    }
+  });
+
+  document.addEventListener('keyup',event=>{
+    if(!selectedId)return;
+    if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)){
+      api()?.commit?.('Mover figura con teclado');
+    }
+  });
+}
+
 function boot(){
   injectStyles();
 
@@ -1051,6 +1240,7 @@ function boot(){
       ensureState(false);
       buildPanel();
       ensureOverlay();
+      bindKeyboardTransforms();
       sync(current());
       return true;
     }
