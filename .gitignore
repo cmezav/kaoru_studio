@@ -9,3 +9,7 @@ KAORU_PUSH_CRON_LOCAL.sql
 *.log
 Thumbs.db
 .DS_Store
+
+# Kaoru Studio Desktop
+node_modules/
+dist-desktop/

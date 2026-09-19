@@ -1,0 +1,79 @@
+{
+  "name": "kaoru-studio",
+  "productName": "Kaoru Studio",
+  "version": "2026.9.20",
+  "description": "Kaoru Studio desktop creative suite",
+  "private": true,
+  "main": "desktop/main.cjs",
+  "author": "cmezav",
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "electron-builder --win --x64 --dir",
+    "dist:win": "electron-builder --win nsis --x64",
+    "publish:win": "electron-builder --win nsis --x64 --publish always"
+  },
+  "devDependencies": {
+    "electron": "44.4.2",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.cmezav.kaorustudio",
+    "productName": "Kaoru Studio",
+    "asar": false,
+    "compression": "maximum",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "desktop/**/*",
+      "index.html",
+      "logo.png",
+      "icono-kaoru.png",
+      "kaoru-notification-icon.png",
+      "kaoru-notification-badge.png",
+      "reader-sw.js",
+      "reader-cache-reset.html",
+      "KAORU_VERSION.txt",
+      "README_KAORU_STUDIO.md",
+      "THIRD_PARTY_3D_LIGHTING.md",
+      "MODELO_ASARO_ORIGINAL.md",
+      "MODELO_HUMANO_CC0.md",
+      "app/dist/**/*",
+      "legacy/**/*",
+      "vendor/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icono-kaoru.png",
+      "artifactName": "Kaoru-Studio-Setup-${version}.${ext}",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kaoru Studio",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "cmezav",
+        "repo": "kaoru_studio",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.9"
+  }
+}
