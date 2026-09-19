@@ -51,7 +51,7 @@
           ]
         }
       ],
-      "icon": "icono-kaoru.png",
+      "icon": "logo.png",
       "artifactName": "Kaoru-Studio-Setup-${version}.${ext}",
       "verifyUpdateCodeSignature": false
     },

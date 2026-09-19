@@ -81,7 +81,7 @@ function createWindow(origin, rootDir) {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#111111',
-    icon: path.join(rootDir, 'icono-kaoru.png'),
+    icon: path.join(rootDir, 'logo.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
