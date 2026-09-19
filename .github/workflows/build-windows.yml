@@ -1,4 +1,4 @@
-name: Release Kaoru Studio Windows
+﻿name: Release Kaoru Studio Windows
 
 on:
   workflow_dispatch:
@@ -27,7 +27,25 @@ jobs:
         shell: pwsh
         run: npm install --no-audit --no-fund
 
-      - name: Build and publish Windows release
+      - name: Create GitHub Release first
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = $env:GITHUB_REF_NAME
+
+          gh release view $tag *> $null
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Creating release $tag..."
+            gh release create $tag --title "$version" --notes "Kaoru Studio $version"
+          }
+          else {
+            Write-Host "Release $tag already exists."
+          }
+
+      - name: Build and publish Windows update
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
