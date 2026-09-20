@@ -1,7 +1,7 @@
 {
   "name": "kaoru-studio",
   "productName": "Kaoru Studio",
-  "version": "2026.9.24",
+  "version": "2026.9.25",
   "description": "Kaoru Studio desktop creative suite",
   "private": true,
   "main": "desktop/main.cjs",
