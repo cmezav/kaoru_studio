@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('node:path');
-const { app, BrowserWindow, dialog, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, nativeImage, Tray, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { createStaticServer, DEFAULT_PORT } = require('./static-server.cjs');
 
@@ -12,6 +12,7 @@ let mainWindow = null;
 let staticServer = null;
 let quitting = false;
 let updateCheckStarted = false;
+let tray = null;
 
 function setPendingTaskbarBadge(value) {
   if (process.platform !== 'win32') return;
@@ -58,6 +59,53 @@ ipcMain.on('kaoru:set-pending-badge', (event, count) => {
 
   setPendingTaskbarBadge(count);
 });
+
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function ensureTray(rootDir) {
+  if (tray && !tray.isDestroyed()) return;
+
+  const trayImage = nativeImage
+    .createFromPath(path.join(rootDir, 'logo.png'))
+    .resize({ width: 16, height: 16, quality: 'best' });
+
+  tray = new Tray(trayImage);
+  tray.setToolTip('Kaoru Studio');
+
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      {
+        label: 'Abrir Kaoru Studio',
+        click: () => showMainWindow()
+      },
+      { type: 'separator' },
+      {
+        label: 'Salir completamente',
+        click: () => {
+          quitting = true;
+          app.quit();
+        }
+      }
+    ])
+  );
+
+  tray.on('click', () => {
+    showMainWindow();
+  });
+
+  tray.on('double-click', () => {
+    showMainWindow();
+  });
+}
 
 function configureAutoUpdates() {
   if (!app.isPackaged || updateCheckStarted) return;
@@ -111,13 +159,12 @@ if (!singleInstance) {
 } else {
   app.on('second-instance', () => {
     if (!mainWindow) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
+    showMainWindow();
   });
 }
 
 function createWindow(origin, rootDir) {
+  ensureTray(rootDir);
   mainWindow = new BrowserWindow({
     title: 'Kaoru Studio',
     width: 1520,
@@ -139,6 +186,15 @@ function createWindow(origin, rootDir) {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+  });
+
+  // [Kaoru] Cerrar -> minimizar.
+  // Mantener la ventana viva permite conservar el overlay de Windows.
+  mainWindow.on('close', (event) => {
+    if (quitting) return;
+
+    event.preventDefault();
+    mainWindow.minimize();
   });
 
   mainWindow.on('closed', () => {
@@ -187,7 +243,7 @@ app.whenReady().then(async () => {
 
 app.on('activate', () => {
   if (mainWindow) {
-    mainWindow.show();
+    showMainWindow();
     return;
   }
   if (staticServer?.server?.listening) {
