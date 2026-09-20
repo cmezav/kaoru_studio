@@ -1,0 +1,52 @@
+﻿name: Release Kaoru Studio Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install desktop dependencies
+        shell: pwsh
+        run: npm install --no-audit --no-fund
+
+      - name: Create GitHub Release first
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          $tag = $env:GITHUB_REF_NAME
+
+          gh release view $tag *> $null
+
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Creating release $tag..."
+            gh release create $tag --title "$version" --notes "Kaoru Studio $version"
+          }
+          else {
+            Write-Host "Release $tag already exists."
+          }
+
+      - name: Build and publish Windows update
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run publish:win
