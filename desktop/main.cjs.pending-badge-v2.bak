@@ -1,63 +1,17 @@
 'use strict';
 
 const path = require('node:path');
-const { app, BrowserWindow, dialog, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { createStaticServer, DEFAULT_PORT } = require('./static-server.cjs');
 
 const APP_ID = 'com.cmezav.kaorustudio';
-const DESKTOP_BUILD = () => app.getVersion();
+const DESKTOP_BUILD = '2026.09.19-desktop.1';
 
 let mainWindow = null;
 let staticServer = null;
 let quitting = false;
 let updateCheckStarted = false;
-
-function setPendingTaskbarBadge(value) {
-  if (process.platform !== 'win32') return;
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-
-  const count = Math.max(0, Math.floor(Number(value) || 0));
-
-  if (count === 0) {
-    mainWindow.setOverlayIcon(
-      null,
-      'Sin tareas vencidas ni pendientes para hoy'
-    );
-    return;
-  }
-
-  const fileName = count > 99
-    ? '99plus.png'
-    : String(count) + '.png';
-
-  const badgePath = path.join(__dirname, 'badges', fileName);
-  const image = nativeImage.createFromPath(badgePath);
-
-  if (image.isEmpty()) {
-    console.warn('[Kaoru Pending Badge] No se pudo cargar:', badgePath);
-    return;
-  }
-
-  const overlay = image.resize({
-    width: 16,
-    height: 16,
-    quality: 'best'
-  });
-
-  const description = count === 1
-    ? '1 tarea pendiente para hoy o vencida'
-    : String(count) + ' tareas pendientes para hoy o vencidas';
-
-  mainWindow.setOverlayIcon(overlay, description);
-}
-
-ipcMain.on('kaoru:set-pending-badge', (event, count) => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (event.sender !== mainWindow.webContents) return;
-
-  setPendingTaskbarBadge(count);
-});
 
 function configureAutoUpdates() {
   if (!app.isPackaged || updateCheckStarted) return;
@@ -129,7 +83,6 @@ function createWindow(origin, rootDir) {
     backgroundColor: '#111111',
     icon: path.join(rootDir, 'logo.png'),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -145,7 +98,7 @@ function createWindow(origin, rootDir) {
     mainWindow = null;
   });
 
-  const url = `${origin}/?desktop=1&build=${encodeURIComponent(DESKTOP_BUILD())}#silhouette`;
+  const url = `${origin}/?desktop=1&build=${encodeURIComponent(DESKTOP_BUILD)}#silhouette`;
   mainWindow.loadURL(url).catch(async (error) => {
     await dialog.showMessageBox({
       type: 'error',

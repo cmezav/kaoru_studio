@@ -245,8 +245,20 @@ function counts(){
 function updateCounts(){
   const c=counts();els.pendingBadge.textContent=`${c.pending.length}\u00A0pendiente${c.pending.length===1?'':'s'}`;els.pendingCount.textContent=c.pending.length;els.overdueCount.textContent=c.overdue.length;els.todayCount.textContent=c.today.length;els.weekCount.textContent=c.week.length;els.allCourseCount.textContent=c.pending.length;els.completedCount.textContent=c.completed.length;if(els.historyCountInline)els.historyCountInline.textContent=c.completed.length;
   document.title=c.pending.length?`(${c.pending.length}) Kaoru — Task Studio`:`Kaoru — Task Studio`;
-  if(EMBEDDED)window.parent.postMessage({type:'kaoru:task-count',count:c.pending.length},'*');
+  const attentionCount=state.tasks.filter(t=>{
+    if(!t||t.completed||!t.dueAt)return false;
+    const d=parseDue(t.dueAt);
+    return d!==null&&d<=endOfToday();
+  }).length;
+  if(EMBEDDED)window.parent.postMessage({
+    type:'kaoru:task-count',
+    count:c.pending.length,
+    attentionCount
+  },'*');
 }
+
+// Recalcula tambien si cambia el dia mientras Kaoru sigue abierta.
+setInterval(()=>updateCounts(),60000);
 
 function coursePendingCounts(course){
   const list=state.tasks.filter(t=>!t.completed&&t.courseId===course.id);return{all:list.length,theory:list.filter(t=>t.kind==='theory').length,lab:list.filter(t=>t.kind==='lab').length};
