@@ -5097,3 +5097,81 @@ kaoruBindBeforeHold3d();
     mountPanel();
   }
 })();
+
+// ============================================================
+// KAORU_TRUE_SOLO_SELECTED_LIGHT_V1
+// ============================================================
+let kaoruTrueSoloSnapshot3d=null;
+
+function kaoruTrueSoloActivate3d(){
+  const state=store.getState();
+  const lighting=state?.lighting;
+  const selectedId=lighting?.selectedLightId;
+  const selected=lighting?.lights?.find(light=>light.id===selectedId);
+  if(!lighting||!selected)return;
+
+  kaoruTrueSoloSnapshot3d={
+    lights:lighting.lights.map(light=>[light.id,Boolean(light.enabled)]),
+    ambient:structuredClone(lighting.ambient),
+    shadow:structuredClone(lighting.shadow),
+    bounce:structuredClone(lighting.bounce),
+    rim:structuredClone(lighting.rim),
+    projector:lighting.projector?structuredClone(lighting.projector):null
+  };
+
+  kaoruSoloRestore3d=kaoruTrueSoloSnapshot3d.lights.map(([id,enabled])=>[id,enabled]);
+  kaoruSoloActiveId3d=selectedId;
+  kaoruApplyingSolo3d=true;
+
+  try{
+    store.setState(draft=>{
+      const current=draft.lighting;
+      current.enabled=true;
+      current.selectedLightId=selectedId;
+      current.lights=current.lights.map(light=>({...light,enabled:light.id===selectedId}));
+      if(current.ambient)current.ambient={...current.ambient,intensity:0};
+      if(current.shadow)current.shadow={...current.shadow,intensity:0};
+      if(current.bounce)current.bounce={...current.bounce,intensity:0};
+      if(current.rim)current.rim={...current.rim,intensity:0};
+      if(current.projector)current.projector={...current.projector,enabled:false,intensity:0};
+      return draft;
+    });
+  }finally{
+    kaoruApplyingSolo3d=false;
+  }
+}
+
+function kaoruTrueSoloRestore3d(){
+  const snap=kaoruTrueSoloSnapshot3d;
+  if(!snap)return;
+  const enabledById=new Map(snap.lights);
+  kaoruApplyingSolo3d=true;
+  try{
+    store.setState(draft=>{
+      const current=draft.lighting;
+      current.lights=current.lights.map(light=>enabledById.has(light.id)?{...light,enabled:enabledById.get(light.id)}:light);
+      current.ambient=structuredClone(snap.ambient);
+      current.shadow=structuredClone(snap.shadow);
+      current.bounce=structuredClone(snap.bounce);
+      current.rim=structuredClone(snap.rim);
+      if(snap.projector)current.projector=structuredClone(snap.projector);
+      return draft;
+    });
+  }finally{
+    kaoruApplyingSolo3d=false;
+    kaoruTrueSoloSnapshot3d=null;
+    kaoruSoloRestore3d=null;
+    kaoruSoloActiveId3d=null;
+  }
+}
+
+document.getElementById('soloSelectedLight3d')?.addEventListener(
+  'click',
+  event=>{
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if(kaoruTrueSoloSnapshot3d)kaoruTrueSoloRestore3d();
+    else kaoruTrueSoloActivate3d();
+  },
+  true
+);
