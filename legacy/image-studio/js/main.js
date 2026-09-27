@@ -74,7 +74,7 @@
   function applyHistory(next){if(!next)return;state=ImageState.merge(next);syncAll();preview.setState(state);preview.schedule('full',0);scheduleRecovery()}
   history.onChange=({canUndo,canRedo})=>{$('#undoBtn').disabled=!canUndo;$('#redoBtn').disabled=!canRedo};
 
-  function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterControls','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const el=$(selector);el.dataset.group=group;ImageUI.build(el,state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
+  function buildDynamicControls(){[['#adjustmentControls','adjustments'],['#filterControls','filters'],['#grainControls','grain'],['#lensControls','lens']].forEach(([selector,group])=>{const el=$(selector);el.dataset.group=group;ImageUI.build(el,()=>state,()=>previewFast(),path=>commit(`Ajuste: ${path}`))})}
 
   function syncContourBlurControls(){
     const c=state.contourBlur||{};
