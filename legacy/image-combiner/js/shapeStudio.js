@@ -327,7 +327,11 @@ function svgShapeElement(shape){
   const w=shape.width,h=shape.height;
   let node;
 
-  if(shape.kind==='rect'||shape.kind==='roundRect'){
+  // KAORU_COMBINER_VECTOR_NODE_EDITOR_V1
+  if(shape.kind==='path'&&window.KaoruShapeNodeEditor?.svgPath){
+    node=document.createElementNS(SVG_NS,'path');
+    node.setAttribute('d',window.KaoruShapeNodeEditor.svgPath(shape));
+  }else if(shape.kind==='rect'||shape.kind==='roundRect'){
     node=document.createElementNS(SVG_NS,'rect');
     node.setAttribute('x','0');node.setAttribute('y','0');
     node.setAttribute('width',w);node.setAttribute('height',h);
@@ -1061,6 +1065,11 @@ function pathCanvas(ctx,shape){
   const w=shape.width,h=shape.height;
   ctx.beginPath();
 
+  if(shape.kind==='path'&&window.KaoruShapeNodeEditor?.pathCanvas){
+    window.KaoruShapeNodeEditor.pathCanvas(ctx,shape);
+    return;
+  }
+
   if(shape.kind==='rect'){
     ctx.rect(0,0,w,h);
   }else if(shape.kind==='roundRect'){
@@ -1259,7 +1268,15 @@ function boot(){
 
 window.KaoruShapeStudio={
   sync,
-  drawToCanvas
+  drawToCanvas,
+  selectShape(id){
+    selectedId=id||null;
+    sync(current());
+    return selectedId;
+  },
+  getSelectedShapeId(){
+    return selectedId;
+  }
 };
 
 if(document.readyState==='loading'){
