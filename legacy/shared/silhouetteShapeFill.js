@@ -1,5 +1,6 @@
-﻿(function(){
+(function(){
 'use strict';
+// KAORU_SILHOUETTE_VECTOR_NODE_EDITOR_V2
 
 const api=()=>window.SilhouetteShapeBridge||null;
 const $=(s,r=document)=>r.querySelector(s);
@@ -13,6 +14,9 @@ let resultStage=null;
 let resizeObserver=null;
 let renderBusy=false;
 let layerCounter=1;
+let nodeEditMode=false;
+let nodeAddMode=false;
+let selectedNodeIndex=null;
 
 function clone(value){return JSON.parse(JSON.stringify(value));}
 function uid(){return `sil-shape-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`;}
@@ -38,6 +42,7 @@ function gradientDefault(){
 }
 function fillDefault(){
   return{
+    enabled:true,
     mode:'solid',
     color:'#8B5CF6',
     opacity:1,
@@ -52,6 +57,29 @@ function strokeDefault(){
     opacity:1
   };
 }
+function makeNode(x,y){
+  return{
+    x:Number(x)||0,
+    y:Number(y)||0,
+    inX:Number(x)||0,
+    inY:Number(y)||0,
+    outX:Number(x)||0,
+    outY:Number(y)||0,
+    smooth:false
+  };
+}
+function ensureNode(node){
+  const x=Number(node?.x)||0;
+  const y=Number(node?.y)||0;
+  return{
+    x,y,
+    inX:Number.isFinite(Number(node?.inX))?Number(node.inX):x,
+    inY:Number.isFinite(Number(node?.inY))?Number(node.inY):y,
+    outX:Number.isFinite(Number(node?.outX))?Number(node.outX):x,
+    outY:Number.isFinite(Number(node?.outY))?Number(node.outY):y,
+    smooth:node?.smooth===true
+  };
+}
 function shapeDefault(kind,state){
   const names={
     rect:'Rectángulo',
@@ -63,7 +91,8 @@ function shapeDefault(kind,state){
     hexagon:'Hexágono',
     star:'Estrella',
     heart:'Corazón',
-    arrow:'Flecha'
+    arrow:'Flecha',
+    custom:'Forma libre'
   };
   const cw=Math.max(1,Number(state?.w)||1080);
   const ch=Math.max(1,Number(state?.h)||1080);
@@ -80,6 +109,14 @@ function shapeDefault(kind,state){
     rotation:0,
     radius:Math.min(32,Math.round(Math.min(w,h)*.18)),
     visible:true,
+    closed:true,
+    points:kind==='custom'?[
+      makeNode(w*.15,h*.18),
+      makeNode(w*.82,h*.12),
+      makeNode(w*.9,h*.72),
+      makeNode(w*.58,h*.9),
+      makeNode(w*.12,h*.78)
+    ]:[],
     fill:fillDefault(),
     stroke:strokeDefault()
   };
@@ -96,9 +133,26 @@ function ensureShape(shape){
   shape.rotation=Number(shape.rotation)||0;
   shape.radius=Math.max(0,Number(shape.radius)||0);
   shape.visible=shape.visible!==false;
+  shape.closed=shape.closed!==false;
+  if(shape.kind==='custom'){
+    if(!Array.isArray(shape.points)||shape.points.length<2){
+      shape.points=[
+        makeNode(shape.width*.15,shape.height*.18),
+        makeNode(shape.width*.82,shape.height*.12),
+        makeNode(shape.width*.9,shape.height*.72),
+        makeNode(shape.width*.58,shape.height*.9),
+        makeNode(shape.width*.12,shape.height*.78)
+      ];
+    }else{
+      shape.points=shape.points.map(ensureNode);
+    }
+  }else if(!Array.isArray(shape.points)){
+    shape.points=[];
+  }
 
   const fill=shape.fill&&typeof shape.fill==='object'?shape.fill:{};
   shape.fill={
+    enabled:fill.enabled!==false,
     mode:['solid','gradient'].includes(fill.mode)?fill.mode:'solid',
     color:fill.color||'#8B5CF6',
     opacity:clamp(fill.opacity??1,0,1),
@@ -180,10 +234,37 @@ function polygon(kind,w,h){
 function heartPath(w,h){
   return `M ${w/2} ${h} C ${w*.12} ${h*.76}, 0 ${h*.4}, ${w*.22} ${h*.22} C ${w*.36} ${h*.1}, ${w*.48} ${h*.16}, ${w/2} ${h*.3} C ${w*.52} ${h*.16}, ${w*.64} ${h*.1}, ${w*.78} ${h*.22} C ${w} ${h*.4}, ${w*.88} ${h*.76}, ${w/2} ${h} Z`;
 }
+function customPathD(shape){
+  const points=(shape.points||[]).map(ensureNode);
+  if(!points.length)return '';
+  let d=`M ${points[0].x} ${points[0].y}`;
+  for(let i=1;i<points.length;i++){
+    const prev=points[i-1],next=points[i];
+    d+=` C ${prev.outX} ${prev.outY}, ${next.inX} ${next.inY}, ${next.x} ${next.y}`;
+  }
+  if(shape.closed!==false&&points.length>1){
+    const last=points[points.length-1],first=points[0];
+    d+=` C ${last.outX} ${last.outY}, ${first.inX} ${first.inY}, ${first.x} ${first.y} Z`;
+  }
+  return d;
+}
 function pathCanvas(ctx,shape){
   const w=shape.width,h=shape.height;
   ctx.beginPath();
-  if(shape.kind==='rect'){
+  if(shape.kind==='custom'){
+    const points=(shape.points||[]).map(ensureNode);
+    if(points.length){
+      ctx.moveTo(points[0].x,points[0].y);
+      for(let i=1;i<points.length;i++){
+        const prev=points[i-1],next=points[i];
+        ctx.bezierCurveTo(prev.outX,prev.outY,next.inX,next.inY,next.x,next.y);
+      }
+      if(shape.closed!==false&&points.length>1){
+        const last=points[points.length-1],first=points[0];
+        ctx.bezierCurveTo(last.outX,last.outY,first.inX,first.inY,first.x,first.y);
+      }
+    }
+  }else if(shape.kind==='rect'){
     ctx.rect(0,0,w,h);
   }else if(shape.kind==='roundRect'){
     const radius=clamp(shape.radius,0,Math.min(w,h)/2);
@@ -210,7 +291,7 @@ function pathCanvas(ctx,shape){
     const points=polygon(shape.kind,w,h).split(/\s+/).map(value=>value.split(',').map(Number));
     points.forEach((point,index)=>index?ctx.lineTo(point[0],point[1]):ctx.moveTo(point[0],point[1]));
   }
-  ctx.closePath();
+  if(shape.kind!=='custom'||shape.closed!==false)ctx.closePath();
 }
 function rgba(hex,alpha){
   let value=String(hex||'#FFFFFF').replace('#','');
@@ -239,12 +320,14 @@ function drawShape(ctx,shape){
   ctx.rotate((shape.rotation||0)*Math.PI/180);
   ctx.translate(-shape.width/2,-shape.height/2);
 
-  pathCanvas(ctx,shape);
-  ctx.save();
-  ctx.globalAlpha=clamp(shape.fill.opacity??1,0,1);
-  ctx.fillStyle=shape.fill.mode==='gradient'?canvasGradient(ctx,shape):(shape.fill.color||'#8B5CF6');
-  ctx.fill();
-  ctx.restore();
+  if(shape.fill.enabled!==false&&shape.closed!==false){
+    pathCanvas(ctx,shape);
+    ctx.save();
+    ctx.globalAlpha=clamp(shape.fill.opacity??1,0,1);
+    ctx.fillStyle=shape.fill.mode==='gradient'?canvasGradient(ctx,shape):(shape.fill.color||'#8B5CF6');
+    ctx.fill();
+    ctx.restore();
+  }
 
   if(shape.stroke.enabled&&shape.stroke.width>0){
     pathCanvas(ctx,shape);
@@ -267,7 +350,10 @@ function draw(ctx,state=current()){
 function svgShapeElement(shape){
   const w=shape.width,h=shape.height;
   let node;
-  if(shape.kind==='rect'||shape.kind==='roundRect'){
+  if(shape.kind==='custom'){
+    node=document.createElementNS(SVG_NS,'path');
+    node.setAttribute('d',customPathD(shape));
+  }else if(shape.kind==='rect'||shape.kind==='roundRect'){
     node=document.createElementNS(SVG_NS,'rect');
     node.setAttribute('x','0');node.setAttribute('y','0');
     node.setAttribute('width',w);node.setAttribute('height',h);
@@ -326,6 +412,157 @@ function newTopLeftForAnchor(anchor,dir,w,h,rotation){
   return{x:anchor.x-cx-vector.x,y:anchor.y-cy-vector.y};
 }
 
+
+function regularPolygonPoints(shape){
+  const w=shape.width,h=shape.height;
+  if(shape.kind==='rect'||shape.kind==='roundRect'){
+    return[
+      makeNode(0,0),makeNode(w,0),makeNode(w,h),makeNode(0,h)
+    ];
+  }
+  if(shape.kind==='circle'||shape.kind==='ellipse'){
+    const rx=shape.kind==='circle'?Math.min(w,h)/2:w/2;
+    const ry=shape.kind==='circle'?Math.min(w,h)/2:h/2;
+    const cx=w/2,cy=h/2,k=.5522847498307936;
+    const points=[
+      makeNode(cx,cy-ry),
+      makeNode(cx+rx,cy),
+      makeNode(cx,cy+ry),
+      makeNode(cx-rx,cy)
+    ];
+    points[0].smooth=true;points[0].inX=cx-rx*k;points[0].outX=cx+rx*k;
+    points[1].smooth=true;points[1].inY=cy-ry*k;points[1].outY=cy+ry*k;
+    points[2].smooth=true;points[2].inX=cx+rx*k;points[2].outX=cx-rx*k;
+    points[3].smooth=true;points[3].inY=cy+ry*k;points[3].outY=cy-ry*k;
+    return points;
+  }
+  if(shape.kind==='heart'){
+    const p0=makeNode(w/2,h),p1=makeNode(w*.22,h*.22),p2=makeNode(w/2,h*.3),p3=makeNode(w*.78,h*.22);
+    p0.outX=w*.12;p0.outY=h*.76;p0.inX=w*.88;p0.inY=h*.76;
+    p1.inX=0;p1.inY=h*.4;p1.outX=w*.36;p1.outY=h*.1;
+    p2.inX=w*.48;p2.inY=h*.16;p2.outX=w*.52;p2.outY=h*.16;
+    p3.inX=w*.64;p3.inY=h*.1;p3.outX=w;p3.outY=h*.4;
+    [p0,p1,p2,p3].forEach(point=>point.smooth=true);
+    return[p0,p1,p2,p3];
+  }
+  const raw=polygon(shape.kind,w,h);
+  if(raw){
+    return raw.split(/\s+/).map(value=>{
+      const [x,y]=value.split(',').map(Number);
+      return makeNode(x,y);
+    });
+  }
+  return[
+    makeNode(w*.15,h*.18),
+    makeNode(w*.82,h*.12),
+    makeNode(w*.9,h*.72),
+    makeNode(w*.58,h*.9),
+    makeNode(w*.12,h*.78)
+  ];
+}
+function convertShapeToCustom(shape){
+  if(!shape||shape.kind==='custom')return shape;
+  shape.points=regularPolygonPoints(shape);
+  shape.kind='custom';
+  shape.closed=true;
+  shape.radius=0;
+  nodeEditMode=true;
+  nodeAddMode=false;
+  selectedNodeIndex=0;
+  return shape;
+}
+function worldToLocal(shape,world){
+  const center={x:shape.x+shape.width/2,y:shape.y+shape.height/2};
+  const vector=rotateVector(world.x-center.x,world.y-center.y,-(shape.rotation||0));
+  return{x:vector.x+shape.width/2,y:vector.y+shape.height/2};
+}
+function pointSegmentDistance(point,a,b){
+  const vx=b.x-a.x,vy=b.y-a.y;
+  const wx=point.x-a.x,wy=point.y-a.y;
+  const length=vx*vx+vy*vy||1;
+  const t=clamp((wx*vx+wy*vy)/length,0,1);
+  const x=a.x+vx*t,y=a.y+vy*t;
+  return Math.hypot(point.x-x,point.y-y);
+}
+function nearestSegmentIndex(shape,point){
+  const points=shape.points||[];
+  if(points.length<2)return 0;
+  let best=0,bestDistance=Infinity;
+  const count=shape.closed===false?points.length-1:points.length;
+  for(let i=0;i<count;i++){
+    const a=points[i],b=points[(i+1)%points.length];
+    const distance=pointSegmentDistance(point,a,b);
+    if(distance<bestDistance){bestDistance=distance;best=i;}
+  }
+  return best;
+}
+function insertNodeAt(shape,local,index=null){
+  if(!shape||shape.kind!=='custom')return;
+  const point=makeNode(
+    clamp(local.x,0,shape.width),
+    clamp(local.y,0,shape.height)
+  );
+  const after=Number.isInteger(index)?index:nearestSegmentIndex(shape,point);
+  shape.points.splice(Math.min(shape.points.length,after+1),0,point);
+  selectedNodeIndex=Math.min(shape.points.length-1,after+1);
+}
+function duplicateSelectedNode(){
+  const shape=selected();
+  if(!shape||shape.kind!=='custom'||selectedNodeIndex==null)return;
+  mutateSelected(currentShape=>{
+    const point=currentShape.points[selectedNodeIndex];
+    if(!point)return;
+    const copy=clone(point);
+    copy.x=clamp(copy.x+18,0,currentShape.width);
+    copy.y=clamp(copy.y+18,0,currentShape.height);
+    copy.inX+=18;copy.inY+=18;copy.outX+=18;copy.outY+=18;
+    currentShape.points.splice(selectedNodeIndex+1,0,copy);
+    selectedNodeIndex++;
+  },'Nodo duplicado.');
+}
+function deleteSelectedNode(){
+  const shape=selected();
+  if(!shape||shape.kind!=='custom'||selectedNodeIndex==null)return;
+  if(shape.points.length<=3){
+    api()?.notify?.('La figura necesita al menos 3 nodos.');
+    return;
+  }
+  mutateSelected(currentShape=>{
+    currentShape.points.splice(selectedNodeIndex,1);
+    selectedNodeIndex=Math.min(selectedNodeIndex,currentShape.points.length-1);
+  },'Nodo eliminado.');
+}
+function setNodeSmooth(shape,index,smooth){
+  const point=shape?.points?.[index];
+  if(!point)return;
+  point.smooth=!!smooth;
+  if(smooth){
+    const prev=shape.points[(index-1+shape.points.length)%shape.points.length]||point;
+    const next=shape.points[(index+1)%shape.points.length]||point;
+    const angle=Math.atan2(next.y-prev.y,next.x-prev.x);
+    const distance=Math.max(12,Math.min(
+      Math.hypot(point.x-prev.x,point.y-prev.y),
+      Math.hypot(next.x-point.x,next.y-point.y)
+    )*.28);
+    point.inX=point.x-Math.cos(angle)*distance;
+    point.inY=point.y-Math.sin(angle)*distance;
+    point.outX=point.x+Math.cos(angle)*distance;
+    point.outY=point.y+Math.sin(angle)*distance;
+  }else{
+    point.inX=point.x;point.inY=point.y;
+    point.outX=point.x;point.outY=point.y;
+  }
+}
+function scalePointSet(points,sx,sy){
+  return(points||[]).map(raw=>{
+    const point=ensureNode(raw);
+    point.x*=sx;point.y*=sy;
+    point.inX*=sx;point.inY*=sy;
+    point.outX*=sx;point.outY*=sy;
+    return point;
+  });
+}
+
 function injectStyles(){
   if($('#silhouetteShapeFillStyles'))return;
   const style=document.createElement('style');
@@ -374,6 +611,18 @@ function injectStyles(){
     html[data-theme=night] #shapeMode .sil-shape-field select{background:var(--surface-2);border-color:var(--border);color:var(--text)}
     html[data-theme=night] #shapeMode .sil-shape-paint{background:var(--surface-3);border-color:var(--border)}
     html[data-theme=night] #shapeMode .sil-shape-row.active{background:#261e33;border-color:#7658b0}
+    #shapeMode .sil-node-tools{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:8px;border:1px solid #ddd9e8;border-radius:9px;background:#fbfaff}
+    #shapeMode .sil-node-tools button{min-height:30px;border:1px solid #ded8eb;border-radius:7px;background:#fff;color:inherit;font-size:8.5px;font-weight:850}
+    #shapeMode .sil-node-tools button.active{background:#efe8ff;border-color:#8b5cf6;color:#6d28d9}
+    #shapeMode .sil-node-tools .full{grid-column:1/-1}
+    #silhouetteShapeOverlay .sil-node{fill:#fff;stroke:#7C3AED;stroke-width:2.4;vector-effect:non-scaling-stroke;cursor:grab;pointer-events:auto}
+    #silhouetteShapeOverlay .sil-node.selected{fill:#FACC15;stroke:#111827}
+    #silhouetteShapeOverlay .sil-node-mid{fill:#34D399;stroke:#064E3B;stroke-width:1.5;vector-effect:non-scaling-stroke;cursor:copy;pointer-events:auto}
+    #silhouetteShapeOverlay .sil-control-line{stroke:#22C55E;stroke-width:1.5;stroke-dasharray:4 3;vector-effect:non-scaling-stroke;pointer-events:none}
+    #silhouetteShapeOverlay .sil-control{fill:#fff;stroke:#16A34A;stroke-width:2;vector-effect:non-scaling-stroke;cursor:crosshair;pointer-events:auto}
+    #silhouetteShapeOverlay .sil-node-add-zone{fill:rgba(124,58,237,.001);stroke:none;pointer-events:all;cursor:crosshair}
+    html[data-theme=night] #shapeMode .sil-node-tools{background:var(--surface-3);border-color:var(--border)}
+    html[data-theme=night] #shapeMode .sil-node-tools button{background:var(--surface-2);border-color:var(--border);color:var(--text)}
   `;
   document.head.appendChild(style);
 }
@@ -396,12 +645,13 @@ function buildPanel(){
       <button data-add="star">Estrella</button>
       <button data-add="heart">Corazón</button>
       <button data-add="arrow">Flecha</button>
+      <button data-add="custom">✦ Forma libre</button>
     </div>
     <div class="sil-shape-heading">Capas</div>
     <div class="sil-shape-list" id="silShapeLayerList"></div>
     <div class="sil-shape-heading">Ajustes</div>
     <div id="silShapeInspector"></div>
-    <p class="sil-shape-help">Arrastra = mover · puntos blancos = escalar · Ctrl + esquina = mantener proporción · punto amarillo = rotar · Shift = saltos de 15° · rueda = escalar · flechas = mover · Supr = eliminar.</p>
+    <p class="sil-shape-help">Arrastra = mover · puntos blancos = escalar · Ctrl + esquina = mantener proporción · punto amarillo = rotar · Shift = saltos de 15° · rueda = escalar. En Editar nodos puedes mover puntos, colocar nuevos nodos, insertar entre segmentos, borrar nodos y editar curvas Bézier.</p>
   `;
 
   $$('[data-add]',host).forEach(button=>{
@@ -493,6 +743,18 @@ function bindMove(group,shape){
     const live=shapesOf(state).find(item=>item.id===shape.id);
     if(!live)return;
     state.activeShapeId=shape.id;
+
+    if(live.kind==='custom'&&nodeEditMode&&nodeAddMode){
+      const world=overlayPoint(event,state);
+      const local=worldToLocal(live,world);
+      mutateSelected(currentShape=>{
+        insertNodeAt(currentShape,local);
+      },'Nodo añadido.');
+      nodeAddMode=false;
+      sync(current());
+      return;
+    }
+
     const start=overlayPoint(event,state);
     const origin={x:live.x,y:live.y};
     api()?.beginGesture?.();
@@ -558,13 +820,132 @@ function bindResize(handle,shape,dir){
 
       const topLeft=newTopLeftForAnchor(anchor,dir,width,height,start.rotation||0);
       live.x=topLeft.x;live.y=topLeft.y;live.width=width;live.height=height;
+      if(start.kind==='custom'){
+        live.points=scalePointSet(start.points,width/start.width,height/start.height);
+      }
       api()?.render?.();renderOverlay(current());renderInspector(current());
     },()=>{api()?.endGesture?.();sync(current());api()?.notify?.('Tamaño actualizado.');});
   });
 }
 
+
+function bindNodeDrag(nodeEl,shape,index){
+  nodeEl.addEventListener('pointerdown',event=>{
+    event.preventDefault();event.stopPropagation();
+    const state=current();
+    const live=shapesOf(state).find(item=>item.id===shape.id);
+    const point=live?.points?.[index];
+    if(!live||!point)return;
+    state.activeShapeId=shape.id;
+    selectedNodeIndex=index;
+    const startWorld=overlayPoint(event,state);
+    const start=clone(point);
+    api()?.beginGesture?.();
+    pointerSession(event,next=>{
+      const world=overlayPoint(next,current());
+      const deltaWorld={x:world.x-startWorld.x,y:world.y-startWorld.y};
+      const delta=localDeltaFromWorld(deltaWorld.x,deltaWorld.y,live.rotation||0);
+      const x=clamp(start.x+delta.x,0,live.width);
+      const y=clamp(start.y+delta.y,0,live.height);
+      const dx=x-start.x,dy=y-start.y;
+      point.x=x;point.y=y;
+      point.inX=start.inX+dx;point.inY=start.inY+dy;
+      point.outX=start.outX+dx;point.outY=start.outY+dy;
+      api()?.render?.();renderOverlay(current());renderInspector(current());
+    },()=>{api()?.endGesture?.();sync(current());api()?.notify?.('Nodo movido.');});
+  });
+}
+function bindControlDrag(controlEl,shape,index,key){
+  controlEl.addEventListener('pointerdown',event=>{
+    event.preventDefault();event.stopPropagation();
+    const state=current();
+    const live=shapesOf(state).find(item=>item.id===shape.id);
+    const point=live?.points?.[index];
+    if(!live||!point)return;
+    selectedNodeIndex=index;
+    api()?.beginGesture?.();
+    pointerSession(event,next=>{
+      const world=overlayPoint(next,current());
+      const local=worldToLocal(live,world);
+      const xKey=key==='in'?'inX':'outX',yKey=key==='in'?'inY':'outY';
+      const oxKey=key==='in'?'outX':'inX',oyKey=key==='in'?'outY':'inY';
+      point[xKey]=local.x;point[yKey]=local.y;
+      if(point.smooth){
+        const oppositeLength=Math.max(8,Math.hypot(point[oxKey]-point.x,point[oyKey]-point.y));
+        const vx=local.x-point.x,vy=local.y-point.y;
+        const length=Math.hypot(vx,vy)||1;
+        point[oxKey]=point.x-vx/length*oppositeLength;
+        point[oyKey]=point.y-vy/length*oppositeLength;
+      }
+      api()?.render?.();renderOverlay(current());renderInspector(current());
+    },()=>{api()?.endGesture?.();sync(current());api()?.notify?.('Curva actualizada.');});
+  });
+}
+function renderNodeEditor(group,shape,state){
+  if(!nodeEditMode||shape.kind!=='custom'||shape.id!==state.activeShapeId)return;
+  const points=shape.points||[];
+  if(!points.length)return;
+
+  const addZone=document.createElementNS(SVG_NS,'rect');
+  addZone.classList.add('sil-node-add-zone');
+  addZone.setAttribute('x','0');addZone.setAttribute('y','0');
+  addZone.setAttribute('width',shape.width);addZone.setAttribute('height',shape.height);
+  if(nodeAddMode){
+    addZone.addEventListener('pointerdown',event=>{
+      event.preventDefault();event.stopPropagation();
+      const world=overlayPoint(event,current());
+      const local=worldToLocal(shape,world);
+      mutateSelected(currentShape=>insertNodeAt(currentShape,local),'Nodo añadido.');
+      nodeAddMode=false;sync(current());
+    });
+    group.insertBefore(addZone,group.firstChild);
+  }else{
+    addZone.style.pointerEvents='none';
+  }
+
+  const segmentCount=shape.closed===false?points.length-1:points.length;
+  for(let index=0;index<segmentCount;index++){
+    const a=points[index],b=points[(index+1)%points.length];
+    const mid=document.createElementNS(SVG_NS,'circle');
+    mid.classList.add('sil-node-mid');
+    mid.setAttribute('cx',(a.x+b.x)/2);mid.setAttribute('cy',(a.y+b.y)/2);mid.setAttribute('r',Math.max(5,Math.min(shape.width,shape.height)*.014));
+    mid.addEventListener('pointerdown',event=>{
+      event.preventDefault();event.stopPropagation();
+      mutateSelected(currentShape=>{
+        const p1=currentShape.points[index],p2=currentShape.points[(index+1)%currentShape.points.length];
+        insertNodeAt(currentShape,{x:(p1.x+p2.x)/2,y:(p1.y+p2.y)/2},index);
+      },'Nodo insertado entre segmentos.');
+    });
+    group.appendChild(mid);
+  }
+
+  points.forEach((point,index)=>{
+    if(index===selectedNodeIndex){
+      [['in',point.inX,point.inY],['out',point.outX,point.outY]].forEach(([key,x,y])=>{
+        const line=document.createElementNS(SVG_NS,'line');
+        line.classList.add('sil-control-line');
+        line.setAttribute('x1',point.x);line.setAttribute('y1',point.y);line.setAttribute('x2',x);line.setAttribute('y2',y);
+        group.appendChild(line);
+        const control=document.createElementNS(SVG_NS,'circle');
+        control.classList.add('sil-control');control.dataset.handle=key;
+        control.setAttribute('cx',x);control.setAttribute('cy',y);control.setAttribute('r',Math.max(5,Math.min(shape.width,shape.height)*.013));
+        bindControlDrag(control,shape,index,key);
+        group.appendChild(control);
+      });
+    }
+
+    const node=document.createElementNS(SVG_NS,'circle');
+    node.classList.add('sil-node');
+    if(index===selectedNodeIndex)node.classList.add('selected');
+    node.dataset.nodeIndex=String(index);
+    node.setAttribute('cx',point.x);node.setAttribute('cy',point.y);node.setAttribute('r',Math.max(6,Math.min(shape.width,shape.height)*.016));
+    node.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();selectedNodeIndex=index;renderOverlay(current());renderInspector(current());});
+    bindNodeDrag(node,shape,index);
+    group.appendChild(node);
+  });
+}
+
 function renderOverlay(state=current()){
-  if(renderBusy)return;
   normalizeState(state);
   ensureOverlay();
   syncOverlayLayout(state);
@@ -613,10 +994,11 @@ function renderOverlay(state=current()){
 
     hit.addEventListener('click',event=>{
       event.preventDefault();event.stopPropagation();
-      state.activeShapeId=shape.id;sync(state);
+      state.activeShapeId=shape.id;selectedNodeIndex=shape.kind==='custom'?0:null;nodeAddMode=false;sync(state);
     });
     bindMove(group,shape);
     bindRotation(rotator,shape);
+    renderNodeEditor(group,shape,state);
     overlayLayer.appendChild(group);
   });
 }
@@ -637,7 +1019,7 @@ function renderLayerList(state=current()){
 
     row.addEventListener('click',event=>{
       if(event.target.closest('button'))return;
-      state.activeShapeId=shape.id;sync(state);
+      state.activeShapeId=shape.id;selectedNodeIndex=shape.kind==='custom'?0:null;nodeAddMode=false;sync(state);
     });
 
     $$('button',row).forEach(button=>button.addEventListener('click',event=>{
@@ -648,10 +1030,10 @@ function renderLayerList(state=current()){
         const index=list.findIndex(item=>item.id===shape.id);
         if(index<0)return;
         if(action==='del'){
-          list.splice(index,1);next.activeShapeId=list.at(-1)?.id||null;
+          list.splice(index,1);next.activeShapeId=list.at(-1)?.id||null;selectedNodeIndex=null;nodeAddMode=false;
         }else if(action==='dup'){
           const copy=clone(list[index]);copy.id=uid();copy.name=`${copy.name} copia`;copy.x+=24;copy.y+=24;
-          list.splice(index+1,0,copy);next.activeShapeId=copy.id;
+          list.splice(index+1,0,copy);next.activeShapeId=copy.id;selectedNodeIndex=copy.kind==='custom'?0:null;nodeAddMode=false;
         }else if(action==='up'&&index<list.length-1){
           [list[index],list[index+1]]=[list[index+1],list[index]];
         }else if(action==='down'&&index>0){
@@ -690,8 +1072,24 @@ function renderInspector(state=current()){
     <label class="sil-shape-field full"><span>Rotación</span><div class="sil-shape-range"><input data-prop="rotation" type="range" min="-180" max="180" step="1"><output data-out="rotation"></output></div></label>
     <label class="sil-shape-field full" data-radius-row><span>Radio de esquinas</span><div class="sil-shape-range"><input data-prop="radius" type="range" min="0" max="200" step="1"><output data-out="radius"></output></div></label>
 
+    <div class="sil-node-tools">
+      <button class="full" data-convert-nodes type="button">${shape.kind==='custom'?'✓ Figura editable por nodos':'✦ Convertir figura a nodos'}</button>
+      <button data-edit-nodes type="button">Editar nodos</button>
+      <button data-add-node type="button">＋ Colocar nodo</button>
+      <button data-duplicate-node type="button">⧉ Duplicar nodo</button>
+      <button data-delete-node type="button">− Borrar nodo</button>
+      <button data-node-corner type="button">Nodo esquina</button>
+      <button data-node-smooth type="button">Nodo suave</button>
+      <label class="sil-shape-check full"><span>Cerrar trazado</span><input data-shape-closed type="checkbox"></label>
+      <div class="sil-shape-gradient full" data-node-position>
+        <label class="sil-shape-field"><span>Nodo X</span><input data-node-x type="number" step="1"></label>
+        <label class="sil-shape-field"><span>Nodo Y</span><input data-node-y type="number" step="1"></label>
+      </div>
+    </div>
+
     <div class="sil-shape-paint">
       <strong>Relleno</strong>
+      <label class="sil-shape-check"><span>Activar relleno</span><input data-fill-enabled type="checkbox"></label>
       <label class="sil-shape-field"><span>Tipo</span><select data-fill-mode><option value="solid">Color sólido</option><option value="gradient">Degradado</option></select></label>
       <div class="sil-shape-gradient" data-solid><label class="sil-shape-field"><span>Color</span><input data-fill-color type="color"></label><label class="sil-shape-field"><span>Opacidad</span><input data-fill-opacity type="range" min="0" max="1" step="0.01"></label></div>
       <div data-gradient>
@@ -717,15 +1115,104 @@ function renderInspector(state=current()){
     input.addEventListener('input',()=>{
       let value=input.value;
       if(input.type==='number'||input.type==='range')value=Number(value);
-      shape[prop]=prop==='width'||prop==='height'?Math.max(12,Number(value)||12):value;
+      if((prop==='width'||prop==='height')&&shape.kind==='custom'){
+        const oldW=shape.width,oldH=shape.height;
+        const nextValue=Math.max(12,Number(value)||12);
+        if(prop==='width'){
+          shape.width=nextValue;
+          shape.points=scalePointSet(shape.points,shape.width/oldW,1);
+        }else{
+          shape.height=nextValue;
+          shape.points=scalePointSet(shape.points,1,shape.height/oldH);
+        }
+      }else{
+        shape[prop]=prop==='width'||prop==='height'?Math.max(12,Number(value)||12):value;
+      }
       if(out)out.textContent=prop==='rotation'?`${Math.round(Number(value))}°`:`${Math.round(Number(value))}`;
       api()?.render?.();renderOverlay(current());renderLayerList(current());
     });
     bindGestureInput(input);
   });
 
+  const convertButton=$('[data-convert-nodes]',box);
+  const editButton=$('[data-edit-nodes]',box);
+  const addNodeButton=$('[data-add-node]',box);
+  const duplicateNodeButton=$('[data-duplicate-node]',box);
+  const deleteNodeButton=$('[data-delete-node]',box);
+  const cornerButton=$('[data-node-corner]',box);
+  const smoothButton=$('[data-node-smooth]',box);
+  const closedInput=$('[data-shape-closed]',box);
+  const nodePosition=$('[data-node-position]',box);
+  const nodeX=$('[data-node-x]',box),nodeY=$('[data-node-y]',box);
+
+  const custom=shape.kind==='custom';
+  editButton.disabled=!custom;
+  addNodeButton.disabled=!custom;
+  duplicateNodeButton.disabled=!custom||selectedNodeIndex==null;
+  deleteNodeButton.disabled=!custom||selectedNodeIndex==null||shape.points.length<=3;
+  cornerButton.disabled=!custom||selectedNodeIndex==null;
+  smoothButton.disabled=!custom||selectedNodeIndex==null;
+  closedInput.disabled=!custom;
+  closedInput.checked=shape.closed!==false;
+  editButton.classList.toggle('active',custom&&nodeEditMode);
+  addNodeButton.classList.toggle('active',custom&&nodeAddMode);
+
+  convertButton.addEventListener('click',()=>{
+    if(shape.kind!=='custom'){
+      mutateSelected(currentShape=>convertShapeToCustom(currentShape),'Figura convertida a nodos.');
+    }else{
+      nodeEditMode=true;
+      selectedNodeIndex=selectedNodeIndex??0;
+      sync(current());
+    }
+  });
+  editButton.addEventListener('click',()=>{
+    if(shape.kind!=='custom')return;
+    nodeEditMode=!nodeEditMode;
+    nodeAddMode=false;
+    if(nodeEditMode&&selectedNodeIndex==null)selectedNodeIndex=0;
+    sync(current());
+  });
+  addNodeButton.addEventListener('click',()=>{
+    if(shape.kind!=='custom')return;
+    nodeEditMode=true;
+    nodeAddMode=!nodeAddMode;
+    sync(current());
+    api()?.notify?.(nodeAddMode?'Haz clic dentro del transformador para colocar el nodo.':'Colocación de nodos cancelada.');
+  });
+  duplicateNodeButton.addEventListener('click',duplicateSelectedNode);
+  deleteNodeButton.addEventListener('click',deleteSelectedNode);
+  cornerButton.addEventListener('click',()=>mutateSelected(currentShape=>setNodeSmooth(currentShape,selectedNodeIndex,false),'Nodo convertido en esquina.'));
+  smoothButton.addEventListener('click',()=>mutateSelected(currentShape=>setNodeSmooth(currentShape,selectedNodeIndex,true),'Nodo suavizado.'));
+  closedInput.addEventListener('change',()=>mutateSelected(currentShape=>{currentShape.closed=closedInput.checked;},'Trazado actualizado.'));
+
+  const activePoint=custom&&selectedNodeIndex!=null?shape.points[selectedNodeIndex]:null;
+  nodePosition.style.display=activePoint?'grid':'none';
+  if(activePoint){
+    nodeX.value=Math.round(activePoint.x*100)/100;
+    nodeY.value=Math.round(activePoint.y*100)/100;
+    const updateNodePosition=()=>{
+      const point=shape.points[selectedNodeIndex];
+      if(!point)return;
+      const nextX=clamp(Number(nodeX.value)||0,0,shape.width);
+      const nextY=clamp(Number(nodeY.value)||0,0,shape.height);
+      const dx=nextX-point.x,dy=nextY-point.y;
+      point.x=nextX;point.y=nextY;
+      point.inX+=dx;point.inY+=dy;point.outX+=dx;point.outY+=dy;
+      api()?.render?.();renderOverlay(current());
+    };
+    nodeX.addEventListener('input',updateNodePosition);
+    nodeY.addEventListener('input',updateNodePosition);
+    [nodeX,nodeY].forEach(bindGestureInput);
+  }
+
   const radiusRow=$('[data-radius-row]',box);
   if(radiusRow)radiusRow.style.display=shape.kind==='roundRect'?'':'none';
+
+  const fillEnabled=$('[data-fill-enabled]',box);
+  fillEnabled.checked=shape.fill.enabled!==false;
+  fillEnabled.disabled=shape.closed===false;
+  fillEnabled.addEventListener('change',()=>mutateSelected(s=>{s.fill.enabled=fillEnabled.checked;},'Relleno actualizado.'));
 
   const mode=$('[data-fill-mode]',box),solid=$('[data-solid]',box),gradient=$('[data-gradient]',box);
   mode.value=shape.fill.mode;
@@ -788,20 +1275,39 @@ function bindKeyboard(){
       event.preventDefault();event.stopImmediatePropagation();duplicateSelected();return;
     }
     if(event.key==='Delete'||event.key==='Backspace'){
-      event.preventDefault();event.stopImmediatePropagation();deleteSelected();return;
+      event.preventDefault();event.stopImmediatePropagation();
+      if(nodeEditMode&&selected(state)?.kind==='custom'&&selectedNodeIndex!=null)deleteSelectedNode();
+      else deleteSelected();
+      return;
     }
     if(event.key==='Escape'){
+      if(nodeAddMode){nodeAddMode=false;sync(state);return;}
+      if(nodeEditMode){nodeEditMode=false;selectedNodeIndex=null;sync(state);return;}
       state.activeShapeId=null;sync(state);return;
     }
     if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)&&selected(state)){
       event.preventDefault();event.stopImmediatePropagation();
       const step=event.shiftKey?10:1;
-      mutateSelected(shape=>{
-        if(event.key==='ArrowLeft')shape.x-=step;
-        if(event.key==='ArrowRight')shape.x+=step;
-        if(event.key==='ArrowUp')shape.y-=step;
-        if(event.key==='ArrowDown')shape.y+=step;
-      },'Forma movida.');
+      const shape=selected(state);
+      if(nodeEditMode&&shape.kind==='custom'&&selectedNodeIndex!=null&&shape.points[selectedNodeIndex]){
+        mutateSelected(currentShape=>{
+          const point=currentShape.points[selectedNodeIndex];
+          const dx=event.key==='ArrowLeft'?-step:event.key==='ArrowRight'?step:0;
+          const dy=event.key==='ArrowUp'?-step:event.key==='ArrowDown'?step:0;
+          const nextX=clamp(point.x+dx,0,currentShape.width);
+          const nextY=clamp(point.y+dy,0,currentShape.height);
+          const mx=nextX-point.x,my=nextY-point.y;
+          point.x=nextX;point.y=nextY;
+          point.inX+=mx;point.inY+=my;point.outX+=mx;point.outY+=my;
+        },'Nodo movido.');
+      }else{
+        mutateSelected(currentShape=>{
+          if(event.key==='ArrowLeft')currentShape.x-=step;
+          if(event.key==='ArrowRight')currentShape.x+=step;
+          if(event.key==='ArrowUp')currentShape.y-=step;
+          if(event.key==='ArrowDown')currentShape.y+=step;
+        },'Forma movida.');
+      }
     }
   },true);
 }
@@ -816,8 +1322,10 @@ function bindWheel(){
     const factor=event.deltaY<0?1.05:.95;
     mutateSelected(s=>{
       const cx=s.x+s.width/2,cy=s.y+s.height/2;
+      const oldW=s.width,oldH=s.height;
       s.width=Math.max(12,s.width*factor);s.height=Math.max(12,s.height*factor);
       s.x=cx-s.width/2;s.y=cy-s.height/2;
+      if(s.kind==='custom')s.points=scalePointSet(s.points,s.width/oldW,s.height/oldH);
     },'Escala de forma actualizada.');
   },{passive:false,capture:true});
 }
@@ -846,7 +1354,7 @@ function boot(){
   setTimeout(()=>observer.disconnect(),15000);
 }
 
-window.SilhouetteShapeFill={draw,sync,duplicateSelected,deleteSelected};
+window.SilhouetteShapeFill={draw,sync,duplicateSelected,deleteSelected,convertSelectedToNodes:()=>mutateSelected(shape=>convertShapeToCustom(shape),'Figura convertida a nodos.')};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
 else boot();
 
