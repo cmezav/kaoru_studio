@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=kaoru-stable-20260906">
-  <link rel="stylesheet" href="./reader.css?cache=epub-images-1">
+  <link rel="stylesheet" href="./reader.css?cache=epub-chapters-1">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -226,10 +226,20 @@
   </main>
 
   <main id="readerView" class="reader-view" hidden>
+    <div class="chapter-toolbar">
+      <button
+        id="chapterPickerBtn"
+        type="button"
+        aria-haspopup="dialog"
+        aria-controls="chapterPicker"
+        aria-keyshortcuts="C"
+        title="Capítulos (C)"
+      >Capítulos</button>
+    </div>
     <article id="readingColumn" class="reading-column">
       <header class="chapter-heading">
         <p id="workLine" class="work-line"></p>
-        <h1 id="chapterTitle"></h1>
+        <h1 id="chapterTitle" tabindex="-1"></h1>
       </header>
 
       <section id="chapterContent" class="chapter-content userstuff"></section>
@@ -245,6 +255,15 @@
     </article>
   </main>
 
+  <dialog id="chapterPicker" class="chapter-picker" aria-labelledby="chapterPickerTitle">
+    <header class="chapter-picker-head">
+      <h2 id="chapterPickerTitle">Capítulos</h2>
+      <form method="dialog">
+        <button type="submit" aria-label="Cerrar lista de capítulos">×</button>
+      </form>
+    </header>
+    <ol id="chapterPickerList" class="chapter-picker-list"></ol>
+  </dialog>
 
   <main id="pdfView" class="pdf-view" hidden>
     <section id="pdfPages" class="pdf-pages" aria-label="Páginas del PDF"></section>
@@ -312,6 +331,6 @@
   <script src="./reader-account.js?cache=kaoru-stable-20260906"></script>
   <script type="module" src="./reader-progress-cloud.js?cache=kaoru-stable-20260906"></script>
   <script type="module" src="./reader-files-cloud.js?cache=epub-images-1"></script>
-  <script type="module" src="./reader.js?cache=epub-images-1"></script>
+  <script type="module" src="./reader.js?cache=epub-chapters-1"></script>
 </body>
 </html>

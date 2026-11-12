@@ -63,6 +63,9 @@ const elements = {
   chapterTitle: document.getElementById('chapterTitle'),
   chapterContent: document.getElementById('chapterContent'),
   chapterPosition: document.getElementById('chapterPosition'),
+  chapterPickerBtn: document.getElementById('chapterPickerBtn'),
+  chapterPicker: document.getElementById('chapterPicker'),
+  chapterPickerList: document.getElementById('chapterPickerList'),
   prevChapterBtn: document.getElementById('prevChapterBtn'),
   nextChapterBtn: document.getElementById('nextChapterBtn'),
   libraryBtn: document.getElementById('libraryBtn'),
@@ -96,6 +99,8 @@ let saveTimer = 0;
 let restoreToken = 0;
 let epubImageLoader = null;
 const chapterImageUrls = new Set();
+const desktopPointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+let chapterSwipe = null;
 
 function clampReadingSize(value) {
   const numeric = Number(value);
@@ -492,6 +497,8 @@ async function renderLibrary() {
 }
 async function showLibrary(fromHistory = false) {
   clearTimeout(saveTimer);
+  elements.chapterPicker.close();
+  chapterSwipe = null;
 
   const epubSnapshot =
     currentBook && !isPdfBook(currentBook)
@@ -959,32 +966,33 @@ async function openBook(bookId, chapterIndex = 0, restore = true) {
     Math.min(book.chapters.length - 1, Number(chapterIndex) || 0)
   );
 
-  await renderChapter(restore);
+  const rendering = renderChapter(restore);
+  elements.chapterTitle.focus({ preventScroll: true });
+  await rendering;
 }
 
-async function changeChapter(delta) {
+function isReadingEpub() {
+  return Boolean(currentBook?.chapters?.length) && !isPdfBook(currentBook) && !elements.readerView.hidden;
+}
+
+async function goToChapter(index) {
   if (
-    !currentBook ||
-    isPdfBook(currentBook)
+    !isReadingEpub() ||
+    !Number.isInteger(index) ||
+    index < 0 ||
+    index >= currentBook.chapters.length ||
+    index === currentChapterIndex
   ) {
     return;
   }
 
-  const count = currentBook.chapters.length;
-  const next =
-    currentChapterIndex + Number(delta || 0);
-
-  if (
-    next < 0 ||
-    next >= count
-  ) {
-    return;
-  }
-
-  currentChapterIndex = next;
+  currentChapterIndex = index;
+  chapterSwipe = null;
 
   try {
-    await renderChapter(false);
+    const rendering = renderChapter(false);
+    elements.chapterTitle.focus({ preventScroll: true });
+    await rendering;
   } catch (error) {
     console.error(
       'Cambio de capítulo',
@@ -996,6 +1004,100 @@ async function changeChapter(delta) {
     scheduleCloudSync(1500);
   }
 }
+
+function changeChapter(delta) {
+  return goToChapter(currentChapterIndex + delta);
+}
+
+function openChapterPicker() {
+  if (!isReadingEpub() || elements.chapterPicker.open) return;
+
+  const list = document.createDocumentFragment();
+  let activeButton;
+  currentBook.chapters.forEach((chapter, index) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.chapterIndex = String(index);
+    button.textContent = chapter.title || `Chapter ${index + 1}`;
+    if (index === currentChapterIndex) {
+      button.setAttribute('aria-current', 'true');
+      button.autofocus = true;
+      activeButton = button;
+    }
+    item.append(button);
+    list.append(item);
+  });
+
+  elements.chapterPickerList.replaceChildren(list);
+  elements.chapterPicker.showModal();
+  activeButton?.scrollIntoView({ block: 'nearest' });
+}
+
+function handleChapterKey(event) {
+  if (
+    !desktopPointer.matches ||
+    !isReadingEpub() ||
+    elements.chapterPicker.open ||
+    event.defaultPrevented ||
+    event.repeat ||
+    event.isComposing ||
+    event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+    event.target.closest?.('input, textarea, select, [contenteditable]') ||
+    window.getSelection()?.isCollapsed === false
+  ) {
+    return;
+  }
+
+  switch (event.key.toLowerCase()) {
+    case 'arrowleft':
+      event.preventDefault();
+      changeChapter(-1);
+      break;
+    case 'arrowright':
+      event.preventDefault();
+      changeChapter(1);
+      break;
+    case 'c':
+      event.preventDefault();
+      openChapterPicker();
+      break;
+  }
+}
+
+function startChapterSwipe(event) {
+  if (event.pointerType !== 'touch') return;
+
+  chapterSwipe = null;
+  const edge = 24;
+  if (
+    !event.isPrimary ||
+    !isReadingEpub() ||
+    elements.chapterPicker.open ||
+    event.clientX < edge ||
+    event.clientX > document.documentElement.clientWidth - edge ||
+    event.target.closest('a, button, input, select, textarea, pre, [contenteditable]')
+  ) {
+    return;
+  }
+
+  chapterSwipe = { id: event.pointerId, x: event.clientX, y: event.clientY };
+}
+
+function finishChapterSwipe(event) {
+  const start = chapterSwipe;
+  if (!start || event.pointerId !== start.id) return;
+
+  chapterSwipe = null;
+  if (event.type === 'pointercancel' || window.getSelection()?.isCollapsed === false) return;
+
+  const dx = event.clientX - start.x;
+  const dy = event.clientY - start.y;
+  if (Math.abs(dx) >= 64 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    changeChapter(dx < 0 ? 1 : -1);
+  }
+}
+
 async function importReaderFile(file) {
   if (!file) return;
 
@@ -1317,6 +1419,18 @@ elements.importBtn.addEventListener('click', () => {
 elements.epubInput.addEventListener('change', () => {
   importReaderFile(elements.epubInput.files?.[0]);
 });
+
+elements.chapterPickerBtn.addEventListener('click', openChapterPicker);
+elements.chapterPickerList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-chapter-index]');
+  if (!button) return;
+  elements.chapterPicker.close();
+  goToChapter(Number(button.dataset.chapterIndex));
+});
+document.addEventListener('keydown', handleChapterKey);
+elements.readingColumn.addEventListener('pointerdown', startChapterSwipe);
+elements.readingColumn.addEventListener('pointerup', finishChapterSwipe);
+elements.readingColumn.addEventListener('pointercancel', finishChapterSwipe);
 
 elements.libraryBtn?.addEventListener('click', (event) => {
   event.preventDefault();
