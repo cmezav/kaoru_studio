@@ -9,7 +9,7 @@ import {
 
 import {
   parseEpub
-} from './epub-parser.js?cache=archive-reader';
+} from './epub-parser.js?cache=epub-images-1';
 
 const MODULE='reader';
 const ENTITY_TYPE='book';
@@ -139,9 +139,9 @@ function arrayBufferFrom(value){
 async function storeImportedFile(file,book){
   if(!file||!book?.id)return;
 
-  const bytes=await file.arrayBuffer();
   const format=String(book.format||'').toLowerCase()==='pdf'?'pdf':'epub';
   const fallback=format==='pdf'?'documento.pdf':'obra.epub';
+  const bytes=format==='pdf'?await file.arrayBuffer():file.slice();
 
   await putAsset({
     id:sourceAssetId(book.id),
@@ -163,7 +163,7 @@ async function storeImportedFile(file,book){
 
 async function sourceForBook(book){
   const source=await getAsset(sourceAssetId(book.id));
-  const sourceBytes=arrayBufferFrom(source?.bytes);
+  const sourceBytes=source?.bytes instanceof Blob?source.bytes:arrayBufferFrom(source?.bytes);
 
   if(sourceBytes){
     return{
@@ -209,7 +209,7 @@ function bookPayload(book,source,path){
     author:String(book.author||''),
     fileName:String(book.fileName||source.name),
     mime:String(book.mime||source.mime),
-    size:Number(book.size||source.bytes.byteLength||0),
+    size:Number(book.size||source.bytes.size||source.bytes.byteLength||0),
     pageCount:Number(book.pageCount||0),
     storyChapterCount:Number(book.storyChapterCount||book.chapters?.length||0),
     language:String(book.language||''),
@@ -368,16 +368,18 @@ async function downloadRemoteBook(row){
   const {data,error}=await api.storage.from(BUCKET).download(assertOwnedStoragePath(path));
   if(error)throw error;
 
-  const bytes=await data.arrayBuffer();
+  const portable=payload.storageKind==='portable'||payload.storageMime==='application/x-kaoru-epub+json';
+  const pdf=String(payload.format).toLowerCase()==='pdf';
+  const bytes=portable||pdf?await data.arrayBuffer():data;
   let book=null;
 
-  if(payload.storageKind==='portable'||payload.storageMime==='application/x-kaoru-epub+json'){
+  if(portable){
     const parsed=JSON.parse(new TextDecoder().decode(bytes));
     if(parsed?.schema!=='kaoru.reader.portable-epub.v1'||!parsed.book){
       throw new Error('El paquete EPUB de Kaoru no es valido.');
     }
     book=parsed.book;
-  }else if(String(payload.format).toLowerCase()==='pdf'){
+  }else if(pdf){
     book={
       id:String(payload.id||row.entity_id),
       format:'pdf',
@@ -420,7 +422,7 @@ async function downloadRemoteBook(row){
     bookId:book.id,
     name:String(payload.storageName||payload.fileName||'archivo'),
     mime:String(payload.storageMime||data.type||'application/octet-stream'),
-    size:bytes.byteLength,
+    size:data.size,
     updatedAt:book.contentUpdatedAt,
     bytes
   });

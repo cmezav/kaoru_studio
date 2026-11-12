@@ -52,22 +52,27 @@ function decodeName(bytes) {
 }
 
 class ZipArchive {
-  constructor(buffer) {
-    this.buffer = buffer;
-    this.view = new DataView(buffer);
-    this.bytes = new Uint8Array(buffer);
+  constructor(blob) {
+    this.blob = blob;
     this.entries = new Map();
-    this.readDirectory();
   }
 
-  readDirectory() {
-    const view = this.view;
-    const length = view.byteLength;
-    const min = Math.max(0, length - 65557);
+  static async open(blob) {
+    const archive = new ZipArchive(blob);
+    await archive.readDirectory();
+    return archive;
+  }
+
+  async readDirectory() {
+    const tailStart = Math.max(0, this.blob.size - 65557);
+    const tail = new DataView(await this.blob.slice(tailStart).arrayBuffer());
     let eocd = -1;
 
-    for (let offset = length - 22; offset >= min; offset -= 1) {
-      if (view.getUint32(offset, true) === 0x06054b50) {
+    for (let offset = tail.byteLength - 22; offset >= 0; offset -= 1) {
+      if (
+        tail.getUint32(offset, true) === 0x06054b50 &&
+        offset + 22 + tail.getUint16(offset + 20, true) === tail.byteLength
+      ) {
         eocd = offset;
         break;
       }
@@ -77,11 +82,20 @@ class ZipArchive {
       throw new Error('El EPUB no contiene un directorio ZIP válido.');
     }
 
-    const total = view.getUint16(eocd + 10, true);
-    let cursor = view.getUint32(eocd + 16, true);
+    const total = tail.getUint16(eocd + 10, true);
+    const size = tail.getUint32(eocd + 12, true);
+    const start = tail.getUint32(eocd + 16, true);
+    if (start + size > tailStart + eocd) {
+      throw new Error('El directorio del EPUB está dañado.');
+    }
+
+    const directory = await this.blob.slice(start, start + size).arrayBuffer();
+    const view = new DataView(directory);
+    const bytes = new Uint8Array(directory);
+    let cursor = 0;
 
     for (let index = 0; index < total; index += 1) {
-      if (view.getUint32(cursor, true) !== 0x02014b50) {
+      if (cursor + 46 > size || view.getUint32(cursor, true) !== 0x02014b50) {
         throw new Error('El directorio del EPUB está dañado.');
       }
 
@@ -92,7 +106,7 @@ class ZipArchive {
       const extraLength = view.getUint16(cursor + 30, true);
       const commentLength = view.getUint16(cursor + 32, true);
       const localOffset = view.getUint32(cursor + 42, true);
-      const nameBytes = this.bytes.slice(cursor + 46, cursor + 46 + nameLength);
+      const nameBytes = bytes.subarray(cursor + 46, cursor + 46 + nameLength);
       const name = normalizePath(decodeName(nameBytes));
 
       this.entries.set(name, {
@@ -121,20 +135,21 @@ class ZipArchive {
 
     const offset = entry.localOffset;
 
-    if (this.view.getUint32(offset, true) !== 0x04034b50) {
+    const header = new DataView(await this.blob.slice(offset, offset + 30).arrayBuffer());
+    if (header.byteLength !== 30 || header.getUint32(0, true) !== 0x04034b50) {
       throw new Error(`La entrada ${key} del EPUB no es válida.`);
     }
 
-    const nameLength = this.view.getUint16(offset + 26, true);
-    const extraLength = this.view.getUint16(offset + 28, true);
+    const nameLength = header.getUint16(26, true);
+    const extraLength = header.getUint16(28, true);
     const dataStart = offset + 30 + nameLength + extraLength;
-    const compressed = this.bytes.slice(
+    const compressed = this.blob.slice(
       dataStart,
       dataStart + entry.compressedSize
     );
 
     if (entry.method === 0) {
-      return compressed;
+      return new Uint8Array(await compressed.arrayBuffer());
     }
 
     if (entry.method !== 8) {
@@ -154,7 +169,7 @@ class ZipArchive {
     }
 
     const response = new Response(
-      new Blob([compressed]).stream().pipeThrough(stream)
+      compressed.stream().pipeThrough(stream)
     );
 
     return new Uint8Array(await response.arrayBuffer());
@@ -177,6 +192,46 @@ const DROP = new Set([
   'audio','source'
 ]);
 
+const IMAGE_TYPES = new Map([
+  ['png', 'image/png'],
+  ['jpg', 'image/jpeg'],
+  ['jpeg', 'image/jpeg'],
+  ['gif', 'image/gif'],
+  ['webp', 'image/webp'],
+  ['avif', 'image/avif']
+]);
+
+function imageType(path) {
+  return IMAGE_TYPES.get(path.split('.').pop().toLowerCase());
+}
+
+function embeddedImagePath(chapterPath, source, archive) {
+  const href = String(source || '').trim().split(/[?#]/, 1)[0];
+  if (!href || /^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(href)) return '';
+
+  const paths = [resolvePath(chapterPath, href)];
+  try {
+    const decoded = decodeURIComponent(href);
+    if (decoded !== href) {
+      const path = decoded.startsWith('/')
+        ? normalizePath(decoded)
+        : normalizePath(dirname(chapterPath) + decoded);
+      paths.unshift(path);
+    }
+  } catch (_) {}
+
+  return paths.find((path) => imageType(path) && archive.has(path)) || '';
+}
+
+export async function createEpubImageLoader(blob) {
+  const archive = await ZipArchive.open(blob);
+  return async (path) => {
+    const type = imageType(path);
+    if (!type || !archive.has(path)) return null;
+    return new Blob([await archive.bytesFor(path)], { type });
+  };
+}
+
 function safeHref(value) {
   const href = String(value || '').trim();
 
@@ -185,7 +240,7 @@ function safeHref(value) {
   return '';
 }
 
-function sanitizeNode(node, outputDocument) {
+function sanitizeNode(node, outputDocument, resolveImage) {
   if (node.nodeType === Node.TEXT_NODE) {
     return outputDocument.createTextNode(node.nodeValue || '');
   }
@@ -201,6 +256,11 @@ function sanitizeNode(node, outputDocument) {
     marker.setAttribute('class', 'reader-media-break');
     marker.setAttribute('role', 'separator');
     marker.setAttribute('aria-label', 'Contenido visual del original');
+    const path = resolveImage(node.getAttribute('src'));
+    if (path) {
+      marker.dataset.readerImage = path;
+      marker.dataset.readerAlt = node.getAttribute('alt') || '';
+    }
     return marker;
   }
 
@@ -210,7 +270,7 @@ function sanitizeNode(node, outputDocument) {
     const fragment = outputDocument.createDocumentFragment();
 
     Array.from(node.childNodes).forEach((child) => {
-      const safe = sanitizeNode(child, outputDocument);
+      const safe = sanitizeNode(child, outputDocument, resolveImage);
       if (safe) fragment.appendChild(safe);
     });
 
@@ -244,29 +304,24 @@ function sanitizeNode(node, outputDocument) {
   }
 
   Array.from(node.childNodes).forEach((child) => {
-    const safe = sanitizeNode(child, outputDocument);
+    const safe = sanitizeNode(child, outputDocument, resolveImage);
     if (safe) element.appendChild(safe);
   });
 
   return element;
 }
 
-function sanitizeBody(xhtml) {
+function sanitizeBody(xhtml, resolveImage) {
   const input = html(xhtml);
   const output = document.implementation.createHTMLDocument('');
   const container = output.createElement('div');
 
   Array.from(input.body ? input.body.childNodes : []).forEach((node) => {
-    const safe = sanitizeNode(node, output);
+    const safe = sanitizeNode(node, output, resolveImage);
     if (safe) container.appendChild(safe);
   });
 
-  /*
-    El EPUB puede traer ilustraciones, banners o comics. Kaoru no
-    inserta esas imagenes dentro del HTML sanitizado, pero tampoco
-    deja un hueco visual vacio: conserva un unico separador discreto.
-  */
-  Array.from(container.querySelectorAll('.reader-media-break')).forEach((marker) => {
+  Array.from(container.querySelectorAll('.reader-media-break:not([data-reader-image])')).forEach((marker) => {
     let previous = marker.previousSibling;
 
     while (previous && (
@@ -278,7 +333,8 @@ function sanitizeBody(xhtml) {
 
     if (
       previous?.nodeType === Node.ELEMENT_NODE &&
-      previous.classList.contains('reader-media-break')
+      previous.classList.contains('reader-media-break') &&
+      !previous.hasAttribute('data-reader-image')
     ) {
       marker.remove();
     }
@@ -361,7 +417,7 @@ function storyChapterCount(chapters) {
 export async function parseEpub(file) {
   if (!file) throw new Error('Selecciona un EPUB.');
 
-  const archive = new ZipArchive(await file.arrayBuffer());
+  const archive = await ZipArchive.open(file);
 
   if (!archive.has('META-INF/container.xml')) {
     throw new Error('Este archivo no parece ser un EPUB estándar.');
@@ -462,7 +518,7 @@ export async function parseEpub(file) {
     chapters.push({
       title: item.title || `Chapter ${chapters.length + 1}`,
       path: item.path,
-      html: sanitizeBody(text)
+      html: sanitizeBody(text, (src) => embeddedImagePath(item.path, src, archive))
     });
   }
 

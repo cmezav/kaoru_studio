@@ -428,6 +428,12 @@ a:hover,a:focus{background:#5998D6;color:#111}
 }
 .chapter-content ul,.chapter-content ol{padding-left:1.5em}
 .chapter-content a{overflow-wrap:anywhere}
+.chapter-content .reader-epub-image{
+  display:block;
+  max-width:100%;
+  height:auto;
+  margin:1.15em auto 1.45em;
+}
 /* Separador seguro para contenido visual omitido del EPUB */
 .chapter-content .reader-media-break{
   position:relative;

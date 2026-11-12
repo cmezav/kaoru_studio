@@ -4,12 +4,14 @@ import {
   listBooks,
   deleteBook,
   getProgress,
-  putProgress
+  putProgress,
+  getAsset
 } from './reader-db.js?cache=pdf-reader-1';
 
 import {
-  parseEpub
-} from './epub-parser.js?cache=archive-reader';
+  parseEpub,
+  createEpubImageLoader
+} from './epub-parser.js?cache=epub-images-1';
 
 import {
   isPdfBook,
@@ -92,6 +94,8 @@ let currentBook = null;
 let currentChapterIndex = 0;
 let saveTimer = 0;
 let restoreToken = 0;
+let epubImageLoader = null;
+const chapterImageUrls = new Set();
 
 function clampReadingSize(value) {
   const numeric = Number(value);
@@ -494,6 +498,10 @@ async function showLibrary(fromHistory = false) {
       ? captureEpubProgressSnapshot()
       : null;
 
+  restoreToken += 1;
+  clearChapterImages();
+  epubImageLoader = null;
+
   if (currentBook && isPdfBook(currentBook)) {
     try {
       await Promise.race([
@@ -691,9 +699,9 @@ async function saveCurrentPosition(immediate = false) {
 
 async function restorePosition(bookId, chapterIndex, token) {
   const progress = await getProgress(bookId);
+  if (token !== restoreToken) return;
 
   if (
-    token !== restoreToken ||
     !progress ||
     Number(progress.chapterIndex) !== Number(chapterIndex)
   ) {
@@ -703,6 +711,7 @@ async function restorePosition(bookId, chapterIndex, token) {
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
+      if (token !== restoreToken) return;
       const anchors = readingAnchors();
       const anchor = anchors[
         Math.max(
@@ -787,6 +796,52 @@ function prepareChapterAnchors() {
   });
 }
 
+function clearChapterImages() {
+  for (const url of chapterImageUrls) URL.revokeObjectURL(url);
+  chapterImageUrls.clear();
+}
+
+async function loadEpubImages(bookId) {
+  const source = await getAsset(`source:${bookId}`);
+  if (!source?.bytes || source.mime === 'application/x-kaoru-epub+json') return null;
+  const blob = source.bytes instanceof Blob ? source.bytes : new Blob([source.bytes]);
+  return createEpubImageLoader(blob);
+}
+
+async function renderChapterImages(bookId, token) {
+  const markers = elements.chapterContent.querySelectorAll('[data-reader-image]');
+  if (!markers.length) return;
+
+  epubImageLoader ||= loadEpubImages(bookId).catch((error) => {
+    console.warn('No se pudieron abrir las ilustraciones del EPUB.', error);
+    return null;
+  });
+  const loadImage = await epubImageLoader;
+  if (!loadImage) return;
+
+  for (const marker of markers) {
+    if (token !== restoreToken) return;
+    let url;
+    try {
+      const blob = await loadImage(marker.dataset.readerImage);
+      if (!blob || token !== restoreToken) continue;
+
+      const image = document.createElement('img');
+      image.className = 'reader-epub-image';
+      image.alt = marker.dataset.readerAlt || '';
+      url = URL.createObjectURL(blob);
+      chapterImageUrls.add(url);
+      image.src = url;
+      await image.decode();
+
+      if (token === restoreToken) marker.replaceWith(image);
+    } catch (error) {
+      if (chapterImageUrls.delete(url)) URL.revokeObjectURL(url);
+      console.warn('No se pudo mostrar una ilustración del EPUB.', error);
+    }
+  }
+}
+
 async function renderChapter(restore = false) {
   if (!currentBook) return;
 
@@ -797,7 +852,9 @@ async function renderChapter(restore = false) {
   );
 
   const chapter = currentBook.chapters[currentChapterIndex];
+  const bookId = currentBook.id;
   const token = ++restoreToken;
+  clearChapterImages();
 
   elements.workLine.textContent =
     `${currentBook.title} — ${currentBook.author}`;
@@ -828,10 +885,13 @@ async function renderChapter(restore = false) {
     chapterIndex: currentChapterIndex
   });
 
+  window.scrollTo(0, 0);
+  await renderChapterImages(bookId, token);
+  if (token !== restoreToken) return;
+
   if (restore) {
-    await restorePosition(currentBook.id, currentChapterIndex, token);
+    await restorePosition(bookId, currentChapterIndex, token);
   } else {
-    window.scrollTo(0, 0);
     await saveCurrentPosition(true);
   }
 }
@@ -844,6 +904,9 @@ async function openBook(bookId, chapterIndex = 0, restore = true) {
     return;
   }
 
+  restoreToken += 1;
+  clearChapterImages();
+  epubImageLoader = null;
   currentBook = book;
   book.lastOpenedAt = Date.now();
   await putBook(book);
