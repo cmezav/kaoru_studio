@@ -41,6 +41,7 @@ import {
 } from './reader-cloud.js?cache=cloud-sync-pdf-2';
 
 const SESSION_KEY = 'kaoru.archive-reader.session';
+const CHAPTER_POSITIONS_KEY = 'kaoru.archive-reader.chapter-positions';
 const READING_PREFS_KEY = 'kaoru.archive-reader.reading-prefs';
 const DEFAULT_READING_SIZE = 16;
 const ENTRY_MODE = new URLSearchParams(location.search).get('entry');
@@ -97,6 +98,8 @@ let currentBook = null;
 let currentChapterIndex = 0;
 let saveTimer = 0;
 let restoreToken = 0;
+let settledChapterToken = -1;
+let chapterHistory = { bookId: null, positions: {} };
 let epubImageLoader = null;
 const chapterImageUrls = new Set();
 const desktopPointer = window.matchMedia('(hover: hover) and (pointer: fine)');
@@ -268,6 +271,25 @@ function readSession() {
 function writeSession(data) {
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  } catch (_) {}
+}
+
+function loadChapterHistory(bookId) {
+  if (chapterHistory.bookId === bookId) return;
+
+  chapterHistory = { bookId, positions: {} };
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CHAPTER_POSITIONS_KEY));
+    if (saved?.bookId === bookId && saved.positions) chapterHistory = saved;
+  } catch (_) {}
+}
+
+function rememberChapterPosition(snapshot) {
+  if (!snapshot || chapterHistory.bookId !== snapshot.bookId) return;
+
+  chapterHistory.positions[snapshot.chapterIndex] = snapshot;
+  try {
+    sessionStorage.setItem(CHAPTER_POSITIONS_KEY, JSON.stringify(chapterHistory));
   } catch (_) {}
 }
 
@@ -500,10 +522,8 @@ async function showLibrary(fromHistory = false) {
   elements.chapterPicker.close();
   chapterSwipe = null;
 
-  const epubSnapshot =
-    currentBook && !isPdfBook(currentBook)
-      ? captureEpubProgressSnapshot()
-      : null;
+  const epubSnapshot = captureEpubProgressSnapshot();
+  rememberChapterPosition(epubSnapshot);
 
   restoreToken += 1;
   clearChapterImages();
@@ -646,12 +666,7 @@ function currentRatio() {
 }
 
 function captureEpubProgressSnapshot() {
-  if (
-    !currentBook ||
-    isPdfBook(currentBook)
-  ) {
-    return null;
-  }
+  if (!isReadingEpub() || settledChapterToken !== restoreToken) return null;
 
   const anchor = currentAnchor();
 
@@ -704,98 +719,34 @@ async function saveCurrentPosition(immediate = false) {
   }
 }
 
-async function restorePosition(bookId, chapterIndex, token) {
-  const progress = await getProgress(bookId);
-  if (token !== restoreToken) return;
+function restorePosition(progress) {
+  const anchors = readingAnchors();
+  const anchorIndex = Math.max(
+    0,
+    Math.min(anchors.length - 1, Number(progress.anchorIndex) || 0)
+  );
+  const anchor = anchors[anchorIndex];
+  const maxScroll = Math.max(
+    0,
+    document.documentElement.scrollHeight - window.innerHeight
+  );
+  const viewportTop = progress.anchorViewportTop;
 
-  if (
-    !progress ||
-    Number(progress.chapterIndex) !== Number(chapterIndex)
-  ) {
-    window.scrollTo(0, 0);
+  if (anchor && viewportTop != null && Number.isFinite(Number(viewportTop))) {
+    const target = window.scrollY + anchor.getBoundingClientRect().top - Number(viewportTop);
+    window.scrollTo(0, Math.max(0, Math.min(maxScroll, target)));
     return;
   }
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (token !== restoreToken) return;
-      const anchors = readingAnchors();
-      const anchor = anchors[
-        Math.max(
-          0,
-          Math.min(
-            anchors.length - 1,
-            Number(progress.anchorIndex) || 0
-          )
-        )
-      ];
+  const legacyOffset = Number(progress.anchorOffset);
+  const legacyLimit = Math.max(1600, window.innerHeight * 2);
+  if (anchor && Number.isFinite(legacyOffset) && Math.abs(legacyOffset) <= legacyLimit) {
+    window.scrollTo(0, Math.max(0, anchor.offsetTop + legacyOffset));
+    return;
+  }
 
-      if (
-        anchor &&
-        progress.anchorViewportTop !== undefined &&
-        progress.anchorViewportTop !== null &&
-        Number.isFinite(Number(progress.anchorViewportTop))
-      ) {
-        const absoluteAnchorTop =
-          window.scrollY +
-          anchor.getBoundingClientRect().top;
-
-        const max = Math.max(
-          0,
-          document.documentElement.scrollHeight -
-          window.innerHeight
-        );
-
-        const target = Math.max(
-          0,
-          Math.min(
-            max,
-            absoluteAnchorTop -
-            Number(progress.anchorViewportTop)
-          )
-        );
-
-        window.scrollTo(0, target);
-        return;
-      }
-
-      const legacyOffset = Number(progress.anchorOffset);
-      const legacyLimit = Math.max(
-        1600,
-        window.innerHeight * 2
-      );
-
-      if (
-        anchor &&
-        Number.isFinite(legacyOffset) &&
-        Math.abs(legacyOffset) <= legacyLimit
-      ) {
-        window.scrollTo(
-          0,
-          Math.max(0, anchor.offsetTop + legacyOffset)
-        );
-        return;
-      }
-
-      const ratio = Math.max(
-        0,
-        Math.min(1, Number(progress.ratio) || 0)
-      );
-
-      if (ratio >= 0.985) {
-        window.scrollTo(0, 0);
-        return;
-      }
-
-      const max = Math.max(
-        0,
-        document.documentElement.scrollHeight -
-        window.innerHeight
-      );
-
-      window.scrollTo(0, max * ratio);
-    });
-  });
+  const ratio = Math.max(0, Math.min(1, Number(progress.ratio) || 0));
+  window.scrollTo(0, viewportTop == null && ratio >= 0.985 ? 0 : maxScroll * ratio);
 }
 function prepareChapterAnchors() {
   readingAnchors().forEach((element, index) => {
@@ -849,7 +800,7 @@ async function renderChapterImages(bookId, token) {
   }
 }
 
-async function renderChapter(restore = false) {
+async function renderChapter(position, saveProgress = false) {
   if (!currentBook) return;
 
   const count = currentBook.chapters.length;
@@ -861,6 +812,7 @@ async function renderChapter(restore = false) {
   const chapter = currentBook.chapters[currentChapterIndex];
   const bookId = currentBook.id;
   const token = ++restoreToken;
+  clearTimeout(saveTimer);
   clearChapterImages();
 
   elements.workLine.textContent =
@@ -896,11 +848,14 @@ async function renderChapter(restore = false) {
   await renderChapterImages(bookId, token);
   if (token !== restoreToken) return;
 
-  if (restore) {
-    await restorePosition(bookId, currentChapterIndex, token);
-  } else {
-    await saveCurrentPosition(true);
+  if (position) {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    if (token !== restoreToken) return;
+    restorePosition(position);
   }
+
+  settledChapterToken = token;
+  if (saveProgress) await saveCurrentPosition(true);
 }
 
 async function openBook(bookId, chapterIndex = 0, restore = true) {
@@ -966,7 +921,15 @@ async function openBook(bookId, chapterIndex = 0, restore = true) {
     Math.min(book.chapters.length - 1, Number(chapterIndex) || 0)
   );
 
-  const rendering = renderChapter(restore);
+  loadChapterHistory(book.id);
+  const token = restoreToken;
+  const progress = restore ? await getProgress(book.id) : null;
+  if (token !== restoreToken) return;
+  const position = Number(progress?.chapterIndex) === currentChapterIndex
+    ? progress
+    : chapterHistory.positions[currentChapterIndex];
+
+  const rendering = renderChapter(position, !restore);
   elements.chapterTitle.focus({ preventScroll: true });
   await rendering;
 }
@@ -986,11 +949,12 @@ async function goToChapter(index) {
     return;
   }
 
+  rememberChapterPosition(captureEpubProgressSnapshot());
   currentChapterIndex = index;
   chapterSwipe = null;
 
   try {
-    const rendering = renderChapter(false);
+    const rendering = renderChapter(chapterHistory.positions[index], true);
     elements.chapterTitle.focus({ preventScroll: true });
     await rendering;
   } catch (error) {
@@ -1038,18 +1002,29 @@ function handleChapterKey(event) {
   if (
     !desktopPointer.matches ||
     !isReadingEpub() ||
-    elements.chapterPicker.open ||
     event.defaultPrevented ||
     event.repeat ||
     event.isComposing ||
     event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
-    event.target.closest?.('input, textarea, select, [contenteditable]') ||
-    window.getSelection()?.isCollapsed === false
+    event.target.closest?.('input, textarea, select, [contenteditable]')
   ) {
     return;
   }
 
-  switch (event.key.toLowerCase()) {
+  const key = event.key.toLowerCase();
+  if (key === 'c') {
+    event.preventDefault();
+    if (elements.chapterPicker.open) {
+      elements.chapterPicker.close();
+    } else {
+      openChapterPicker();
+    }
+    return;
+  }
+
+  if (elements.chapterPicker.open || window.getSelection()?.isCollapsed === false) return;
+
+  switch (key) {
     case 'arrowleft':
       event.preventDefault();
       changeChapter(-1);
@@ -1057,10 +1032,6 @@ function handleChapterKey(event) {
     case 'arrowright':
       event.preventDefault();
       changeChapter(1);
-      break;
-    case 'c':
-      event.preventDefault();
-      openChapterPicker();
       break;
   }
 }
