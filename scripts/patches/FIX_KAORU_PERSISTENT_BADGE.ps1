@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Stop"
 
-$Root = $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Preload = Join-Path $Root "desktop\preload.cjs"
 
 Write-Host ""

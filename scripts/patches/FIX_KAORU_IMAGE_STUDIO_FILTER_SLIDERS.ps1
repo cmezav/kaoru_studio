@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Root = $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Ui = Join-Path $Root "legacy\image-studio\js\ui.js"
 $Main = Join-Path $Root "legacy\image-studio\js\main.js"
 $Index = Join-Path $Root "legacy\image-studio\index.html"

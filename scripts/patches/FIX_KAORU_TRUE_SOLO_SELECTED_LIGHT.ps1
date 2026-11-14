@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Stop"
 
-$Root = $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $ThreeMain = Join-Path $Root "legacy\3d-lighting\js\main.js"
 $LightMain = Join-Path $Root "legacy\light-lab\js\main.js"
 

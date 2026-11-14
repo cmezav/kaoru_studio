@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Stop"
 
-$Root = $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Main = Join-Path $Root "desktop\main.cjs"
 
 Write-Host ""

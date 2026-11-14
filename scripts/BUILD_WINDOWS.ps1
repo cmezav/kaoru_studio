@@ -1,4 +1,5 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
+$Root = Split-Path -Parent $PSScriptRoot
 
 Write-Host ''
 Write-Host '============================================================' -ForegroundColor DarkMagenta
@@ -12,12 +13,12 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-if (-not (Test-Path (Join-Path $PSScriptRoot 'index.html'))) {
-    Write-Host 'Este script debe estar en la raíz de kaoru_studio (junto a index.html).' -ForegroundColor Red
+if (-not (Test-Path (Join-Path $Root 'index.html'))) {
+    Write-Host 'No se encontró index.html en la raíz del repositorio.' -ForegroundColor Red
     exit 1
 }
 
-Set-Location $PSScriptRoot
+Set-Location -LiteralPath $Root
 
 Write-Host ('Node: ' + (node --version)) -ForegroundColor Gray
 Write-Host ('npm : ' + (npm --version)) -ForegroundColor Gray
@@ -32,7 +33,7 @@ Write-Host '[2/2] Creando Kaoru Studio Setup.exe...' -ForegroundColor Cyan
 npm run dist:win
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$dist = Join-Path $PSScriptRoot 'dist-desktop'
+$dist = Join-Path $Root 'dist-desktop'
 $installer = Get-ChildItem -Path $dist -Filter 'Kaoru-Studio-Setup-*.exe' -File | Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
 Write-Host ''

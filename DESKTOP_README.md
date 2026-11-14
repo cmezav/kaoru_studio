@@ -13,10 +13,10 @@ Esta capa convierte el Kaoru Studio actual en una aplicación de Windows sin ree
 
 ## Crear el instalador en Windows
 
-1. Copia estos archivos en la raíz del repositorio `kaoru_studio`.
+1. Abre PowerShell en la raíz del repositorio `kaoru_studio`.
 2. Instala Node.js LTS si aún no lo tienes.
-3. Ejecuta `BUILD_WINDOWS.ps1` desde PowerShell.
-4. El instalador queda en `dist-desktop/Kaoru-Studio-Setup-2026.9.19.exe`.
+3. Ejecuta `.\scripts\BUILD_WINDOWS.ps1`.
+4. El instalador queda en `dist-desktop/Kaoru-Studio-Setup-<versión>.exe`.
 
 También puedes usar:
 

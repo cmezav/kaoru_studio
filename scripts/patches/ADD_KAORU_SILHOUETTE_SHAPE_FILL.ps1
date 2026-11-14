@@ -1,6 +1,6 @@
 ﻿$ErrorActionPreference = "Stop"
 
-$Root = $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Index = Join-Path $Root "legacy\index.html"
 $Module = Join-Path $Root "legacy\shared\silhouetteShapeFill.js"
 $Package = Join-Path $Root "package.json"
@@ -31,7 +31,7 @@ if ($Branch -eq "main") {
   exit 1
 }
 
-$Version = node -p "require('./package.json').version"
+$Version = node -p "require(process.argv[1]).version" $Package
 Write-Host "[OK] Rama: $Branch" -ForegroundColor Green
 Write-Host "[OK] Version local: $Version" -ForegroundColor Green
 

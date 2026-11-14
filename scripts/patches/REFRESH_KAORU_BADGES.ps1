@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$Root = $PSScriptRoot
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $BadgeDir = Join-Path $Root "desktop\badges"
 
 Write-Host ""
