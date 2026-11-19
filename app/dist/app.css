@@ -90,3 +90,5 @@ html[data-theme=night]{--bg:#0e0c12;--surface:rgba(23,20,29,.92);--surface-solid
   .kaoru-app.is-tasks .frame-shell{height:100%;padding:0;background:var(--bg)}
   .kaoru-app.is-tasks .studio-frame{height:100%;border:0;border-radius:0;box-shadow:none;background:var(--bg)}
 }
+/* Mantiene las ventanas de edicion abiertas fuera de la vista activa. */
+.studio-frame[hidden]{display:none}

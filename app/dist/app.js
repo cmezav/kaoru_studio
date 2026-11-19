@@ -1,5 +1,6 @@
 const h = React.createElement;
 const THEME_KEY = 'siluetaStudioTheme';
+const EDITOR_IDS = ['silhouette', 'text', 'image', 'light', '3d', 'combiner'];
 function Icon(props) {
     const name = props.name;
     const common = { viewBox: '0 0 24 24', width: 19, height: 19, fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
@@ -58,13 +59,26 @@ function readerStandaloneUrl() {
 class App extends React.Component {
     constructor(props) {
         super(props);
+        this.editorFrames = {};
+        this.transientFrame = null;
+        this.taskCount = 0;
+        this.readerTitle = '';
         const first = hashStudio();
         const firstStudio = studios.find(s => s.id === first) || studios[0];
-        this.state = { active: first, theme: readTheme(), frameSrc: firstStudio.src };
-        this.frame = null;
+        this.state = {
+            active: first,
+            theme: readTheme(),
+            frameSrc: EDITOR_IDS.includes(first) ? studios[0].src : firstStudio.src,
+            editorSources: EDITOR_IDS.includes(first) ? { [first]: firstStudio.src } : {}
+        };
         this.onKeyBound = this.onKey.bind(this);
         this.onMessageBound = this.onMessage.bind(this);
         this.onHashBound = this.onHash.bind(this);
+    }
+    get frame() {
+        return EDITOR_IDS.includes(this.state.active)
+            ? this.editorFrames[this.state.active] || null
+            : this.transientFrame;
     }
     componentDidMount() {
         if (this.state.active === 'reader' && shouldOpenReaderStandalone()) {
@@ -74,7 +88,8 @@ class App extends React.Component {
         if (this.state.active === 'tasks' && shouldOpenReaderStandalone()) {
             window.location.assign(tasksStandaloneUrl());
             return;
-        }        window.addEventListener('keydown', this.onKeyBound);
+        }
+        window.addEventListener('keydown', this.onKeyBound);
         window.addEventListener('message', this.onMessageBound);
         window.addEventListener('hashchange', this.onHashBound);
         this.applyTheme(this.state.theme, false);
@@ -96,20 +111,43 @@ class App extends React.Component {
         this.navigate(map[e.key]);
     }
     onMessage(e) {
+        var _a, _b;
         const data = e.data || {};
-        if (data.type === 'kaoru:navigate' && studios.some(s => s.id === data.studio))
-            this.navigate(data.studio);
-        else if (data.type === 'kaoru:studio-ready' && studios.some(s => s.id === data.studio))
-            this.setState({ active: data.studio });
-        else if (data.type === 'kaoru:theme' && (data.theme === 'day' || data.theme === 'night'))
-            this.setTheme(data.theme);
-        else if (data.type === 'kaoru:task-count') {
-            const count = Number(data.count) || 0;
-            document.title = count > 0 ? '(' + count + ') kaoru\'s studio' : 'kaoru\'s studio';
+        if (e.origin !== location.origin)
+            return;
+        const activeSource = (_a = this.frame) === null || _a === void 0 ? void 0 : _a.contentWindow;
+        const knownSource = e.source === ((_b = this.transientFrame) === null || _b === void 0 ? void 0 : _b.contentWindow) ||
+            Object.values(this.editorFrames).some(frame => (frame === null || frame === void 0 ? void 0 : frame.contentWindow) === e.source);
+        if (!knownSource)
+            return;
+        if (data.type === 'kaoru:task-count') {
+            this.taskCount = Math.max(0, Number(data.count) || 0);
+            this.updateTitle();
+            return;
         }
+        if (e.source !== activeSource)
+            return;
+        if (data.type === 'kaoru:navigate' && studios.some(s => s.id === data.studio)) {
+            this.navigate(data.studio);
+        }
+        else if (data.type === 'kaoru:open-project' && this.state.active === 'gallery' && EDITOR_IDS.includes(data.studio)) {
+            this.navigate(data.studio, true, true);
+        }
+        else if (data.type === 'kaoru:reader-title' && this.state.active === 'reader' && typeof data.title === 'string') {
+            this.readerTitle = data.title;
+            this.updateTitle();
+        }
+        else if (data.type === 'kaoru:theme' && (data.theme === 'day' || data.theme === 'night')) {
+            this.setTheme(data.theme);
+        }
+    }
+    updateTitle() {
+        const studioTitle = this.taskCount > 0 ? '(' + this.taskCount + ') kaoru\'s studio' : 'kaoru\'s studio';
+        document.title = this.state.active === 'reader' && this.readerTitle ? this.readerTitle : studioTitle;
     }
     setTheme(theme) { this.setState({ theme: theme }, () => this.applyTheme(theme, true)); }
     applyTheme(theme, save) {
+        var _a, _b;
         document.documentElement.dataset.theme = theme;
         if (save) {
             try {
@@ -117,45 +155,66 @@ class App extends React.Component {
             }
             catch (_) { }
         }
-        try {
-            if (this.frame && this.frame.contentWindow && this.frame.contentWindow.StudioBridge)
-                this.frame.contentWindow.StudioBridge.applyTheme(theme, save);
+        for (const frame of [...Object.values(this.editorFrames), this.transientFrame]) {
+            try {
+                (_b = (_a = frame === null || frame === void 0 ? void 0 : frame.contentWindow) === null || _a === void 0 ? void 0 : _a.StudioBridge) === null || _b === void 0 ? void 0 : _b.applyTheme(theme, save);
+            }
+            catch (_) { }
         }
-        catch (_) { }
     }
-    navigate(id, updateHash = true) {
+    navigate(id, updateHash = true, openProject = false) {
         const target = studios.find(s => s.id === id);
         if (!target)
             return;
-
-        if (id === 'reader' && shouldOpenReaderStandalone()) {
+        if (id === this.state.active && !openProject)
+            return;
+        const hasEditors = Object.keys(this.state.editorSources).length > 0;
+        if (id === 'reader' && shouldOpenReaderStandalone() && !hasEditors) {
             window.location.assign(readerStandaloneUrl());
             return;
         }
-
-        if (id === 'tasks' && shouldOpenReaderStandalone()) {
+        if (id === 'tasks' && shouldOpenReaderStandalone() && !hasEditors) {
             window.location.assign(tasksStandaloneUrl());
             return;
         }
-        const nextSrc = id === 'reader'
-            ? target.src + '&entry=library&visit=' + Date.now()
-            : id === 'tasks'
-                ? target.src + '&visit=' + Date.now()
-                : target.src;
-
-        this.setState({ active: id, frameSrc: nextSrc });
-
-        if (updateHash && location.hash !== ('#' + id))
+        const nextSrc = target.src + (id === 'reader' ? '&entry=library' : '') + '&visit=' + Date.now();
+        if (id === 'reader')
+            this.readerTitle = '';
+        this.setState(previous => {
+            const editorSources = { ...previous.editorSources };
+            if (EDITOR_IDS.includes(id) && (!editorSources[id] || openProject)) {
+                editorSources[id] = openProject ? target.src + '&project=' + Date.now() : target.src;
+            }
+            return {
+                active: id,
+                editorSources,
+                frameSrc: EDITOR_IDS.includes(id) ? previous.frameSrc : nextSrc
+            };
+        }, () => {
+            this.updateTitle();
+            const frame = this.frame;
+            requestAnimationFrame(() => {
+                if (frame !== this.frame)
+                    return;
+                try {
+                    const view = frame === null || frame === void 0 ? void 0 : frame.contentWindow;
+                    frame === null || frame === void 0 ? void 0 : frame.focus();
+                    view === null || view === void 0 ? void 0 : view.dispatchEvent(new view.Event('resize'));
+                }
+                catch (_) { }
+            });
+        });
+        if (updateHash && location.hash !== ('#' + id)) {
             location.hash = id;
+        }
     }
-    onFrameLoad() {
+    onFrameLoad(frame) {
+        var _a;
+        if (!frame)
+            return;
         try {
-            const doc = this.frame.contentDocument;
-            const id = doc && doc.body && doc.body.dataset.studio;
-            if (id && studios.some(s => s.id === id) && id !== this.state.active)
-                this.setState({ active: id });
-            if (this.frame.contentWindow && this.frame.contentWindow.StudioBridge)
-                this.frame.contentWindow.StudioBridge.applyTheme(this.state.theme, false);
+            const view = frame.contentWindow;
+            (_a = view === null || view === void 0 ? void 0 : view.StudioBridge) === null || _a === void 0 ? void 0 : _a.applyTheme(this.state.theme, false);
         }
         catch (_) { }
     }
@@ -176,7 +235,9 @@ class App extends React.Component {
             }
             this.triggerLegacyAction('saveTemplateBtn');
         }
-        catch (_) { this.triggerLegacyAction('saveTemplateBtn'); }
+        catch (_) {
+            this.triggerLegacyAction('saveTemplateBtn');
+        }
     }
     exportSilhouette() {
         try {
@@ -187,7 +248,9 @@ class App extends React.Component {
             }
             this.triggerLegacyAction('downloadBtn');
         }
-        catch (_) { this.triggerLegacyAction('downloadBtn'); }
+        catch (_) {
+            this.triggerLegacyAction('downloadBtn');
+        }
     }
     openRemoveBg() { window.open('https://www.remove.bg/es', '_blank', 'noopener,noreferrer'); }
     render() {
@@ -195,7 +258,31 @@ class App extends React.Component {
         return h('div', { className: 'kaoru-app' + (this.state.active === 'reader' ? ' is-reader' : '') + (this.state.active === 'tasks' ? ' is-tasks' : '') + (this.state.active === 'home' ? ' is-home' : '') }, h('aside', { className: 'rail' }, h('div', { className: 'rail-brand' }, h(Logo, {})), h('nav', { className: 'rail-nav', 'aria-label': 'Studios' }, ...studios.map(studio => h('button', {
             key: studio.id, className: `rail-item accent-${studio.accent} ${this.state.active === studio.id ? 'is-active' : ''}`,
             onClick: () => this.navigate(studio.id), title: `${studio.name} · ${studio.hotkey}`, 'aria-current': this.state.active === studio.id ? 'page' : undefined
-        }, h('span', { className: 'rail-icon' }, studio.icon), h('span', { className: 'rail-label' }, studio.short)))), h('div', { className: 'rail-bottom' }, h('button', { className: 'rail-item theme-rail', onClick: () => this.setTheme(this.state.theme === 'night' ? 'day' : 'night'), title: this.state.theme === 'night' ? 'Modo claro' : 'Modo oscuro' }, h('span', { className: 'rail-icon' }, h(Icon, { name: this.state.theme === 'night' ? 'sun' : 'moon' })), h('span', { className: 'rail-label' }, this.state.theme === 'night' ? 'Claro' : 'Oscuro')))), h('section', { className: 'main-shell' }, h('header', { className: 'appbar' }, h('div', { className: 'appbar-title' }, h('div', { className: 'crumb-brand' }, "Kaoru's Studio"), h(Icon, { name: 'chevron' }), h('div', { className: 'workspace-title' }, h('strong', null, activeStudio.name), h('span', null, activeStudio.subtitle))), h('div', { className: 'appbar-actions' }, this.state.active === 'silhouette' && h('div', { className: 'silhouette-shell-actions' }, h('button', { className: 'shell-action shell-action-secondary', onClick: () => this.openRemoveBg(), title: 'Abrir Quitafondos' }, 'Quitafondos'), h('button', { className: 'shell-action shell-action-secondary', onClick: () => this.saveBlackTemplate(), title: 'Guardar la silueta como plantilla negra pura' }, '＋ Plantilla negra'), h('button', { className: 'shell-action shell-action-primary', onClick: () => this.exportSilhouette(), title: 'Exportar la silueta como PNG' }, 'Exportar PNG')), h('div', { className: 'shortcut-hint' }, h('span', null, 'Cambiar de Studio'), h('kbd', null, activeStudio.hotkey)), h('button', { className: 'appbar-icon', title: 'Opciones de Kaoru’s Studio' }, h(Icon, { name: 'dots' })))), h('div', { className: 'frame-shell' }, h('iframe', { ref: (el) => this.frame = el, className: 'studio-frame', allowFullScreen: true, allow: 'fullscreen', src: this.state.frameSrc, title: activeStudio.name, onLoad: () => this.onFrameLoad() }))));
+        }, h('span', { className: 'rail-icon' }, studio.icon), h('span', { className: 'rail-label' }, studio.short)))), h('div', { className: 'rail-bottom' }, h('button', { className: 'rail-item theme-rail', onClick: () => this.setTheme(this.state.theme === 'night' ? 'day' : 'night'), title: this.state.theme === 'night' ? 'Modo claro' : 'Modo oscuro' }, h('span', { className: 'rail-icon' }, h(Icon, { name: this.state.theme === 'night' ? 'sun' : 'moon' })), h('span', { className: 'rail-label' }, this.state.theme === 'night' ? 'Claro' : 'Oscuro')))), h('section', { className: 'main-shell' }, h('header', { className: 'appbar' }, h('div', { className: 'appbar-title' }, h('div', { className: 'crumb-brand' }, "Kaoru's Studio"), h(Icon, { name: 'chevron' }), h('div', { className: 'workspace-title' }, h('strong', null, activeStudio.name), h('span', null, activeStudio.subtitle))), h('div', { className: 'appbar-actions' }, this.state.active === 'silhouette' && h('div', { className: 'silhouette-shell-actions' }, h('button', { className: 'shell-action shell-action-secondary', onClick: () => this.openRemoveBg(), title: 'Abrir Quitafondos' }, 'Quitafondos'), h('button', { className: 'shell-action shell-action-secondary', onClick: () => this.saveBlackTemplate(), title: 'Guardar la silueta como plantilla negra pura' }, '＋ Plantilla negra'), h('button', { className: 'shell-action shell-action-primary', onClick: () => this.exportSilhouette(), title: 'Exportar la silueta como PNG' }, 'Exportar PNG')), h('div', { className: 'shortcut-hint' }, h('span', null, 'Cambiar de Studio'), h('kbd', null, activeStudio.hotkey)), h('button', { className: 'appbar-icon', title: 'Opciones de Kaoru’s Studio' }, h(Icon, { name: 'dots' })))), h('div', { className: 'frame-shell' }, ...EDITOR_IDS.filter(id => this.state.editorSources[id]).map(id => h('iframe', {
+            key: id,
+            ref: (el) => { if (el)
+                this.editorFrames[id] = el;
+            else
+                delete this.editorFrames[id]; },
+            className: 'studio-frame',
+            'data-studio-frame': id,
+            hidden: this.state.active !== id,
+            allowFullScreen: true,
+            allow: 'fullscreen',
+            src: this.state.editorSources[id],
+            title: studios.find(studio => studio.id === id).name,
+            onLoad: () => this.onFrameLoad(this.editorFrames[id] || null)
+        })), h('iframe', {
+            key: 'transient',
+            ref: (el) => this.transientFrame = el,
+            className: 'studio-frame',
+            hidden: EDITOR_IDS.includes(this.state.active),
+            allowFullScreen: true,
+            allow: 'fullscreen',
+            src: this.state.frameSrc,
+            title: EDITOR_IDS.includes(this.state.active) ? 'Inicio' : activeStudio.name,
+            onLoad: () => this.onFrameLoad(this.transientFrame)
+        }))));
     }
 }
 ReactDOM.render(h(App, {}), document.getElementById('root'));

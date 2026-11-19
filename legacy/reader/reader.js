@@ -269,6 +269,21 @@ function readSession() {
 }
 
 function writeSession(data) {
+  let title = 'Archive Reader';
+  if (data.view === 'reader' && currentBook) {
+    const chapter = currentBook.chapters[data.chapterIndex];
+    const number = chapter?.title?.match(/^\s*(?:chapter|cap[ií]tulo)\s*(\d+)\b/i);
+    title = `${currentBook.title} - ${number ? number[1] : data.chapterIndex + 1}`;
+  } else if (data.view === 'pdf' && currentBook) {
+    title = currentBook.title;
+  }
+  document.title = title;
+  if (window.parent !== window) {
+    window.parent.postMessage({
+      type: 'kaoru:reader-title',
+      title: data.view === 'library' ? '' : title
+    }, location.origin);
+  }
   try {
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
   } catch (_) {}

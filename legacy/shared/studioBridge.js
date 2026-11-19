@@ -50,6 +50,16 @@
   }
 
   function installNavigationShortcuts() {
+    if (EMBEDDED) {
+      document.addEventListener('click', (event) => {
+        const link = event.target.closest('a[data-studio-link]');
+        if (!link || event.defaultPrevented || event.button !== 0 ||
+            event.ctrlKey || event.metaKey || event.shiftKey || event.altKey ||
+            link.target === '_blank') return;
+        event.preventDefault();
+        window.parent.postMessage({ type: 'kaoru:navigate', studio: link.dataset.studioLink }, '*');
+      });
+    }
     document.addEventListener('keydown', (event) => {
       if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
       const target = event.key === '1' ? 'silhouette' : event.key === '2' ? 'text' : event.key === '3' ? 'image' : event.key === '4' ? 'light' : event.key === '5' ? '3d' : event.key === '6' ? 'combiner' : event.key === '7' ? 'gallery' : event.key === '8' ? 'reader' : event.key === '9' ? 'tasks' : null;
