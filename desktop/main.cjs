@@ -244,6 +244,10 @@ if (!singleInstance) {
 
 function createWindow(origin, rootDir) {
   ensureTray(rootDir);
+  const windowIcon = process.platform === 'win32'
+    ? path.join(__dirname, 'kaoru.ico')
+    : path.join(rootDir, 'logo.png');
+
   mainWindow = new BrowserWindow({
     title: 'Kaoru Studio',
     width: 1520,
@@ -253,7 +257,7 @@ function createWindow(origin, rootDir) {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#111111',
-    icon: path.join(rootDir, 'logo.png'),
+    icon: windowIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
@@ -262,6 +266,16 @@ function createWindow(origin, rootDir) {
       webSecurity: true
     }
   });
+
+  if (process.platform === 'win32' && app.isPackaged) {
+    mainWindow.setAppDetails({
+      appId: APP_ID,
+      appIconPath: windowIcon,
+      appIconIndex: 0,
+      relaunchCommand: `"${process.execPath}"`,
+      relaunchDisplayName: 'Kaoru Studio'
+    });
+  }
 
   mainWindow.once('ready-to-show', () => {
     if (process.argv.includes(STARTUP_ARG)) {

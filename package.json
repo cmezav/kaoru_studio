@@ -1,7 +1,7 @@
 {
   "name": "kaoru-studio",
   "productName": "Kaoru Studio",
-  "version": "2026.9.36",
+  "version": "2026.9.37",
   "description": "Kaoru Studio desktop creative suite",
   "private": true,
   "main": "desktop/main.cjs",
@@ -51,11 +51,13 @@
           ]
         }
       ],
-      "icon": "logo.png",
+      "icon": "desktop/kaoru.ico",
       "artifactName": "Kaoru-Studio-Setup-${version}.${ext}",
       "verifyUpdateCodeSignature": false
     },
     "nsis": {
+      "installerIcon": "desktop/kaoru.ico",
+      "uninstallerIcon": "desktop/kaoru.ico",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
