@@ -1665,3 +1665,36 @@ body.reader-soft-immersive .pdf-view{
     grid-template-columns:1fr;
   }
 }
+
+/* Library search and personal book labels. */
+.library-search{margin:24px 0;color:var(--reader-strong)}
+.library-search>label{display:block;font-weight:bold;margin-bottom:8px}
+.search-controls{display:flex;gap:8px}
+.search-controls input{width:100%;min-width:0;background:#181818;border:1px solid #666;border-radius:8px;color:#eee;padding:12px}
+.search-controls button{padding:8px 14px}
+.library-search p{font-size:13px;line-height:1.5}
+.book-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.book-tags:empty{display:none}
+.book-tag{display:inline-block;border-radius:20px;padding:4px 10px;font-size:12px;font-weight:600;line-height:1.4;overflow-wrap:anywhere}
+.book-card-footer{flex-wrap:wrap;gap:8px}
+.book-card-footer .progress-label{flex:1 1 120px}
+.edit-book-tags{padding:5px 10px}
+.book-tags-dialog{width:min(560px,calc(100% - 28px));max-height:85dvh;overflow:auto;background:#181818;color:#eee;border:1px solid #666;border-radius:14px;padding:20px}
+.book-tags-dialog::backdrop{background:rgba(0,0,0,.75)}
+.tag-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tag-dialog-heading h2{margin:0;font-size:21px}
+.tag-dialog-heading button,.remove-tag{min-width:40px;min-height:40px;font-size:22px}
+.book-tags-dialog p{line-height:1.5;overflow-wrap:anywhere}
+#tagBookTitle{font-weight:bold;color:#ddd}
+.tag-edit-row{display:grid;grid-template-columns:minmax(0,1fr) 48px 94px 40px;gap:8px;padding:12px 0;border-top:1px solid #444;align-items:end}
+.tag-edit-row label{font-size:12px;display:grid;gap:6px;min-width:0}
+.tag-edit-row input{width:100%;min-width:0;height:40px;background:#262626;color:#eee;border:1px solid #777;border-radius:5px;padding:6px}
+.tag-edit-row input:invalid{border-color:#ff8787}
+.tag-edit-row .tag-picker{padding:3px;cursor:pointer}
+.tag-palette{grid-column:1/-1;display:flex;gap:9px;flex-wrap:wrap}
+button.tag-swatch{width:27px;height:27px;border:1px solid #aaa;border-radius:50%;box-shadow:none;min-height:0}
+button.tag-swatch:focus-visible{outline:3px solid white;outline-offset:3px}
+#tagEditError{color:#ffaaaa;min-height:1.5em}
+.tag-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.tag-dialog-actions button,#addBookTag{padding:10px}
+@media(max-width:420px){.book-tags-dialog{padding:14px}.tag-edit-row{grid-template-columns:minmax(0,1fr) 44px 82px 36px;gap:6px}.tag-edit-row .remove-tag{min-width:36px}.tag-dialog-actions{flex-wrap:wrap}}

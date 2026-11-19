@@ -1,5 +1,6 @@
 const DB_NAME = 'kaoru.archive-reader';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
+const TAG_STORE = 'bookTags';
 const BOOK_STORE = 'books';
 const PROGRESS_STORE = 'progress';
 const ASSET_STORE = 'assets';
@@ -26,6 +27,7 @@ export function openReaderDb() {
 
   dbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
+    let blocked = false;
 
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -39,12 +41,28 @@ export function openReaderDb() {
         db.createObjectStore(PROGRESS_STORE, { keyPath: 'bookId' });
       }
 
+      if (!db.objectStoreNames.contains(TAG_STORE)) {
+        const tags = db.createObjectStore(TAG_STORE, { keyPath: ['ownerId', 'bookId'] });
+        tags.createIndex('ownerId', 'ownerId');
+        tags.createIndex('bookId', 'bookId');
+      }
+
       if (!db.objectStoreNames.contains(ASSET_STORE)) {
         db.createObjectStore(ASSET_STORE, { keyPath: 'id' });
       }
     };
 
-    request.onsuccess = () => resolve(request.result);
+    request.onblocked = () => {
+      blocked = true;
+      dbPromise = null;
+      reject(new Error('Cierra las otras ventanas de Kaoru y vuelve a abrir Reader para actualizar la biblioteca.'));
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      if (blocked) { db.close(); return; }
+      db.onversionchange = () => { db.close(); dbPromise = null; };
+      resolve(db);
+    };
     request.onerror = () => reject(request.error || new Error('No se pudo abrir la biblioteca local.'));
   });
 
@@ -79,10 +97,15 @@ export async function listBooks() {
 export async function deleteBook(id) {
   const db = await openReaderDb();
   const tx = db.transaction(
-    [BOOK_STORE, PROGRESS_STORE, ASSET_STORE],
+    [BOOK_STORE, PROGRESS_STORE, ASSET_STORE, TAG_STORE],
     'readwrite'
   );
 
+  const tags = tx.objectStore(TAG_STORE);
+  tags.index('bookId').openCursor(IDBKeyRange.only(id)).onsuccess = event => {
+    const cursor = event.target.result;
+    if (cursor) { cursor.delete(); cursor.continue(); }
+  };
   tx.objectStore(BOOK_STORE).delete(id);
   tx.objectStore(PROGRESS_STORE).delete(id);
   tx.objectStore(ASSET_STORE).delete(`pdf:${id}`);
@@ -144,4 +167,46 @@ export async function deleteAsset(id) {
   const tx = db.transaction(ASSET_STORE, 'readwrite');
   tx.objectStore(ASSET_STORE).delete(id);
   await txPromise(tx);
+}
+
+// Labels are independent of book bytes, so reimporting cannot overwrite them.
+export async function listBookTags(ownerId) {
+  const db = await openReaderDb();
+  return requestPromise(db.transaction(TAG_STORE).objectStore(TAG_STORE).index('ownerId').getAll(ownerId));
+}
+
+export async function putBookTags(record, localEdit = false) {
+  const db = await openReaderDb();
+  const tx = db.transaction(TAG_STORE, 'readwrite');
+  const done = txPromise(tx);
+  const store = tx.objectStore(TAG_STORE);
+  let result;
+  store.get([record.ownerId, record.bookId]).onsuccess = event => {
+    const previous = event.target.result;
+    result = { ...record };
+    if (localEdit) result.updatedAt = Math.max(Date.now(), Number(previous?.updatedAt || 0) + 1);
+    if (localEdit || !previous || Number(result.updatedAt) > Number(previous.updatedAt)) store.put(result);
+    else result = previous;
+  };
+  await done;
+  return result;
+}
+
+export async function claimLocalBookTags(ownerId) {
+  if (ownerId === 'local') return;
+  const db = await openReaderDb();
+  const tx = db.transaction(TAG_STORE, 'readwrite');
+  const done = txPromise(tx);
+  const store = tx.objectStore(TAG_STORE);
+  store.index('ownerId').openCursor(IDBKeyRange.only('local')).onsuccess = event => {
+    const cursor = event.target.result;
+    if (!cursor) return;
+    const record = { ...cursor.value, ownerId };
+    store.get([ownerId, record.bookId]).onsuccess = current => {
+      if (!current.target.result || Number(record.updatedAt) > Number(current.target.result.updatedAt)) store.put(record);
+      cursor.delete();
+      cursor.continue();
+    };
+  };
+  await done;
 }

@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>Archive Reader</title>
   <link rel="stylesheet" href="./vendor/pdfjs/pdf_viewer.css?cache=kaoru-stable-20260906">
-  <link rel="stylesheet" href="./reader.css?cache=epub-chapters-1">
+  <link rel="stylesheet" href="./reader.css?cache=reader-tags-38">
 </head>
 <body data-studio="reader">
   <main id="libraryView" class="library-view">
@@ -205,6 +205,13 @@
       </details>
     </section>
 
+    <section class="library-search" aria-label="Buscar libros">
+      <label for="bookSearch">Buscar por título o etiqueta</label>
+      <div class="search-controls"><input id="bookSearch" type="search" placeholder="Título o etiqueta…" autocomplete="off" aria-controls="libraryList continueCard"><button id="clearBookSearch" type="button" hidden>Limpiar</button></div>
+      <p id="searchResultStatus" role="status" aria-live="polite"></p>
+      <p id="tagsSyncStatus" class="settings-status" role="status"></p>
+    </section>
+
     <section id="continueSection" class="continue-section" hidden>
       <h2>Continuar leyendo</h2>
       <div id="continueCard"></div>
@@ -216,6 +223,7 @@
         <span id="bookCount">0</span>
       </div>
       <div id="libraryList" class="library-list"></div>
+      <p id="noSearchResults" class="empty-library" hidden>No hay libros que coincidan. Prueba otro título o etiqueta.</p>
       <div id="emptyLibrary" class="empty-library">
         <strong>Aún no hay obras guardadas.</strong>
         <span>Importa un EPUB de AO3 o cualquier PDF que quieras leer.</span>
@@ -224,6 +232,16 @@
 
     <p id="libraryStatus" class="library-status" role="status"></p>
   </main>
+
+  <dialog id="bookTagsDialog" class="book-tags-dialog" aria-labelledby="bookTagsHeading">
+    <div class="tag-dialog-heading"><h2 id="bookTagsHeading">Etiquetas</h2><button id="closeBookTags" type="button" aria-label="Cerrar etiquetas">×</button></div>
+    <p id="tagBookTitle"></p>
+    <p>Escribe tus etiquetas y elige sus colores. Puedes usar #RGB o #RRGGBB.</p>
+    <div id="bookTagRows"></div>
+    <button id="addBookTag" type="button">+ Añadir etiqueta</button>
+    <p id="tagEditError" role="alert"></p>
+    <div class="tag-dialog-actions"><button id="cancelBookTags" type="button">Cancelar</button><button id="saveBookTags" type="button">Guardar etiquetas</button></div>
+  </dialog>
 
   <main id="readerView" class="reader-view" hidden>
     <div class="chapter-toolbar">
@@ -331,6 +349,6 @@
   <script src="./reader-account.js?cache=kaoru-stable-20260906"></script>
   <script type="module" src="./reader-progress-cloud.js?cache=kaoru-stable-20260906"></script>
   <script type="module" src="./reader-files-cloud.js?cache=epub-images-1"></script>
-  <script type="module" src="./reader.js?cache=editor-session-reader-title-1"></script>
+  <script type="module" src="./reader.js?cache=reader-tags-38"></script>
 </body>
 </html>

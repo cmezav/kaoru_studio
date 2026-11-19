@@ -311,6 +311,17 @@ async function performDelete(item){
   });
   if(progressError)throw progressError;
 
+  const {error:tagsError}=await api.rpc('kaoru_upsert_record',{
+    p_module:MODULE,
+    p_entity_type:'book-tags',
+    p_entity_id:id,
+    p_payload:{bookId:id,tags:[]},
+    p_client_updated_at:now,
+    p_deleted:true,
+    p_device_id:device
+  });
+  if(tagsError)throw tagsError;
+
   removeQueuedDelete(item);
   return true;
 }

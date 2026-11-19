@@ -1,3 +1,4 @@
+import { libraryTags, saveBookTags, tagOwner, tagColor, tagInk, TAG_PALETTE, foldSearch } from './reader-tags.js';
 import {
   putBook,
   getBook,
@@ -376,22 +377,46 @@ function cardMarkup(book, progress) {
     <span class="book-title">${escapeHtml(book.title)}</span>
     ${authorLine ? `<span class="book-author">${authorLine}</span>` : ''}
     <span class="book-meta">${meta}</span>
+    ${tagMarkup(book.id)}
     <span class="progress-track"><i style="width:${percent}%"></i></span>
   `;
 }
 
+let libraryRows = [];
+let tagsByBook = new Map();
+let libraryRenderId = 0;
+const bookSearch = document.getElementById('bookSearch');
+function tagMarkup(bookId) {
+  return `<span class="book-tags">${(tagsByBook.get(bookId) || []).map(tag => {
+    const color = tagColor(tag.color);
+    return `<span class="book-tag" style="background:${color};color:${tagInk(color)}">${escapeHtml(tag.label)}</span>`;
+  }).join('')}</span>`;
+}
 async function renderLibrary() {
-  const books = await listBooks();
-
-  elements.bookCount.textContent = String(books.length);
-  elements.emptyLibrary.hidden = books.length > 0;
+  const request = ++libraryRenderId;
+  const [books, tags] = await Promise.all([listBooks(), libraryTags()]);
+  const rows = await Promise.all(books.map(async book => ({ book, progress: await getProgress(book.id) })));
+  if (request !== libraryRenderId) return;
+  tagsByBook = tags;
+  libraryRows = rows;
+  drawLibrary();
+}
+function drawLibrary() {
+  const tokens = foldSearch(bookSearch.value).split(/\s+/).filter(Boolean);
+  const matches = libraryRows.filter(({ book }) => {
+    const text = foldSearch([book.title, ...(tagsByBook.get(book.id) || []).map(tag => tag.label)].join(' '));
+    return tokens.every(token => text.includes(token));
+  });
+  elements.bookCount.textContent = tokens.length ? `${matches.length} / ${libraryRows.length}` : String(libraryRows.length);
+  document.getElementById('searchResultStatus').textContent = tokens.length ? `${matches.length} de ${libraryRows.length} libros` : '';
+  document.getElementById('clearBookSearch').hidden = !bookSearch.value;
+  document.getElementById('noSearchResults').hidden = !libraryRows.length || !!matches.length;
+  elements.emptyLibrary.hidden = libraryRows.length > 0;
   elements.libraryList.replaceChildren();
 
   const continueItems = [];
 
-  for (const book of books) {
-    const progress = await getProgress(book.id);
-
+  for (const { book, progress } of matches) {
     const percent = progressPercent(book, progress);
 
     if (
@@ -489,7 +514,13 @@ async function renderLibrary() {
       await renderLibrary();
     });
 
-    footer.append(label, remove);
+    const editTags = document.createElement('button');
+    editTags.type = 'button';
+    editTags.className = 'edit-book-tags';
+    editTags.textContent = 'Etiquetas';
+    editTags.setAttribute('aria-label', `Editar etiquetas de ${book.title}`);
+    editTags.addEventListener('click', () => openBookTags(book));
+    footer.append(label, editTags, remove);
     card.append(main, footer);
     elements.libraryList.appendChild(card);
   }
@@ -532,6 +563,71 @@ async function renderLibrary() {
     elements.continueCard.replaceChildren();
   }
 }
+const tagsDialog = document.getElementById('bookTagsDialog');
+const tagRows = document.getElementById('bookTagRows');
+const tagEditError = document.getElementById('tagEditError');
+let editingTagsBook = null;
+let editingTagsOwner = null;
+function addTagRow(tag = { label: '', color: TAG_PALETTE[0] }) {
+  const row = document.createElement('div');
+  row.className = 'tag-edit-row';
+  row.innerHTML = `<label>Etiqueta<input class="tag-name" maxlength="80" placeholder="Por ejemplo: Fantasía" aria-label="Nombre de etiqueta"></label>
+    <label>Color<input class="tag-picker" type="color" aria-label="Color de etiqueta"></label>
+    <label>Hex<input class="tag-hex" maxlength="7" spellcheck="false" aria-label="Código hexadecimal"></label>
+    <button class="remove-tag" type="button" aria-label="Quitar etiqueta">×</button><div class="tag-palette" aria-label="Paleta de colores"></div>`;
+  const name = row.querySelector('.tag-name');
+  const picker = row.querySelector('.tag-picker');
+  const hex = row.querySelector('.tag-hex');
+  name.value = tag.label;
+  picker.value = hex.value = tagColor(tag.color);
+  picker.addEventListener('input', () => { hex.value = picker.value; hex.setCustomValidity(''); });
+  hex.addEventListener('input', () => {
+    try { picker.value = tagColor(hex.value); hex.setCustomValidity(''); }
+    catch (_) { hex.setCustomValidity('Usa #RGB o #RRGGBB.'); }
+  });
+  for (const color of TAG_PALETTE) {
+    const swatch = document.createElement('button');
+    swatch.type = 'button';
+    swatch.className = 'tag-swatch';
+    swatch.style.background = color;
+    swatch.setAttribute('aria-label', `Usar ${color}`);
+    swatch.title = color;
+    swatch.addEventListener('click', () => { picker.value = hex.value = color; hex.setCustomValidity(''); });
+    row.querySelector('.tag-palette').append(swatch);
+  }
+  row.querySelector('.remove-tag').addEventListener('click', () => row.remove());
+  tagRows.append(row);
+  return name;
+}
+function openBookTags(book) {
+  editingTagsBook = book.id;
+  editingTagsOwner = tagOwner();
+  document.getElementById('tagBookTitle').textContent = book.title;
+  tagRows.replaceChildren();
+  tagEditError.textContent = '';
+  for (const tag of tagsByBook.get(book.id) || []) addTagRow(tag);
+  tagsDialog.showModal();
+}
+bookSearch.addEventListener('input', drawLibrary);
+document.getElementById('clearBookSearch').addEventListener('click', () => { bookSearch.value = ''; drawLibrary(); bookSearch.focus(); });
+document.getElementById('addBookTag').addEventListener('click', () => addTagRow().focus());
+for (const id of ['closeBookTags', 'cancelBookTags']) document.getElementById(id).addEventListener('click', () => tagsDialog.close());
+document.getElementById('saveBookTags').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  tagEditError.textContent = '';
+  try {
+    if (!await getBook(editingTagsBook)) throw new Error('Este libro ya no está en tu biblioteca.');
+    const tags = [...tagRows.children].map(row => ({ label: row.querySelector('.tag-name').value, color: row.querySelector('.tag-hex').value }));
+    await saveBookTags(editingTagsBook, tags, editingTagsOwner);
+    tagsDialog.close();
+  } catch (error) { tagEditError.textContent = error.message || 'No se pudieron guardar las etiquetas.'; }
+  finally { button.disabled = false; }
+});
+window.addEventListener('kaoru:reader-tags-changed', () => {
+  if (!document.body.classList.contains('is-reading')) renderLibrary().catch(console.warn);
+});
+window.addEventListener('kaoru:reader-account', () => { if (tagsDialog.open) tagsDialog.close(); });
 async function showLibrary(fromHistory = false) {
   clearTimeout(saveTimer);
   elements.chapterPicker.close();

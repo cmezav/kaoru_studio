@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-53-editor-session-reader-title';
+const CACHE_NAME = 'kaoru-archive-reader-shell-54-reader-search-tags';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [
@@ -22,6 +22,7 @@ const CORE = [
   './legacy/reader/reader.css',
   './legacy/reader/reader.js',
   './legacy/reader/reader-db.js',
+  './legacy/reader/reader-tags.js',
   './legacy/reader/epub-parser.js',
   './legacy/reader/reader-cloud.js',
   './legacy/reader/reader-account.js',
