@@ -2,7 +2,8 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const { app, BrowserWindow, dialog, ipcMain, nativeImage, Tray, Menu } = require('electron');
+const crypto = require('node:crypto');
+const { app, BrowserWindow, dialog, ipcMain, nativeImage, Tray, Menu, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { createStaticServer, DEFAULT_PORT } = require('./static-server.cjs');
 
@@ -15,6 +16,7 @@ let staticServer = null;
 let quitting = false;
 let updateCheckStarted = false;
 let tray = null;
+let shortcutIconReport = null;
 
 function setPendingTaskbarBadge(value) {
   if (process.platform !== 'win32') return;
@@ -242,11 +244,109 @@ if (!singleInstance) {
   });
 }
 
+// KAORU_TASKBAR_EXE_V39: migrate only this installation's existing shortcuts.
+function repairWindowsShortcutIcons() {
+  const report = { checked: 0, changed: 0, errors: [] };
+  if (process.platform !== 'win32' || !app.isPackaged) return report;
+  try {
+    const appData = app.getPath('appData');
+    const roots = [
+      { folder: app.getPath('desktop'), recursive: false },
+      { folder: path.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs'), recursive: true },
+      { folder: path.join(appData, 'Microsoft', 'Internet Explorer', 'Quick Launch', 'User Pinned', 'TaskBar'), recursive: false }
+    ];
+    const executable = path.resolve(process.execPath);
+    const sameTarget = value => path.resolve(String(value || '').replace(/^"|"$/g, '')).toLowerCase() === executable.toLowerCase();
+    const backupFolder = path.join(app.getPath('userData'), 'shortcut-icon-backups');
+    const visited = new Set();
+    const visit = (folder, recursive, depth = 0) => {
+      if (depth > 8 || visited.has(folder.toLowerCase())) return;
+      visited.add(folder.toLowerCase());
+      let entries;
+      try { entries = fs.readdirSync(folder, { withFileTypes: true }); }
+      catch (_) { return; }
+      for (const entry of entries) {
+        const file = path.join(folder, entry.name);
+        if (entry.isSymbolicLink()) continue;
+        if (entry.isDirectory()) {
+          if (recursive) visit(file, true, depth + 1);
+          continue;
+        }
+        if (!entry.isFile() || !/kaoru.*\.lnk$/i.test(entry.name)) continue;
+        try {
+          const link = shell.readShortcutLink(file);
+          if (!sameTarget(link.target)) continue;
+          report.checked += 1;
+          if (String(link.icon || '').toLowerCase() === executable.toLowerCase() &&
+              Number(link.iconIndex || 0) === 0 && link.appUserModelId === APP_ID) continue;
+          fs.mkdirSync(backupFolder, { recursive: true });
+          const key = crypto.createHash('sha256').update(file.toLowerCase()).digest('hex').slice(0, 20);
+          const backup = path.join(backupFolder, `${key}.lnk`);
+          if (!fs.existsSync(backup)) fs.copyFileSync(file, backup);
+          const saved = shell.writeShortcutLink(file, 'update', {
+            target: link.target,
+            icon: executable,
+            iconIndex: 0,
+            appUserModelId: APP_ID
+          });
+          if (!saved) throw new Error('Windows no pudo actualizar el acceso.');
+          report.changed += 1;
+        } catch (error) {
+          report.errors.push({ path: file, message: String(error?.message || error) });
+        }
+      }
+    };
+    for (const root of roots) visit(root.folder, root.recursive);
+  } catch (error) {
+    report.errors.push({ message: String(error?.message || error) });
+  }
+  return report;
+}
+
+function loadKaoruWindowIcon(rootDir) {
+  const report = {
+    version: app.getVersion(), executable: process.execPath,
+    shortcutIcons: shortcutIconReport,
+    loaded: false, applied: false, attempts: [], updatedAt: new Date().toISOString()
+  };
+  for (const name of ['logo.png', 'icono-kaoru.png']) {
+    const imagePath = path.join(rootDir, name);
+    try {
+      const image = nativeImage.createFromBuffer(fs.readFileSync(imagePath));
+      if (image.isEmpty()) throw new Error('Electron devolvio una imagen vacia.');
+      const size = image.getSize();
+      if (!size.width || !size.height) throw new Error('La imagen no tiene dimensiones.');
+      report.loaded = true;
+      report.source = imagePath;
+      report.size = size;
+      return { image: image.resize({ width: 256, height: 256, quality: 'best' }), report };
+    } catch (error) {
+      report.attempts.push({ path: imagePath, error: String(error?.message || error) });
+    }
+  }
+  return { image: undefined, report };
+}
+
+function writeKaoruWindowIconReport(state) {
+  try {
+    const base = process.env.LOCALAPPDATA || app.getPath('userData');
+    const folder = path.join(base, 'KaoruStudio', 'IconRepair');
+    fs.mkdirSync(folder, { recursive: true });
+    state.report.updatedAt = new Date().toISOString();
+    fs.writeFileSync(path.join(folder, 'window-icon-runtime.json'), JSON.stringify(state.report, null, 2), 'utf8');
+    if (state.image && !state.image.isEmpty()) {
+      fs.writeFileSync(path.join(folder, 'window-icon-runtime.png'), state.image.toPNG());
+    }
+  } catch (error) {
+    console.warn('[Kaoru Window Icon] No se pudo guardar el diagnostico:', error);
+  }
+}
+
 function createWindow(origin, rootDir) {
   ensureTray(rootDir);
-  const windowIcon = process.platform === 'win32'
-    ? path.join(__dirname, 'kaoru.ico')
-    : path.join(rootDir, 'logo.png');
+  // KAORU_TASKBAR_PNG_V2: decode and validate the window image explicitly.
+  const iconState = loadKaoruWindowIcon(rootDir);
+  const windowIcon = iconState.image;
 
   mainWindow = new BrowserWindow({
     title: 'Kaoru Studio',
@@ -267,17 +367,34 @@ function createWindow(origin, rootDir) {
     }
   });
 
-  if (process.platform === 'win32' && app.isPackaged) {
-    mainWindow.setAppDetails({
-      appId: APP_ID,
-      appIconPath: windowIcon,
-      appIconIndex: 0,
-      relaunchCommand: `"${process.execPath}"`,
-      relaunchDisplayName: 'Kaoru Studio'
-    });
-  }
+  const applyWindowIcon = (stage) => {
+    if (process.platform !== 'win32' || !mainWindow || mainWindow.isDestroyed()) return;
+    try {
+      // The taskbar and shortcuts use the same verified executable resource.
+      mainWindow.setAppDetails({
+        appId: APP_ID,
+        appIconPath: process.execPath,
+        appIconIndex: 0,
+        relaunchCommand: `"${process.execPath}"`,
+        relaunchDisplayName: 'Kaoru Studio'
+      });
+      if (windowIcon && !windowIcon.isEmpty()) {
+        mainWindow.setIcon(windowIcon);
+        iconState.report.applied = true;
+      }
+      iconState.report.stage = stage;
+      delete iconState.report.applyError;
+    } catch (error) {
+      iconState.report.applied = false;
+      iconState.report.applyError = String(error?.message || error);
+    }
+    writeKaoruWindowIconReport(iconState);
+  };
+  applyWindowIcon('created');
+  mainWindow.on('restore', () => applyWindowIcon('restored'));
 
   mainWindow.once('ready-to-show', () => {
+    applyWindowIcon('ready-to-show');
     if (process.argv.includes(STARTUP_ARG)) {
       // Mostrar inactivo y minimizar para conservar el boton de taskbar
       // y permitir que aparezca el badge sin robar foco al iniciar Windows.
@@ -347,6 +464,7 @@ async function boot() {
 }
 
 app.whenReady().then(async () => {
+  shortcutIconReport = repairWindowsShortcutIcons();
   configureStartupDefaultOnce();
   await boot();
   configureAutoUpdates();
