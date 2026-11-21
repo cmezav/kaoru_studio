@@ -911,6 +911,26 @@ async function renderChapterImages(bookId, token) {
   }
 }
 
+function hideRepeatedChapterHeading(container, title) {
+  const normalize = value => String(value || '').normalize('NFC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+  const expected = normalize(title);
+  if (!expected) return;
+
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+  let text;
+  while ((text = walker.nextNode())) {
+    if (!normalize(text.nodeValue)) continue;
+    const heading = text.parentElement?.closest('h1,h2,h3,h4,h5,h6');
+    // Only the introductory heading group can repeat the Reader title.
+    if (!heading || !container.contains(heading) || heading.closest('blockquote,pre,code,li,dt,dd')) return;
+    if (normalize(heading.textContent) !== expected) continue;
+    if (heading.querySelector('img,svg,video,audio,.reader-media-break,[data-reader-image]')) continue;
+    // Retain anchor indexes for positions saved before this visual correction.
+    heading.hidden = true;
+  }
+}
+
 async function renderChapter(position, saveProgress = false) {
   if (!currentBook) return;
 
@@ -933,6 +953,7 @@ async function renderChapter(position, saveProgress = false) {
     chapter.title || `Chapter ${currentChapterIndex + 1}`;
 
   elements.chapterContent.innerHTML = chapter.html || '';
+  hideRepeatedChapterHeading(elements.chapterContent, elements.chapterTitle.textContent);
   prepareChapterAnchors();
 
   elements.chapterPosition.textContent =
