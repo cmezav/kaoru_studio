@@ -12,7 +12,7 @@ function Icon(props) {
         three: [h('path', { d: 'M12 2 20 6.5v9L12 20l-8-4.5v-9L12 2Z' }), h('path', { d: 'm4 6.5 8 4.5 8-4.5M12 11v9' }), h('path', { d: 'M8.5 8.7 12 6.8l3.5 1.9' })],
         combine: [h('rect', { x: 4, y: 5, width: 11, height: 11, rx: 2 }), h('rect', { x: 9, y: 8, width: 11, height: 11, rx: 2 }), h('path', { d: 'M7 12l2-2 2 2 2-2 4 4' })],
         gallery: [h('rect', { x: 4, y: 4, width: 6, height: 6, rx: 1 }), h('rect', { x: 14, y: 4, width: 6, height: 6, rx: 1 }), h('rect', { x: 4, y: 14, width: 6, height: 6, rx: 1 }), h('rect', { x: 14, y: 14, width: 6, height: 6, rx: 1 })],
-        tasks: [h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }), h('path', { d: 'M8 9l1.5 1.5L12 8M8 14l1.5 1.5L12 13M14 9h3M14 14h3' })],        reader: [h('path', { d: 'M5 4.5A3.5 3.5 0 0 1 8.5 2H12v18H8.5A3.5 3.5 0 0 0 5 23.5v-19Z' }), h('path', { d: 'M19 4.5A3.5 3.5 0 0 0 15.5 2H12v18h3.5a3.5 3.5 0 0 1 3.5 3.5v-19Z' })],
+        tasks: [h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }), h('path', { d: 'M8 9l1.5 1.5L12 8M8 14l1.5 1.5L12 13M14 9h3M14 14h3' })], reader: [h('path', { d: 'M5 4.5A3.5 3.5 0 0 1 8.5 2H12v18H8.5A3.5 3.5 0 0 0 5 23.5v-19Z' }), h('path', { d: 'M19 4.5A3.5 3.5 0 0 0 15.5 2H12v18h3.5a3.5 3.5 0 0 1 3.5 3.5v-19Z' })],
         moon: [h('path', { d: 'M20.2 14.2A8 8 0 0 1 9.8 3.8 8.5 8.5 0 1 0 20.2 14.2Z' })],
         sun: [h('circle', { cx: 12, cy: 12, r: 4 }), h('path', { d: 'M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41' })],
         chevron: [h('path', { d: 'm9 18 6-6-6-6' })],
@@ -22,14 +22,14 @@ function Icon(props) {
 }
 const studios = [
     { id: 'home', name: 'Inicio', short: 'Inicio', subtitle: 'Tu espacio creativo', src: './legacy/home/index.html?embed=1', accent: 'home', icon: h(Icon, { name: 'gallery' }), hotkey: 'Inicio' },
-    { id: 'silhouette', name: 'Silueta Studio', short: 'Silueta', subtitle: 'Formas, máscaras y composiciones', src: './legacy/index.html?embed=1', accent: 'violet', icon: h(Icon, { name: 'silhouette' }), hotkey: 'Alt+1' },
+    { id: 'silhouette', name: 'Silueta Studio', short: 'Silueta', subtitle: 'Formas, máscaras y composiciones', src: './legacy/index.html?embed=1&cache=silhouette-41', accent: 'violet', icon: h(Icon, { name: 'silhouette' }), hotkey: 'Alt+1' },
     { id: 'text', name: 'Text Studio', short: 'Texto', subtitle: 'Tipografía y efectos avanzados', src: './legacy/text-studio/index.html?embed=1', accent: 'rose', icon: h(Icon, { name: 'text' }), hotkey: 'Alt+2' },
     { id: 'image', name: 'Image Studio', short: 'Imagen', subtitle: 'Ajustes, filtros y exportación', src: './legacy/image-studio/index.html?embed=1', accent: 'blue', icon: h(Icon, { name: 'image' }), hotkey: 'Alt+3' },
     { id: 'light', name: 'Light Lab', short: 'Light Lab', subtitle: 'Paletas, luces, pieles y materiales', src: './legacy/light-lab/index.html?embed=1', accent: 'teal', icon: h(Icon, { name: 'light' }), hotkey: 'Alt+4' },
     { id: '3d', name: '3D Lighting Studio', short: '3D', subtitle: 'Modelos, anatomia y luces 3D', src: './legacy/3d-lighting/index.html?embed=1', accent: 'indigo', icon: h(Icon, { name: 'three' }), hotkey: 'Alt+5' },
     { id: 'combiner', name: 'Image Combiner Studio', short: 'Combiner', subtitle: 'Lienzos, capas y composiciones de imagen', src: './legacy/image-combiner/index.html?embed=1', accent: 'coral', icon: h(Icon, { name: 'combine' }), hotkey: 'Alt+6' },
     { id: 'gallery', name: 'Galería', short: 'Galería', subtitle: 'Diseños, proyectos y plantillas', src: './legacy/gallery/index.html?embed=1', accent: 'amber', icon: h(Icon, { name: 'gallery' }), hotkey: 'Alt+7' },
-    { id: 'tasks', name: 'Task Studio', short: 'Tareas', subtitle: 'Cursos, tareas, notas y entregas', src: './legacy/task-studio/index.html?embed=1', accent: 'mint', icon: h(Icon, { name: 'tasks' }), hotkey: 'Alt+9' },    { id: 'reader', name: 'Archive Reader', short: 'Reader', subtitle: 'Lectura EPUB offline', src: './legacy/reader/index.html?embed=1', accent: 'reader', icon: h(Icon, { name: 'reader' }), hotkey: 'Alt+8' }
+    { id: 'tasks', name: 'Task Studio', short: 'Tareas', subtitle: 'Cursos, tareas, notas y entregas', src: './legacy/task-studio/index.html?embed=1', accent: 'mint', icon: h(Icon, { name: 'tasks' }), hotkey: 'Alt+9' }, { id: 'reader', name: 'Archive Reader', short: 'Reader', subtitle: 'Lectura EPUB offline', src: './legacy/reader/index.html?embed=1', accent: 'reader', icon: h(Icon, { name: 'reader' }), hotkey: 'Alt+8' }
 ];
 function readTheme() { try {
     return localStorage.getItem(THEME_KEY) === 'night' ? 'night' : 'day';
@@ -46,11 +46,22 @@ function shouldOpenReaderStandalone() {
         return false;
     }
 }
+function isLauncherReload() {
+    var _a;
+    try {
+        return ((_a = performance.getEntriesByType('navigation')[0]) === null || _a === void 0 ? void 0 : _a.type) === 'reload';
+    }
+    catch (_) {
+        return false;
+    }
+}
 function readerStandaloneUrl() {
     return './legacy/reader/index.html?entry=library&standalone=1&visit=' + Date.now();
-}function tasksStandaloneUrl() {
+}
+function tasksStandaloneUrl() {
     return './legacy/task-studio/index.html?standalone=1&visit=' + Date.now();
-}class Logo extends React.Component {
+}
+class Logo extends React.Component {
     constructor(props) { super(props); this.state = { failed: false }; }
     render() {
         return h('div', { className: 'brand-logo-wrap' }, !this.state.failed && h('img', { className: 'brand-logo', src: './logo.png', alt: "Kaoru's Studio", onError: () => this.setState({ failed: true }) }), this.state.failed && h('div', { className: 'brand-logo-fallback', 'aria-label': "Kaoru's Studio" }, 'K'));
@@ -68,7 +79,7 @@ class App extends React.Component {
         this.state = {
             active: first,
             theme: readTheme(),
-            frameSrc: EDITOR_IDS.includes(first) ? studios[0].src : firstStudio.src,
+            frameSrc: EDITOR_IDS.includes(first) ? studios[0].src : firstStudio.src + (first === 'reader' && !isLauncherReload() ? '&entry=library' : ''),
             editorSources: EDITOR_IDS.includes(first) ? { [first]: firstStudio.src } : {}
         };
         this.onKeyBound = this.onKey.bind(this);
@@ -166,7 +177,7 @@ class App extends React.Component {
         const target = studios.find(s => s.id === id);
         if (!target)
             return;
-        if (id === this.state.active && !openProject)
+        if (id === this.state.active && !openProject && id !== 'reader')
             return;
         const hasEditors = Object.keys(this.state.editorSources).length > 0;
         if (id === 'reader' && shouldOpenReaderStandalone() && !hasEditors) {

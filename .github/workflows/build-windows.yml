@@ -1,10 +1,8 @@
-﻿name: Release Kaoru Studio Windows
+name: Release Kaoru Studio Windows
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
+  # Windows releases are built locally while Actions billing is blocked.
 
 permissions:
   contents: write

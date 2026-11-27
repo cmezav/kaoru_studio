@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kaoru-archive-reader-shell-55-reader-single-title';
+const CACHE_NAME = 'kaoru-archive-reader-shell-56-silhouette-paints-library';
 const SUPABASE_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4';
 
 const CORE = [

@@ -1,0 +1,32 @@
+.kaoru-paint{min-width:0;margin-top:8px;font-size:11px}
+.kaoru-paint [hidden]{display:none!important}
+.kaoru-paint button,.kaoru-paint input{font:inherit;color:inherit;min-width:0}
+.kaoru-paint button{cursor:pointer;border:1px solid #bdb7c9;border-radius:9px;background:#faf8ff;padding:8px}
+.kaoru-paint button:disabled{opacity:.4;cursor:default}
+.kaoru-paint button:focus-visible,.kaoru-paint input:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+.kaoru-paint .paint-tabs{display:flex;gap:4px;padding:4px;border:1px solid #bdb7c9;border-radius:12px}
+.kaoru-paint .paint-tabs button{flex:1;border:0;background:transparent;font-weight:800}
+.kaoru-paint .paint-tabs .active{background:#e7dcff;color:#5d23b9}
+.kaoru-paint .paint-gradient{margin:12px 0}
+.kaoru-paint .paint-preview{height:40px;border:1px solid #bdb7c9;border-radius:10px}
+.kaoru-paint .paint-track{position:relative;height:22px;margin:18px 12px 20px;border:1px solid #bdb7c9;border-radius:7px;touch-action:none}
+.kaoru-paint .paint-stop{position:absolute;top:50%;transform:translate(-50%,-50%);height:26px;width:26px;padding:0;border:2px solid white;border-radius:50%;box-shadow:0 1px 4px #0008;touch-action:none}
+.kaoru-paint .paint-stop.selected{outline:2px solid var(--purple);outline-offset:2px}
+.kaoru-paint .paint-actions,.kaoru-paint .paint-presets{display:flex;gap:8px;margin:10px 0}
+.kaoru-paint .paint-actions button,.kaoru-paint .paint-presets button{flex:1;min-height:34px}
+.kaoru-paint .paint-range{display:block;margin:12px 0}
+.kaoru-paint .paint-range>span{display:flex;align-items:center;gap:10px;margin-top:6px}
+.kaoru-paint .paint-range input[type=range]{flex:1;width:0;margin:0}
+.kaoru-paint .paint-range input[type=number]{width:72px;padding:7px;border:1px solid #bdb7c9;border-radius:8px;background:transparent}
+.kaoru-paint .paint-color-label{display:block;margin:9px 0 6px}
+.kaoru-paint .paint-color-target{opacity:.7}
+.kaoru-paint .paint-color-row{display:flex;align-items:center;gap:7px}
+.kaoru-paint .paint-color{width:48px;height:36px;border:1px solid #bdb7c9;background:transparent;border-radius:8px;padding:3px}
+.kaoru-paint .paint-hex{flex:1;width:0;height:36px;border:1px solid #bdb7c9;border-radius:8px;padding:6px;background:transparent}
+.kaoru-paint .paint-swatches{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.kaoru-paint .paint-swatches button{width:25px;height:25px;padding:0;border:1px solid #a59cac}
+html[data-theme=night] .kaoru-paint button{background:#23202c;border-color:#4b4359}
+html[data-theme=night] .kaoru-paint .paint-tabs{border-color:#4b4359}
+html[data-theme=night] .kaoru-paint .paint-tabs .active{background:#392b50;color:#dfcfff}
+html[data-theme=night] .kaoru-paint input{border-color:#4b4359}
+.border-paint{grid-column:1/-1}
